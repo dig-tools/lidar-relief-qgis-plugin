@@ -27,7 +27,6 @@ class TestSimpleLocalReliefModel:
         After detrending, the interior should be near zero.
         """
         result = simple_local_relief_model(tilted_dem, radius=20)
-        valid = result[~np.isnan(result)]
 
         # Interior pixels (away from edges affected by boundary handling)
         interior = result[25:75, 25:75]
