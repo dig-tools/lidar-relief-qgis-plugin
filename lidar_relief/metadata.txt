@@ -1,0 +1,30 @@
+[general]
+name=LiDAR Relief Visualization
+qgisMinimumVersion=3.22
+description=Generate LiDAR-derived archaeological relief visualizations (Hillshade, SLRM, SVF, Slope) directly from a loaded DEM layer.
+version=1.0.0
+author=LiDAR Relief Contributors
+email=lidar.relief@example.com
+
+about=A native QGIS plugin that generates standard LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), and Slope — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
+
+tracker=https://github.com/lidar-relief/lidar-relief-qgis/issues
+repository=https://github.com/lidar-relief/lidar-relief-qgis
+
+hasProcessingProvider=yes
+
+tags=lidar,relief,hillshade,svf,slrm,slope,archaeology,dem,visualization,terrain,landscape
+
+category=Raster
+icon=resources/icon.png
+
+experimental=True
+deprecated=False
+
+changelog=
+    1.0.0 - Initial release
+    - Multi-directional Hillshade algorithm
+    - Simple Local Relief Model (SLRM) algorithm
+    - Sky-View Factor (SVF) algorithm
+    - Slope (degrees and percent) algorithm
+    - Batch mode for running multiple algorithms on the same DEM

@@ -1,0 +1,12 @@
+Project: LiDAR-Relief-QGIS-Plugin
+Source: open_heritage_software_project_scopes.md — Project 19
+======================================================================
+
+CONTEXT:
+I am building a QGIS plugin for LiDAR-derived archaeological relief visualisations. I need research:
+
+──────────────────────────────────────────────────────────────────────
+
+RESEARCH PROMPT 5:
+
+**QGIS raster processing with NumPy/GDAL**: What is the recommended pattern for reading a QGIS raster layer into a NumPy array, processing it, and writing the result back as a new QGIS layer? How should nodata values and coordinate reference systems be handled?
