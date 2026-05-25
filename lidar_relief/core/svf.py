@@ -65,7 +65,7 @@ def sky_view_factor(
     # Note: in array coordinates, row increases downward (south), col increases right (east)
     # Azimuth 0 = north = negative row direction
     dir_rows = -np.cos(azimuths_rad)  # negative because north = row decrease
-    dir_cols = np.sin(azimuths_rad)   # east = col increase
+    dir_cols = np.sin(azimuths_rad)  # east = col increase
 
     # Accumulate sin(max_horizon_angle) for each direction
     sin_horizon_sum = np.zeros((rows, cols), dtype=np.float32)
@@ -174,11 +174,16 @@ def _shift_array(
         dst_col_start, dst_col_end = 0, cols + col_shift
 
     # Bounds check
-    if (src_row_end <= src_row_start or src_col_end <= src_col_start or
-            dst_row_end <= dst_row_start or dst_col_end <= dst_col_start):
+    if (
+        src_row_end <= src_row_start
+        or src_col_end <= src_col_start
+        or dst_row_end <= dst_row_start
+        or dst_col_end <= dst_col_start
+    ):
         return result
 
-    result[dst_row_start:dst_row_end, dst_col_start:dst_col_end] = \
-        array[src_row_start:src_row_end, src_col_start:src_col_end]
+    result[dst_row_start:dst_row_end, dst_col_start:dst_col_end] = array[
+        src_row_start:src_row_end, src_col_start:src_col_end
+    ]
 
     return result

@@ -43,15 +43,15 @@ def _horn_gradients(dem: np.ndarray, cellsize: float):
     # Pad with edge values to handle boundaries
     padded = np.pad(dem_filled, 1, mode="edge")
 
-    a = padded[:-2, :-2]   # top-left
+    a = padded[:-2, :-2]  # top-left
     b = padded[:-2, 1:-1]  # top-centre
-    c = padded[:-2, 2:]    # top-right
+    c = padded[:-2, 2:]  # top-right
     d = padded[1:-1, :-2]  # mid-left
     # e = padded[1:-1, 1:-1]  # centre (not used)
-    f = padded[1:-1, 2:]   # mid-right
-    g = padded[2:, :-2]    # bottom-left
-    h = padded[2:, 1:-1]   # bottom-centre
-    i = padded[2:, 2:]     # bottom-right
+    f = padded[1:-1, 2:]  # mid-right
+    g = padded[2:, :-2]  # bottom-left
+    h = padded[2:, 1:-1]  # bottom-centre
+    i = padded[2:, 2:]  # bottom-right
 
     dz_dx = ((c + 2.0 * f + i) - (a + 2.0 * d + g)) / (8.0 * cellsize)
     dz_dy = ((g + 2.0 * h + i) - (a + 2.0 * b + c)) / (8.0 * cellsize)
@@ -87,14 +87,13 @@ def _single_hillshade(
     zenith_rad = np.deg2rad(90.0 - altitude_deg)
 
     # Slope and aspect from gradients
-    slope_rad = np.arctan(np.sqrt(dz_dx ** 2 + dz_dy ** 2))
+    slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
     aspect_rad = np.arctan2(-dz_dy, dz_dx)
 
     # Hillshade formula
-    shade = (
-        np.cos(slope_rad) * np.cos(zenith_rad)
-        + np.sin(slope_rad) * np.sin(zenith_rad) * np.cos(azimuth_rad - aspect_rad)
-    )
+    shade = np.cos(slope_rad) * np.cos(zenith_rad) + np.sin(slope_rad) * np.sin(
+        zenith_rad
+    ) * np.cos(azimuth_rad - aspect_rad)
 
     return np.clip(shade, 0.0, 1.0).astype(np.float32)
 

@@ -27,31 +27,31 @@ from ..core.hillshade import multidirectional_hillshade
 class HillshadeAlgorithm(QgsProcessingAlgorithm):
     """Multi-directional hillshade from a DEM raster layer."""
 
-    INPUT = 'INPUT'
-    AZIMUTHS = 'AZIMUTHS'
-    ALTITUDE = 'ALTITUDE'
-    OUTPUT = 'OUTPUT'
+    INPUT = "INPUT"
+    AZIMUTHS = "AZIMUTHS"
+    ALTITUDE = "ALTITUDE"
+    OUTPUT = "OUTPUT"
 
     # -- metadata -----------------------------------------------------------
 
     def name(self):
-        return 'multidirectional_hillshade'
+        return "multidirectional_hillshade"
 
     def displayName(self):
-        return 'Multi-directional Hillshade'
+        return "Multi-directional Hillshade"
 
     def group(self):
-        return 'LiDAR Relief'
+        return "LiDAR Relief"
 
     def groupId(self):
-        return 'lidar_relief'
+        return "lidar_relief"
 
     def shortHelpString(self):
         return (
-            'Generates a multi-directional hillshade by blending '
-            'hillshades from several sun azimuth angles. Useful for '
-            'revealing subtle topographic features that a single-'
-            'direction hillshade would miss.'
+            "Generates a multi-directional hillshade by blending "
+            "hillshades from several sun azimuth angles. Useful for "
+            "revealing subtle topographic features that a single-"
+            "direction hillshade would miss."
         )
 
     def createInstance(self):
@@ -63,20 +63,20 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.INPUT,
-                'Input DEM',
+                "Input DEM",
             )
         )
         self.addParameter(
             QgsProcessingParameterString(
                 self.AZIMUTHS,
-                'Sun azimuth angles (comma-separated degrees)',
-                defaultValue='315,45,135,225,270,360',
+                "Sun azimuth angles (comma-separated degrees)",
+                defaultValue="315,45,135,225,270,360",
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
-                'Sun altitude (degrees)',
+                "Sun altitude (degrees)",
                 type=QgsProcessingParameterNumber.Double,
                 defaultValue=45.0,
                 minValue=0.0,
@@ -86,7 +86,7 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                'Hillshade output',
+                "Hillshade output",
             )
         )
 
@@ -106,10 +106,10 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
 
         # Parse azimuths
         list_float_azimuths = [
-            float(a.strip()) for a in azimuths_str.split(',') if a.strip()
+            float(a.strip()) for a in azimuths_str.split(",") if a.strip()
         ]
 
-        feedback.setProgressText('Reading DEM...')
+        feedback.setProgressText("Reading DEM...")
         dem_data = read_dem_to_array(source.source(), feedback)
 
         if feedback.isCanceled():
@@ -117,7 +117,7 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
 
         float_cellsize = get_cell_size(dem_data.geotransform)
 
-        feedback.setProgressText('Computing multi-directional hillshade...')
+        feedback.setProgressText("Computing multi-directional hillshade...")
         array_result = multidirectional_hillshade(
             dem_data.array,
             float_cellsize,
@@ -128,8 +128,10 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText('Writing output...')
-        array_result = apply_nodata_mask(dem_data.array, array_result, dem_data.nodata_mask)
+        feedback.setProgressText("Writing output...")
+        array_result = apply_nodata_mask(
+            dem_data.array, array_result, dem_data.nodata_mask
+        )
         write_array_to_raster(
             array_result,
             output_path,

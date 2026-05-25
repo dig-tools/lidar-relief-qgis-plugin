@@ -64,7 +64,7 @@ def compute_slope(
     dz_dy = ((g + 2.0 * h + i) - (a + 2.0 * b + c)) / (8.0 * cellsize)
 
     # Slope magnitude
-    slope_rad = np.arctan(np.sqrt(dz_dx ** 2 + dz_dy ** 2))
+    slope_rad = np.arctan(np.sqrt(dz_dx**2 + dz_dy**2))
 
     if units == "degrees":
         result = np.rad2deg(slope_rad).astype(np.float32)

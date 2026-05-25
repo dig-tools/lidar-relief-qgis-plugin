@@ -24,17 +24,18 @@ class LidarReliefProvider(QgsProcessingProvider):
     """Processing provider that groups all LiDAR Relief algorithms."""
 
     def id(self):
-        return 'lidar_relief'
+        return "lidar_relief"
 
     def name(self):
-        return 'LiDAR Relief'
+        return "LiDAR Relief"
 
     def longName(self):
-        return 'LiDAR Relief Visualisation Tools'
+        return "LiDAR Relief Visualisation Tools"
 
     def icon(self):
         import os
-        icon_path = os.path.join(os.path.dirname(__file__), 'resources', 'icon.png')
+
+        icon_path = os.path.join(os.path.dirname(__file__), "resources", "icon.png")
         return QIcon(icon_path)
 
     def loadAlgorithms(self):

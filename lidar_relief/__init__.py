@@ -20,4 +20,5 @@ def classFactory(iface):
         Must return a valid plugin object with initGui() and unload() methods.
     """
     from .plugin import LidarReliefPlugin
+
     return LidarReliefPlugin(iface)

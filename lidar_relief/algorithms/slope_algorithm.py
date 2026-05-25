@@ -27,32 +27,32 @@ from ..core.slope import compute_slope
 class SlopeAlgorithm(QgsProcessingAlgorithm):
     """Slope — terrain gradient in degrees or percent."""
 
-    INPUT = 'INPUT'
-    UNITS = 'UNITS'
-    OUTPUT = 'OUTPUT'
+    INPUT = "INPUT"
+    UNITS = "UNITS"
+    OUTPUT = "OUTPUT"
 
-    _UNIT_OPTIONS = ['Degrees', 'Percent']
-    _UNIT_VALUES = ['degrees', 'percent']
+    _UNIT_OPTIONS = ["Degrees", "Percent"]
+    _UNIT_VALUES = ["degrees", "percent"]
 
     # -- metadata -----------------------------------------------------------
 
     def name(self):
-        return 'slope'
+        return "slope"
 
     def displayName(self):
-        return 'Slope'
+        return "Slope"
 
     def group(self):
-        return 'LiDAR Relief'
+        return "LiDAR Relief"
 
     def groupId(self):
-        return 'lidar_relief'
+        return "lidar_relief"
 
     def shortHelpString(self):
         return (
-            'Computes terrain slope from a DEM. Output can be in '
-            'degrees (0–90) or percent (0–∞). Slope highlights '
-            'edges of features such as banks, scarps, and walls.'
+            "Computes terrain slope from a DEM. Output can be in "
+            "degrees (0–90) or percent (0–∞). Slope highlights "
+            "edges of features such as banks, scarps, and walls."
         )
 
     def createInstance(self):
@@ -64,13 +64,13 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.INPUT,
-                'Input DEM',
+                "Input DEM",
             )
         )
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.UNITS,
-                'Output units',
+                "Output units",
                 options=self._UNIT_OPTIONS,
                 defaultValue=0,  # Degrees
             )
@@ -78,7 +78,7 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                'Slope output',
+                "Slope output",
             )
         )
 
@@ -97,7 +97,7 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
 
         str_units = self._UNIT_VALUES[int_unit_index]
 
-        feedback.setProgressText('Reading DEM...')
+        feedback.setProgressText("Reading DEM...")
         dem_data = read_dem_to_array(source.source(), feedback)
 
         if feedback.isCanceled():
@@ -105,14 +105,16 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
 
         float_cellsize = get_cell_size(dem_data.geotransform)
 
-        feedback.setProgressText(f'Computing slope ({str_units})...')
+        feedback.setProgressText(f"Computing slope ({str_units})...")
         array_result = compute_slope(dem_data.array, float_cellsize, str_units)
 
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText('Writing output...')
-        array_result = apply_nodata_mask(dem_data.array, array_result, dem_data.nodata_mask)
+        feedback.setProgressText("Writing output...")
+        array_result = apply_nodata_mask(
+            dem_data.array, array_result, dem_data.nodata_mask
+        )
         write_array_to_raster(
             array_result,
             output_path,

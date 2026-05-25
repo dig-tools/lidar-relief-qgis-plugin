@@ -31,36 +31,36 @@ from ..core.slope import compute_slope
 class BatchAlgorithm(QgsProcessingAlgorithm):
     """Run multiple LiDAR relief algorithms on the same DEM in one step."""
 
-    INPUT = 'INPUT'
-    RUN_HILLSHADE = 'RUN_HILLSHADE'
-    RUN_SLRM = 'RUN_SLRM'
-    RUN_SVF = 'RUN_SVF'
-    RUN_SLOPE = 'RUN_SLOPE'
-    HILLSHADE_OUTPUT = 'HILLSHADE_OUTPUT'
-    SLRM_OUTPUT = 'SLRM_OUTPUT'
-    SVF_OUTPUT = 'SVF_OUTPUT'
-    SLOPE_OUTPUT = 'SLOPE_OUTPUT'
+    INPUT = "INPUT"
+    RUN_HILLSHADE = "RUN_HILLSHADE"
+    RUN_SLRM = "RUN_SLRM"
+    RUN_SVF = "RUN_SVF"
+    RUN_SLOPE = "RUN_SLOPE"
+    HILLSHADE_OUTPUT = "HILLSHADE_OUTPUT"
+    SLRM_OUTPUT = "SLRM_OUTPUT"
+    SVF_OUTPUT = "SVF_OUTPUT"
+    SLOPE_OUTPUT = "SLOPE_OUTPUT"
 
     # -- metadata -----------------------------------------------------------
 
     def name(self):
-        return 'batch_relief'
+        return "batch_relief"
 
     def displayName(self):
-        return 'Batch Relief Visualisation'
+        return "Batch Relief Visualisation"
 
     def group(self):
-        return 'LiDAR Relief'
+        return "LiDAR Relief"
 
     def groupId(self):
-        return 'lidar_relief'
+        return "lidar_relief"
 
     def shortHelpString(self):
         return (
-            'Runs multiple relief visualisation algorithms on the same '
-            'DEM in a single step. The DEM is read once and each '
-            'selected algorithm is executed with default parameters. '
-            'Disable any algorithms you do not need via the checkboxes.'
+            "Runs multiple relief visualisation algorithms on the same "
+            "DEM in a single step. The DEM is read once and each "
+            "selected algorithm is executed with default parameters. "
+            "Disable any algorithms you do not need via the checkboxes."
         )
 
     def createInstance(self):
@@ -72,7 +72,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.INPUT,
-                'Input DEM',
+                "Input DEM",
             )
         )
 
@@ -80,28 +80,28 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.RUN_HILLSHADE,
-                'Run Multi-directional Hillshade',
+                "Run Multi-directional Hillshade",
                 defaultValue=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.RUN_SLRM,
-                'Run Simple Local Relief Model',
+                "Run Simple Local Relief Model",
                 defaultValue=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.RUN_SVF,
-                'Run Sky-View Factor',
+                "Run Sky-View Factor",
                 defaultValue=True,
             )
         )
         self.addParameter(
             QgsProcessingParameterBoolean(
                 self.RUN_SLOPE,
-                'Run Slope',
+                "Run Slope",
                 defaultValue=True,
             )
         )
@@ -109,7 +109,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
         # Optional outputs
         hillshade_param = QgsProcessingParameterRasterDestination(
             self.HILLSHADE_OUTPUT,
-            'Hillshade output',
+            "Hillshade output",
             optional=True,
             createByDefault=True,
         )
@@ -117,7 +117,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
 
         slrm_param = QgsProcessingParameterRasterDestination(
             self.SLRM_OUTPUT,
-            'SLRM output',
+            "SLRM output",
             optional=True,
             createByDefault=True,
         )
@@ -125,7 +125,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
 
         svf_param = QgsProcessingParameterRasterDestination(
             self.SVF_OUTPUT,
-            'SVF output',
+            "SVF output",
             optional=True,
             createByDefault=True,
         )
@@ -133,7 +133,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
 
         slope_param = QgsProcessingParameterRasterDestination(
             self.SLOPE_OUTPUT,
-            'Slope output',
+            "Slope output",
             optional=True,
             createByDefault=True,
         )
@@ -162,23 +162,23 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
         # Build task list for progress tracking
         list_tasks = []
         if bool_hillshade:
-            list_tasks.append('hillshade')
+            list_tasks.append("hillshade")
         if bool_slrm:
-            list_tasks.append('slrm')
+            list_tasks.append("slrm")
         if bool_svf:
-            list_tasks.append('svf')
+            list_tasks.append("svf")
         if bool_slope:
-            list_tasks.append('slope')
+            list_tasks.append("slope")
 
         if not list_tasks:
-            feedback.reportError('No algorithms selected — nothing to do.')
+            feedback.reportError("No algorithms selected — nothing to do.")
             return {}
 
         int_total = len(list_tasks)
         int_done = 0
 
         # Read DEM once
-        feedback.setProgressText('Reading DEM...')
+        feedback.setProgressText("Reading DEM...")
         dem_data = read_dem_to_array(source.source(), feedback)
 
         if feedback.isCanceled():
@@ -191,7 +191,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 return dict_results
 
-            feedback.setProgressText('Computing multi-directional hillshade...')
+            feedback.setProgressText("Computing multi-directional hillshade...")
             array_hs = multidirectional_hillshade(
                 dem_data.array,
                 float_cellsize,
@@ -218,7 +218,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 return dict_results
 
-            feedback.setProgressText('Computing Simple Local Relief Model...')
+            feedback.setProgressText("Computing Simple Local Relief Model...")
             array_slrm = simple_local_relief_model(dem_data.array, 20)
             array_slrm = apply_nodata_mask(
                 dem_data.array, array_slrm, dem_data.nodata_mask
@@ -242,14 +242,12 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 return dict_results
 
-            feedback.setProgressText('Computing Sky-View Factor (16 directions)...')
+            feedback.setProgressText("Computing Sky-View Factor (16 directions)...")
             array_svf = sky_view_factor(dem_data.array, float_cellsize, 16, 10)
             array_svf = apply_nodata_mask(
                 dem_data.array, array_svf, dem_data.nodata_mask
             )
-            svf_path = self.parameterAsOutputLayer(
-                parameters, self.SVF_OUTPUT, context
-            )
+            svf_path = self.parameterAsOutputLayer(parameters, self.SVF_OUTPUT, context)
             write_array_to_raster(
                 array_svf,
                 svf_path,
@@ -266,8 +264,8 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 return dict_results
 
-            feedback.setProgressText('Computing slope (degrees)...')
-            array_slope = compute_slope(dem_data.array, float_cellsize, 'degrees')
+            feedback.setProgressText("Computing slope (degrees)...")
+            array_slope = compute_slope(dem_data.array, float_cellsize, "degrees")
             array_slope = apply_nodata_mask(
                 dem_data.array, array_slope, dem_data.nodata_mask
             )

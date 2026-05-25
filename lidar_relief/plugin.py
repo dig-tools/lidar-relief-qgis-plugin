@@ -29,6 +29,7 @@ class LidarReliefPlugin:
     def initGui(self):
         """Register the LiDAR Relief Processing provider with QGIS."""
         from .provider import LidarReliefProvider
+
         self.provider = LidarReliefProvider()
         QgsApplication.processingRegistry().addProvider(self.provider)
 

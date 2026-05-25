@@ -7,7 +7,6 @@ rules:
 """
 
 import numpy as np
-import pytest
 
 from lidar_relief.core.hillshade import multidirectional_hillshade
 

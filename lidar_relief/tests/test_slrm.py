@@ -7,7 +7,6 @@ rules:
 """
 
 import numpy as np
-import pytest
 
 from lidar_relief.core.slrm import simple_local_relief_model
 
@@ -35,8 +34,9 @@ class TestSimpleLocalReliefModel:
         interior_valid = interior[~np.isnan(interior)]
 
         # Should be approximately zero (some edge effects expected)
-        assert np.abs(np.mean(interior_valid)) < 2.0, \
+        assert np.abs(np.mean(interior_valid)) < 2.0, (
             "Linear trend should be mostly removed in the interior"
+        )
 
     def test_ridge_furrow_preserved(self, ridge_furrow_dem):
         """Micro-relief (ridges) should survive after removing the macro-slope.
@@ -51,12 +51,14 @@ class TestSimpleLocalReliefModel:
         interior_valid = interior[~np.isnan(interior)]
 
         # Standard deviation should be non-trivial (the ridges survived)
-        assert np.std(interior_valid) > 0.05, \
+        assert np.std(interior_valid) > 0.05, (
             "Micro-relief (ridges) should survive SLRM detrending"
+        )
 
         # The residuals should oscillate around zero
-        assert np.abs(np.mean(interior_valid)) < 1.0, \
+        assert np.abs(np.mean(interior_valid)) < 1.0, (
             "SLRM residuals should centre around zero"
+        )
 
     def test_radius_effect(self, ridge_furrow_dem):
         """Larger radius should preserve larger-scale features."""

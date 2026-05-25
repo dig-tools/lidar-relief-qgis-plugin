@@ -26,29 +26,29 @@ from ..core.openness import topographic_openness
 class OpennessAlgorithm(QgsProcessingAlgorithm):
     """Topographic Openness from a DEM raster layer."""
 
-    INPUT = 'INPUT'
-    OPENNESS_TYPE = 'OPENNESS_TYPE'
-    NUM_DIRECTIONS = 'NUM_DIRECTIONS'
-    SEARCH_RADIUS = 'SEARCH_RADIUS'
-    OUTPUT = 'OUTPUT'
+    INPUT = "INPUT"
+    OPENNESS_TYPE = "OPENNESS_TYPE"
+    NUM_DIRECTIONS = "NUM_DIRECTIONS"
+    SEARCH_RADIUS = "SEARCH_RADIUS"
+    OUTPUT = "OUTPUT"
 
     def name(self):
-        return 'topographic_openness'
+        return "topographic_openness"
 
     def displayName(self):
-        return 'Topographic Openness'
+        return "Topographic Openness"
 
     def group(self):
-        return 'LiDAR Relief'
+        return "LiDAR Relief"
 
     def groupId(self):
-        return 'lidar_relief'
+        return "lidar_relief"
 
     def shortHelpString(self):
         return (
-            'Generates Topographic Openness (Positive or Negative). '
-            'Positive Openness highlights convex features like mounds and ridges. '
-            'Negative Openness highlights concave features like pits and ditches.'
+            "Generates Topographic Openness (Positive or Negative). "
+            "Positive Openness highlights convex features like mounds and ridges. "
+            "Negative Openness highlights concave features like pits and ditches."
         )
 
     def createInstance(self):
@@ -58,29 +58,29 @@ class OpennessAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.INPUT,
-                'Input DEM',
+                "Input DEM",
             )
         )
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.OPENNESS_TYPE,
-                'Openness Type',
-                options=['Positive (Convex)', 'Negative (Concave)'],
+                "Openness Type",
+                options=["Positive (Convex)", "Negative (Concave)"],
                 defaultValue=0,
             )
         )
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.NUM_DIRECTIONS,
-                'Search Directions',
-                options=['8 (fast)', '16 (standard)', '32 (quality)'],
+                "Search Directions",
+                options=["8 (fast)", "16 (standard)", "32 (quality)"],
                 defaultValue=1,
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SEARCH_RADIUS,
-                'Search Radius (pixels)',
+                "Search Radius (pixels)",
                 type=QgsProcessingParameterNumber.Integer,
                 defaultValue=20,
                 minValue=1,
@@ -90,7 +90,7 @@ class OpennessAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                'Openness output',
+                "Openness output",
             )
         )
 
@@ -101,16 +101,16 @@ class OpennessAlgorithm(QgsProcessingAlgorithm):
         radius = self.parameterAsInt(parameters, self.SEARCH_RADIUS, context)
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        is_negative = (type_idx == 1)
+        is_negative = type_idx == 1
         num_dirs = [8, 16, 32][dir_idx]
 
-        feedback.setProgressText('Reading DEM...')
+        feedback.setProgressText("Reading DEM...")
         dem_data = read_dem_to_array(source.source(), feedback)
         if feedback.isCanceled():
             return {}
         float_cellsize = get_cell_size(dem_data.geotransform)
 
-        feedback.setProgressText(f'Computing Openness ({num_dirs} dirs, r={radius})...')
+        feedback.setProgressText(f"Computing Openness ({num_dirs} dirs, r={radius})...")
         array_result = topographic_openness(
             dem_data.array,
             float_cellsize,
@@ -123,8 +123,10 @@ class OpennessAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText('Writing output...')
-        array_result = apply_nodata_mask(dem_data.array, array_result, dem_data.nodata_mask)
+        feedback.setProgressText("Writing output...")
+        array_result = apply_nodata_mask(
+            dem_data.array, array_result, dem_data.nodata_mask
+        )
         write_array_to_raster(
             array_result,
             output_path,

@@ -28,35 +28,35 @@ from ..core.svf import sky_view_factor
 class SvfAlgorithm(QgsProcessingAlgorithm):
     """Sky-View Factor — portion of sky visible from each cell."""
 
-    INPUT = 'INPUT'
-    NUM_DIRECTIONS = 'NUM_DIRECTIONS'
-    SEARCH_RADIUS = 'SEARCH_RADIUS'
-    OUTPUT = 'OUTPUT'
+    INPUT = "INPUT"
+    NUM_DIRECTIONS = "NUM_DIRECTIONS"
+    SEARCH_RADIUS = "SEARCH_RADIUS"
+    OUTPUT = "OUTPUT"
 
-    _DIRECTION_OPTIONS = ['8 (fast)', '16 (standard)', '32 (quality)']
+    _DIRECTION_OPTIONS = ["8 (fast)", "16 (standard)", "32 (quality)"]
     _DIRECTION_VALUES = [8, 16, 32]
 
     # -- metadata -----------------------------------------------------------
 
     def name(self):
-        return 'sky_view_factor'
+        return "sky_view_factor"
 
     def displayName(self):
-        return 'Sky-View Factor (SVF)'
+        return "Sky-View Factor (SVF)"
 
     def group(self):
-        return 'LiDAR Relief'
+        return "LiDAR Relief"
 
     def groupId(self):
-        return 'lidar_relief'
+        return "lidar_relief"
 
     def shortHelpString(self):
         return (
-            'Computes the Sky-View Factor for each cell — the proportion '
-            'of the sky hemisphere visible from that point. Values range '
-            'from 0 (completely obstructed) to 1 (flat open terrain). '
-            'SVF excels at revealing subtle concave features such as '
-            'ditches and hollow ways.'
+            "Computes the Sky-View Factor for each cell — the proportion "
+            "of the sky hemisphere visible from that point. Values range "
+            "from 0 (completely obstructed) to 1 (flat open terrain). "
+            "SVF excels at revealing subtle concave features such as "
+            "ditches and hollow ways."
         )
 
     def createInstance(self):
@@ -68,13 +68,13 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.INPUT,
-                'Input DEM',
+                "Input DEM",
             )
         )
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.NUM_DIRECTIONS,
-                'Number of azimuth directions',
+                "Number of azimuth directions",
                 options=self._DIRECTION_OPTIONS,
                 defaultValue=1,  # index 1 → 16 (standard)
             )
@@ -82,7 +82,7 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.SEARCH_RADIUS,
-                'Search radius (pixels)',
+                "Search radius (pixels)",
                 type=QgsProcessingParameterNumber.Integer,
                 defaultValue=10,
                 minValue=1,
@@ -92,7 +92,7 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                'SVF output',
+                "SVF output",
             )
         )
 
@@ -112,7 +112,7 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
 
         int_num_directions = self._DIRECTION_VALUES[int_dir_index]
 
-        feedback.setProgressText('Reading DEM...')
+        feedback.setProgressText("Reading DEM...")
         dem_data = read_dem_to_array(source.source(), feedback)
 
         if feedback.isCanceled():
@@ -121,7 +121,7 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
         float_cellsize = get_cell_size(dem_data.geotransform)
 
         feedback.setProgressText(
-            f'Computing Sky-View Factor ({int_num_directions} directions)...'
+            f"Computing Sky-View Factor ({int_num_directions} directions)..."
         )
         array_result = sky_view_factor(
             dem_data.array,
@@ -133,8 +133,10 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText('Writing output...')
-        array_result = apply_nodata_mask(dem_data.array, array_result, dem_data.nodata_mask)
+        feedback.setProgressText("Writing output...")
+        array_result = apply_nodata_mask(
+            dem_data.array, array_result, dem_data.nodata_mask
+        )
         write_array_to_raster(
             array_result,
             output_path,

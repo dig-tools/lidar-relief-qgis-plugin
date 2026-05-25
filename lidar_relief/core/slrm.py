@@ -14,6 +14,7 @@ import numpy as np
 # Attempt scipy import — QGIS bundles it on most platforms
 try:
     from scipy.ndimage import uniform_filter
+
     _HAS_SCIPY = True
 except ImportError:
     _HAS_SCIPY = False
@@ -37,8 +38,11 @@ def _box_filter_1d(array: np.ndarray, size: int, axis: int) -> np.ndarray:
         Edge handling: reflect padding to reduce boundary artifacts.
     """
     half = size // 2
-    padded = np.pad(array, [(half, half) if i == axis else (0, 0)
-                            for i in range(array.ndim)], mode="reflect")
+    padded = np.pad(
+        array,
+        [(half, half) if i == axis else (0, 0) for i in range(array.ndim)],
+        mode="reflect",
+    )
 
     cumsum = np.cumsum(padded, axis=axis)
 

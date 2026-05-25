@@ -15,7 +15,6 @@ from qgis.core import (
 from ..core.raster_utils import (
     read_dem_to_array,
     write_array_to_raster,
-    get_cell_size,
 )
 from ..core.mstp import multi_scale_topographic_position
 
@@ -23,31 +22,31 @@ from ..core.mstp import multi_scale_topographic_position
 class MstpAlgorithm(QgsProcessingAlgorithm):
     """Multi-Scale Topographic Position from a DEM."""
 
-    INPUT = 'INPUT'
-    LOCAL_RADIUS = 'LOCAL_RADIUS'
-    MESO_RADIUS = 'MESO_RADIUS'
-    BROAD_RADIUS = 'BROAD_RADIUS'
-    LIGHTNESS = 'LIGHTNESS'
-    OUTPUT = 'OUTPUT'
+    INPUT = "INPUT"
+    LOCAL_RADIUS = "LOCAL_RADIUS"
+    MESO_RADIUS = "MESO_RADIUS"
+    BROAD_RADIUS = "BROAD_RADIUS"
+    LIGHTNESS = "LIGHTNESS"
+    OUTPUT = "OUTPUT"
 
     def name(self):
-        return 'mstp'
+        return "mstp"
 
     def displayName(self):
-        return 'Multi-Scale Topographic Position (MSTP)'
+        return "Multi-Scale Topographic Position (MSTP)"
 
     def group(self):
-        return 'LiDAR Relief'
+        return "LiDAR Relief"
 
     def groupId(self):
-        return 'lidar_relief'
+        return "lidar_relief"
 
     def shortHelpString(self):
         return (
-            'Generates an RGB composite of Topographic Position at three scales. '
-            'Broad scale (Red) highlights large landforms. '
-            'Meso scale (Green) highlights medium features. '
-            'Local scale (Blue) highlights micro-topography like walls and ditches.'
+            "Generates an RGB composite of Topographic Position at three scales. "
+            "Broad scale (Red) highlights large landforms. "
+            "Meso scale (Green) highlights medium features. "
+            "Local scale (Blue) highlights micro-topography like walls and ditches."
         )
 
     def createInstance(self):
@@ -57,13 +56,13 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterLayer(
                 self.INPUT,
-                'Input DEM',
+                "Input DEM",
             )
         )
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.LOCAL_RADIUS,
-                'Local Scale Radius (pixels) -> Blue',
+                "Local Scale Radius (pixels) -> Blue",
                 type=QgsProcessingParameterNumber.Integer,
                 defaultValue=5,
             )
@@ -71,7 +70,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.MESO_RADIUS,
-                'Meso Scale Radius (pixels) -> Green',
+                "Meso Scale Radius (pixels) -> Green",
                 type=QgsProcessingParameterNumber.Integer,
                 defaultValue=50,
             )
@@ -79,7 +78,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.BROAD_RADIUS,
-                'Broad Scale Radius (pixels) -> Red',
+                "Broad Scale Radius (pixels) -> Red",
                 type=QgsProcessingParameterNumber.Integer,
                 defaultValue=500,
             )
@@ -87,7 +86,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterNumber(
                 self.LIGHTNESS,
-                'Lightness/Contrast Multiplier',
+                "Lightness/Contrast Multiplier",
                 type=QgsProcessingParameterNumber.Double,
                 defaultValue=1.0,
             )
@@ -95,7 +94,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                'MSTP (RGB) output',
+                "MSTP (RGB) output",
             )
         )
 
@@ -107,12 +106,12 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
         lightness = self.parameterAsDouble(parameters, self.LIGHTNESS, context)
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        feedback.setProgressText('Reading DEM...')
+        feedback.setProgressText("Reading DEM...")
         dem_data = read_dem_to_array(source.source(), feedback)
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText('Computing MSTP...')
+        feedback.setProgressText("Computing MSTP...")
         rgb_result = multi_scale_topographic_position(
             dem_data.array,
             local_r,
@@ -125,7 +124,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText('Writing RGB output...')
+        feedback.setProgressText("Writing RGB output...")
         # Note: write_array_to_raster in raster_utils.py needs to handle 3D arrays
         # (It already does, we just pass the array and it loops over bands if len(shape)==3)
         write_array_to_raster(

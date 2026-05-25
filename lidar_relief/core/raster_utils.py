@@ -18,7 +18,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
-from osgeo import gdal, osr
+from osgeo import gdal
 
 # Suppress GDAL printing errors to stderr; we handle them ourselves.
 gdal.UseExceptions()
@@ -32,6 +32,7 @@ class DemData:
         array is always float32 with nodata pixels set to np.nan.
         nodata_mask is a boolean array: True where original data was nodata.
     """
+
     array: np.ndarray
     nodata: Optional[float]
     nodata_mask: np.ndarray
@@ -135,11 +136,11 @@ def write_array_to_raster(
         gdal_dtype = gdal.GDT_Float32
 
     driver = gdal.GetDriverByName("GTiff")
-    
+
     creation_options = ["COMPRESS=LZW", "TILED=YES"]
     if bands == 3:
         creation_options.append("PHOTOMETRIC=RGB")
-        
+
     out_dataset = driver.Create(
         output_path,
         x_size,
@@ -172,8 +173,8 @@ def write_array_to_raster(
         for b in range(bands):
             out_band = out_dataset.GetRasterBand(b + 1)
             write_array = array[:, :, b].copy()
-            
-            # RGB images don't typically use nodata in the same way, 
+
+            # RGB images don't typically use nodata in the same way,
             # but if it's not uint8 we should handle NaN
             if array.dtype != np.uint8:
                 if nodata is not None:
@@ -183,7 +184,7 @@ def write_array_to_raster(
             elif nodata is not None:
                 # For uint8, if nodata is provided, just set it
                 out_band.SetNoDataValue(float(nodata))
-                
+
             out_band.WriteArray(write_array)
 
     out_dataset.FlushCache()
@@ -242,7 +243,7 @@ def process_in_tiles(
     halo_size: int,
     tile_size: int = 2048,
     feedback=None,
-    **kwargs
+    **kwargs,
 ) -> None:
     """Process a large DEM in tiles to conserve memory.
 
@@ -277,7 +278,7 @@ def process_in_tiles(
         out_bands = test_out.shape[2]
     else:
         out_bands = 1
-        
+
     if test_out.dtype == np.uint8:
         gdal_dtype = gdal.GDT_Byte
     else:
@@ -287,18 +288,20 @@ def process_in_tiles(
     creation_options = ["COMPRESS=LZW", "TILED=YES"]
     if out_bands == 3:
         creation_options.append("PHOTOMETRIC=RGB")
-        
+
     out_dataset = driver.Create(
         output_path, x_size, y_size, out_bands, gdal_dtype, options=creation_options
     )
     out_dataset.SetGeoTransform(geotransform)
     out_dataset.SetProjection(dataset.GetProjection())
-    
+
     if nodata is not None and gdal_dtype != gdal.GDT_Byte:
         for b in range(out_bands):
             out_dataset.GetRasterBand(b + 1).SetNoDataValue(float(nodata))
 
-    total_tiles = ((x_size + tile_size - 1) // tile_size) * ((y_size + tile_size - 1) // tile_size)
+    total_tiles = ((x_size + tile_size - 1) // tile_size) * (
+        (y_size + tile_size - 1) // tile_size
+    )
     tiles_done = 0
 
     for y in range(0, y_size, tile_size):
@@ -319,27 +322,35 @@ def process_in_tiles(
             read_y_size = min(y_size - read_y, win_y_size + (y - read_y) + halo_size)
 
             # Read block
-            block = band.ReadAsArray(read_x, read_y, read_x_size, read_y_size).astype(np.float32)
-            
+            block = band.ReadAsArray(read_x, read_y, read_x_size, read_y_size).astype(
+                np.float32
+            )
+
             # Handle nodata in input
             block_nodata_mask = np.zeros_like(block, dtype=bool)
             if nodata is not None:
-                block_nodata_mask = np.isclose(block, nodata, rtol=1e-5) | np.isnan(block)
+                block_nodata_mask = np.isclose(block, nodata, rtol=1e-5) | np.isnan(
+                    block
+                )
             else:
                 block_nodata_mask = np.isnan(block)
-                
+
             block[block_nodata_mask] = np.nan
 
             # Run algorithm
             result_block = algorithm_func(block, cellsize, **kwargs)
-            
+
             # Reapply nodata mask
             if result_block.ndim == 3:
                 for b in range(out_bands):
                     band_slice = result_block[:, :, b]
-                    band_slice[block_nodata_mask] = 0 if gdal_dtype == gdal.GDT_Byte else np.nan
+                    band_slice[block_nodata_mask] = (
+                        0 if gdal_dtype == gdal.GDT_Byte else np.nan
+                    )
             else:
-                result_block[block_nodata_mask] = 0 if gdal_dtype == gdal.GDT_Byte else np.nan
+                result_block[block_nodata_mask] = (
+                    0 if gdal_dtype == gdal.GDT_Byte else np.nan
+                )
 
             # Extract the interior (remove halo)
             crop_top = y - read_y

@@ -74,8 +74,8 @@ def topographic_openness(
 
         # Track maximum elevation angle along this direction
         # Start at 0, meaning flat horizon.
-        # Wait: theoretically it could be negative if the terrain drops away, 
-        # but openness is bounded by 90 deg (pi/2) for flat horizon. 
+        # Wait: theoretically it could be negative if the terrain drops away,
+        # but openness is bounded by 90 deg (pi/2) for flat horizon.
         # Actually, if the terrain drops away, the maximum angle can be negative.
         # So we initialize with -pi/2 (straight down).
         max_angle = np.full((rows, cols), -np.pi / 2, dtype=np.float32)
@@ -102,7 +102,7 @@ def topographic_openness(
 
         # Openness for this direction is zenith angle (pi/2 - max_angle)
         # Zenith angle = 0 if straight up, pi/2 if horizontal, >pi/2 if below horizontal
-        openness_sum += (np.pi / 2.0 - max_angle)
+        openness_sum += np.pi / 2.0 - max_angle
 
         if feedback is not None:
             feedback.setProgress(int((dir_idx + 1) / total_steps * 100))

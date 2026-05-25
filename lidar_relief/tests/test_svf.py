@@ -7,7 +7,6 @@ rules:
 """
 
 import numpy as np
-import pytest
 
 from lidar_relief.core.svf import sky_view_factor
 
@@ -20,7 +19,9 @@ class TestSkyViewFactor:
 
         No surrounding terrain occludes the sky on a flat surface.
         """
-        result = sky_view_factor(flat_dem, cellsize, num_directions=16, search_radius=10)
+        result = sky_view_factor(
+            flat_dem, cellsize, num_directions=16, search_radius=10
+        )
         valid = result[~np.isnan(result)]
 
         # Should be very close to 1.0
@@ -28,7 +29,9 @@ class TestSkyViewFactor:
 
     def test_output_range(self, cone_dem, cellsize):
         """SVF values must be in [0, 1] for all valid pixels."""
-        result = sky_view_factor(cone_dem, cellsize, num_directions=16, search_radius=10)
+        result = sky_view_factor(
+            cone_dem, cellsize, num_directions=16, search_radius=10
+        )
         valid = result[~np.isnan(result)]
         assert np.all(valid >= 0.0), "SVF must be >= 0"
         assert np.all(valid <= 1.0), "SVF must be <= 1"
@@ -46,13 +49,18 @@ class TestSkyViewFactor:
         # Far corner (flat terrain, unaffected by pit)
         flat_svf = result[5, 5]
 
-        assert pit_svf < flat_svf, \
+        assert pit_svf < flat_svf, (
             f"Pit SVF ({pit_svf:.3f}) should be lower than flat SVF ({flat_svf:.3f})"
+        )
 
     def test_more_directions_changes_result(self, cone_dem, cellsize):
         """More directions should produce a slightly different (more accurate) result."""
-        result_8 = sky_view_factor(cone_dem, cellsize, num_directions=8, search_radius=10)
-        result_32 = sky_view_factor(cone_dem, cellsize, num_directions=32, search_radius=10)
+        result_8 = sky_view_factor(
+            cone_dem, cellsize, num_directions=8, search_radius=10
+        )
+        result_32 = sky_view_factor(
+            cone_dem, cellsize, num_directions=32, search_radius=10
+        )
 
         # Both should be valid
         assert np.all(result_8[~np.isnan(result_8)] >= 0.0)
@@ -62,12 +70,15 @@ class TestSkyViewFactor:
         valid_8 = result_8[~np.isnan(result_8)]
         valid_32 = result_32[~np.isnan(result_32)]
         # Not asserting which is larger — just that they differ
-        assert not np.allclose(valid_8, valid_32, atol=1e-3), \
+        assert not np.allclose(valid_8, valid_32, atol=1e-3), (
             "8 and 32 directions should give slightly different SVF values"
+        )
 
     def test_nodata_preserved(self, dem_with_nodata, cellsize):
         """NaN pixels in input should remain NaN in output."""
-        result = sky_view_factor(dem_with_nodata, cellsize, num_directions=8, search_radius=5)
+        result = sky_view_factor(
+            dem_with_nodata, cellsize, num_directions=8, search_radius=5
+        )
         input_nan = np.isnan(dem_with_nodata)
         output_nan = np.isnan(result)
         assert np.all(output_nan[input_nan]), "Input NaN pixels must be NaN in output"
@@ -84,8 +95,12 @@ class TestSkyViewFactor:
 
     def test_search_radius_effect(self, pit_dem, cellsize):
         """Larger search radius should detect more distant horizon occlusion."""
-        result_short = sky_view_factor(pit_dem, cellsize, num_directions=16, search_radius=5)
-        result_long = sky_view_factor(pit_dem, cellsize, num_directions=16, search_radius=20)
+        result_short = sky_view_factor(
+            pit_dem, cellsize, num_directions=16, search_radius=5
+        )
+        result_long = sky_view_factor(
+            pit_dem, cellsize, num_directions=16, search_radius=20
+        )
 
         # Both should be valid SVF
         assert np.all(result_short[~np.isnan(result_short)] >= 0.0)
@@ -96,5 +111,6 @@ class TestSkyViewFactor:
         pit_svf_short = result_short[50, 50]
         pit_svf_long = result_long[50, 50]
 
-        assert pit_svf_long <= pit_svf_short + 0.01, \
+        assert pit_svf_long <= pit_svf_short + 0.01, (
             "Longer search radius should detect more occlusion in pit"
+        )
