@@ -8,7 +8,7 @@ fi
 VERSION=$1
 
 echo "Tagging release v$VERSION and pushing to trigger GitHub Actions..."
-git tag "v$VERSION"
+git tag -a "v$VERSION" -m "Release v$VERSION"
 git push github "v$VERSION"
 git push gitlab "v$VERSION"
 
