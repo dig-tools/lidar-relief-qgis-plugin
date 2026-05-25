@@ -20,8 +20,10 @@ ENV/
 dist/
 build/
 *.egg-info/
-lidar_relief_plugin_v1.zip
-lidar_relief.zip
+*.zip
+
+# Documentation
+docs/
 
 # OS generated files
 .DS_Store

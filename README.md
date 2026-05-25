@@ -17,11 +17,12 @@ This plugin integrates directly into the QGIS Processing Toolbox and provides th
 ## Installation
 
 ### Method 1: Install from ZIP (Recommended for Users)
-1. Download the `lidar_relief.zip` file.
-2. Open QGIS.
-3. Go to **Plugins → Manage and Install Plugins...** from the top menu.
-4. Select the **Install from ZIP** tab on the left.
-5. Browse for the downloaded `lidar_relief.zip` file and click **Install Plugin**.
+1. Navigate to the **[Releases](https://github.com/mabo-du/lidar-relief-qgis-plugin/releases)** page (or GitLab equivalent).
+2. Download the latest `lidar_relief.zip` file (or similarly named asset).
+3. Open QGIS.
+4. Go to **Plugins → Manage and Install Plugins...** from the top menu.
+5. Select the **Install from ZIP** tab on the left.
+6. Browse for the downloaded zip file and click **Install Plugin**.
 6. The algorithms will now be available in your **Processing Toolbox** (gear icon) under the `LiDAR Relief` group.
 
 ### Method 2: Manual Installation (For Developers)
