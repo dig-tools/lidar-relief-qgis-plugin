@@ -3,7 +3,7 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=Generate LiDAR-derived archaeological relief visualizations (Hillshade, SLRM, SVF, Slope) directly from a loaded DEM layer.
-version=1.0.2
+version=1.0.3
 author=LiDAR Relief Contributors
 email=lidar.relief@example.com
 
@@ -24,6 +24,9 @@ experimental=True
 deprecated=False
 
 changelog=
+    1.0.3 - Bypass strict linter rules
+    - Bypassed mutually exclusive W503/W504 flake8 rules using any().
+    
     1.0.2 - Final PEP8 & Permission Fixes
     - Fixed final PEP8 W503 strict warnings for QGIS linter.
     - Standardized file permissions across the package.
