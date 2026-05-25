@@ -11,6 +11,7 @@ about=A native QGIS plugin that generates standard LiDAR-derived relief visualiz
 
 tracker=https://github.com/mabo-du/lidar-relief-qgis-plugin/issues
 repository=https://github.com/mabo-du/lidar-relief-qgis-plugin
+homepage=https://github.com/mabo-du/lidar-relief-qgis-plugin
 
 hasProcessingProvider=yes
 
