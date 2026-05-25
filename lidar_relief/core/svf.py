@@ -175,10 +175,10 @@ def _shift_array(
 
     # Bounds check
     if (
-        src_row_end <= src_row_start
-        or src_col_end <= src_col_start
-        or dst_row_end <= dst_row_start
-        or dst_col_end <= dst_col_start
+        src_row_end <= src_row_start or
+        src_col_end <= src_col_start or
+        dst_row_end <= dst_row_start or
+        dst_col_end <= dst_col_start
     ):
         return result
 
