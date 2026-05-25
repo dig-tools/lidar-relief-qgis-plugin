@@ -3,7 +3,7 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=Generate LiDAR-derived archaeological relief visualizations (Hillshade, SLRM, SVF, Slope) directly from a loaded DEM layer.
-version=1.0.0
+version=1.0.1
 author=LiDAR Relief Contributors
 email=lidar.relief@example.com
 
@@ -24,6 +24,12 @@ experimental=True
 deprecated=False
 
 changelog=
+    1.0.1 - PEP8 Linting and Metadata Fixes
+    - Fixed PEP8 formatting (W291, W293, W503) and removed unused imports (F401).
+    - Updated plugin homepage, repository, and tracker metadata links.
+    - Included LICENSE file in the QGIS package.
+    - Updated QGIS compatibility range (3.0 - 4.99).
+    
     1.0.0 - Initial release
     - Multi-directional Hillshade algorithm
     - Simple Local Relief Model (SLRM) algorithm
