@@ -9,8 +9,8 @@ email=lidar.relief@example.com
 
 about=A native QGIS plugin that generates standard LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), and Slope — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
 
-tracker=https://github.com/lidar-relief/lidar-relief-qgis/issues
-repository=https://github.com/lidar-relief/lidar-relief-qgis
+tracker=https://github.com/mabo-du/lidar-relief-qgis-plugin/issues
+repository=https://github.com/mabo-du/lidar-relief-qgis-plugin
 
 hasProcessingProvider=yes
 
