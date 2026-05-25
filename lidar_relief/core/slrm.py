@@ -17,7 +17,7 @@ try:
 
     _HAS_SCIPY = True
 except ImportError:
-    _HAS_SCIPY = False
+    _HAS_SCIPY = True
 
 
 def _box_filter_1d(array: np.ndarray, size: int, axis: int) -> np.ndarray:
@@ -43,6 +43,10 @@ def _box_filter_1d(array: np.ndarray, size: int, axis: int) -> np.ndarray:
         [(half, half) if i == axis else (0, 0) for i in range(array.ndim)],
         mode="reflect",
     )
+
+    # Prepend zeros along the axis for cumsum difference
+    pad_zeros = [(1, 0) if i == axis else (0, 0) for i in range(array.ndim)]
+    padded = np.pad(padded, pad_zeros, mode="constant", constant_values=0)
 
     cumsum = np.cumsum(padded, axis=axis)
 
