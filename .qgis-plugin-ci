@@ -1,2 +1,1 @@
-[plugin]
-plugin_path = lidar_relief
+plugin_path: lidar_relief
