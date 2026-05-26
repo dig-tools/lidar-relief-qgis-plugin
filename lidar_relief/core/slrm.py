@@ -17,7 +17,7 @@ try:
 
     _HAS_SCIPY = True
 except ImportError:
-    _HAS_SCIPY = True
+    _HAS_SCIPY = False
 
 
 def _box_filter_1d(array: np.ndarray, size: int, axis: int) -> np.ndarray:
