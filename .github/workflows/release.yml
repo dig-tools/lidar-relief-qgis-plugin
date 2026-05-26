@@ -28,6 +28,13 @@ jobs:
       - name: Install qgis-plugin-ci
         run: pip install qgis-plugin-ci
 
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          gh release create v${VERSION} --title "Release v${VERSION}" --generate-notes
+
       - name: Package and Release to GitHub and QGIS
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,12 +44,14 @@ jobs:
           if [ -n "${{ secrets.QGIS_TOKEN }}" ]; then
             echo "Publishing to QGIS using QGIS_TOKEN..."
             qgis-plugin-ci release ${VERSION} \
+              --release-tag v${VERSION} \
               --github-token ${GITHUB_TOKEN} \
               --qgis-token ${{ secrets.QGIS_TOKEN }} \
               --create-plugin-repo
           elif [ -n "${{ secrets.OSGEO_USERNAME }}" ]; then
             echo "Publishing to QGIS using OSGEO credentials..."
             qgis-plugin-ci release ${VERSION} \
+              --release-tag v${VERSION} \
               --github-token ${GITHUB_TOKEN} \
               --osgeo-username ${{ secrets.OSGEO_USERNAME }} \
               --osgeo-password ${{ secrets.OSGEO_PASSWORD }} \
@@ -50,6 +59,7 @@ jobs:
           else
             echo "QGIS credentials not found. Releasing only to GitHub."
             qgis-plugin-ci release ${VERSION} \
+              --release-tag v${VERSION} \
               --github-token ${GITHUB_TOKEN} \
               --create-plugin-repo
           fi
