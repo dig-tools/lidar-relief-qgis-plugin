@@ -683,7 +683,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                         is_negative=False,
                         feedback=feedback,
                     )
-                    / 90.0
+                    / 90.0  # fmt: skip
                 ).clip(0, 1)
                 open_neg = (
                     topographic_openness(
@@ -694,7 +694,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                         is_negative=True,
                         feedback=feedback,
                     )
-                    / 90.0
+                    / 90.0  # fmt: skip
                 ).clip(0, 1)
                 local_dom = (
                     compute_local_dominance(
@@ -705,7 +705,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                         observer_h=p_cfg["ld_observer_height"],
                         feedback=feedback,
                     )
-                    / 255.0
+                    / 255.0  # fmt: skip
                 ).clip(0, 1)
                 slope = (compute_slope(block, cellsize, units="degrees") / 90.0).clip(
                     0, 1

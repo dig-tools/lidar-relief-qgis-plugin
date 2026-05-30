@@ -43,7 +43,8 @@ def compute_local_dominance(
 
             # Slice padded DEM to get target_z
             target_z = padded_dem[
-                pad_w + dy : pad_w + dy + rows, pad_w + dx : pad_w + dx + cols
+                pad_w + dy : pad_w + dy + rows,
+                pad_w + dx : pad_w + dx + cols,  # fmt: skip
             ]
 
             delta_z = z_obs - target_z

@@ -23,7 +23,7 @@ class TestMSTP:
 
         # Check pixel (5, 5)
         # radius=2 means window is from [3:8, 3:8] (exclusive end)
-        window = dem[5 - radius : 5 + radius + 1, 5 - radius : 5 + radius + 1]
+        window = dem[5 - radius:5 + radius + 1, 5 - radius:5 + radius + 1]  # fmt: skip
         mean_slow = np.mean(window)
         std_slow = np.std(window)
 
