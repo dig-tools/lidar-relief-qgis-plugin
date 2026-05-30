@@ -18,6 +18,13 @@ from .algorithms.batch_algorithm import BatchAlgorithm
 from .algorithms.openness_algorithm import OpennessAlgorithm
 from .algorithms.mstp_algorithm import MstpAlgorithm
 from .algorithms.blend_algorithm import BlendAlgorithm
+from .algorithms.vat_algorithm import VatAlgorithm
+from .algorithms.red_relief_algorithm import RedReliefAlgorithm
+from .algorithms.local_dominance_algorithm import LocalDominanceAlgorithm
+from .algorithms.asvf_algorithm import AsvfAlgorithm
+from .algorithms.e4mstp_algorithm import E4MstpAlgorithm
+from .algorithms.pca_algorithm import PcaAlgorithm
+from .algorithms.ml_export_algorithm import MlExportAlgorithm
 
 
 class LidarReliefProvider(QgsProcessingProvider):
@@ -52,3 +59,10 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(OpennessAlgorithm())
         self.addAlgorithm(MstpAlgorithm())
         self.addAlgorithm(BlendAlgorithm())
+        self.addAlgorithm(VatAlgorithm())
+        self.addAlgorithm(RedReliefAlgorithm())
+        self.addAlgorithm(LocalDominanceAlgorithm())
+        self.addAlgorithm(AsvfAlgorithm())
+        self.addAlgorithm(E4MstpAlgorithm())
+        self.addAlgorithm(PcaAlgorithm())
+        self.addAlgorithm(MlExportAlgorithm())

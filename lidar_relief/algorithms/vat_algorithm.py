@@ -1,10 +1,9 @@
-"""slrm_algorithm.py — QGIS Processing wrapper for Simple Local Relief Model.
-exports: SlrmAlgorithm
+"""vat_algorithm.py — QGIS Processing wrapper for VAT Composite.
+exports: VatAlgorithm
 used_by: provider.py → loadAlgorithms
 rules:
   all raster I/O through core.raster_utils
-  computation through core.slrm
-  check feedback.isCanceled() between major steps
+  computation through core.vat
 """
 
 from qgis.core import (
@@ -17,24 +16,23 @@ from qgis.core import (
 from ..core.raster_utils import (
     process_in_tiles,
 )
-from ..core.slrm import simple_local_relief_model
+from ..core.vat import compute_vat
 from ..styling import ReliefLayerPostProcessor
 
 
-class SlrmAlgorithm(QgsProcessingAlgorithm):
-    """Simple Local Relief Model — removes large-scale topography."""
+class VatAlgorithm(QgsProcessingAlgorithm):
+    """Visualisation for Archaeological Topography (VAT)."""
 
     INPUT = "INPUT"
-    RADIUS = "RADIUS"
+    SVF_RADIUS = "SVF_RADIUS"
+    OPENNESS_RADIUS = "OPENNESS_RADIUS"
     OUTPUT = "OUTPUT"
 
-    # -- metadata -----------------------------------------------------------
-
     def name(self):
-        return "simple_local_relief_model"
+        return "vat_composite"
 
     def displayName(self):
-        return "Simple Local Relief Model (SLRM)"
+        return "VAT Composite"
 
     def group(self):
         return "LiDAR Relief"
@@ -44,17 +42,13 @@ class SlrmAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self):
         return (
-            "Computes a Simple Local Relief Model by subtracting a "
-            "smoothed (low-pass) version of the DEM from the original. "
-            "This highlights micro-relief features such as ditches, "
-            "banks, and ridge-and-furrow while suppressing broad "
-            "topographic trends."
+            "Visualisation for Archaeological Topography (VAT). "
+            "Blends Hillshade, Slope, Positive Openness, and SVF "
+            "into a single composite highlighting both macro and micro topography."
         )
 
     def createInstance(self):
-        return SlrmAlgorithm()
-
-    # -- parameters ---------------------------------------------------------
+        return VatAlgorithm()
 
     def initAlgorithm(self, config=None):
         self.addParameter(
@@ -65,46 +59,53 @@ class SlrmAlgorithm(QgsProcessingAlgorithm):
         )
         self.addParameter(
             QgsProcessingParameterNumber(
-                self.RADIUS,
-                "Smoothing radius (pixels)",
+                self.SVF_RADIUS,
+                "SVF Search Radius (pixels)",
                 type=QgsProcessingParameterNumber.Integer,
-                defaultValue=20,
-                minValue=2,
+                defaultValue=50,
+                minValue=1,
+                maxValue=500,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.OPENNESS_RADIUS,
+                "Openness Search Radius (pixels)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=50,
+                minValue=1,
                 maxValue=500,
             )
         )
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                "SLRM output",
+                "VAT output",
             )
         )
 
-    # -- processing ---------------------------------------------------------
-
     def processAlgorithm(self, parameters, context, feedback):
-        """Run Simple Local Relief Model.
-
-        Rules:
-            Abort gracefully on cancel.
-        """
         source = self.parameterAsRasterLayer(parameters, self.INPUT, context)
-        int_radius = self.parameterAsInt(parameters, self.RADIUS, context)
+        svf_r = self.parameterAsInt(parameters, self.SVF_RADIUS, context)
+        openness_r = self.parameterAsInt(parameters, self.OPENNESS_RADIUS, context)
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        feedback.setProgressText("Computing Simple Local Relief Model in tiles...")
+        halo_size = max(svf_r, openness_r)
 
-        def slrm_wrapper(block, cellsize, radius):
-            return simple_local_relief_model(block, radius)
+        feedback.setProgressText("Computing VAT Composite in tiles...")
+
+        def vat_wrapper(block, cellsize, svf_radius, openness_radius, feedback):
+            return compute_vat(block, cellsize, svf_radius, openness_radius, feedback)
 
         process_in_tiles(
             source_path=source.source(),
             output_path=output_path,
-            algorithm_func=slrm_wrapper,
-            halo_size=int_radius,
+            algorithm_func=vat_wrapper,
+            halo_size=halo_size,
             tile_size=2048,
             feedback=feedback,
-            radius=int_radius,
+            svf_radius=svf_r,
+            openness_radius=openness_r,
         )
 
         if feedback.isCanceled():

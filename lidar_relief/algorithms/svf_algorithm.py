@@ -17,12 +17,10 @@ from qgis.core import (
 )
 
 from ..core.raster_utils import (
-    read_dem_to_array,
-    write_array_to_raster,
-    apply_nodata_mask,
-    get_cell_size,
+    process_in_tiles,
 )
 from ..core.svf import sky_view_factor
+from ..styling import ReliefLayerPostProcessor
 
 
 class SvfAlgorithm(QgsProcessingAlgorithm):
@@ -31,6 +29,7 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
     INPUT = "INPUT"
     NUM_DIRECTIONS = "NUM_DIRECTIONS"
     SEARCH_RADIUS = "SEARCH_RADIUS"
+    NOISE_LEVEL = "NOISE_LEVEL"
     OUTPUT = "OUTPUT"
 
     _DIRECTION_OPTIONS = ["8 (fast)", "16 (standard)", "32 (quality)"]
@@ -90,6 +89,14 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
+            QgsProcessingParameterEnum(
+                self.NOISE_LEVEL,
+                "Noise removal look-ahead",
+                options=["None", "Low", "Medium", "High"],
+                defaultValue=0,
+            )
+        )
+        self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
                 "SVF output",
@@ -108,41 +115,34 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
         source = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         int_dir_index = self.parameterAsEnum(parameters, self.NUM_DIRECTIONS, context)
         int_search_radius = self.parameterAsInt(parameters, self.SEARCH_RADIUS, context)
+        int_noise_level = self.parameterAsEnum(parameters, self.NOISE_LEVEL, context)
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         int_num_directions = self._DIRECTION_VALUES[int_dir_index]
 
-        feedback.setProgressText("Reading DEM...")
-        dem_data = read_dem_to_array(source.source(), feedback)
-
-        if feedback.isCanceled():
-            return {}
-
-        float_cellsize = get_cell_size(dem_data.geotransform)
-
         feedback.setProgressText(
-            f"Computing Sky-View Factor ({int_num_directions} directions)..."
+            f"Computing Sky-View Factor ({int_num_directions} directions) in tiles..."
         )
-        array_result = sky_view_factor(
-            dem_data.array,
-            float_cellsize,
-            int_search_radius,
-            int_num_directions,
+
+        process_in_tiles(
+            source_path=source.source(),
+            output_path=output_path,
+            algorithm_func=sky_view_factor,
+            halo_size=int_search_radius,
+            tile_size=2048,
+            feedback=feedback,
+            num_directions=int_num_directions,
+            search_radius=int_search_radius,
+            noise_level=int_noise_level,
         )
 
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText("Writing output...")
-        array_result = apply_nodata_mask(
-            dem_data.array, array_result, dem_data.nodata_mask
-        )
-        write_array_to_raster(
-            array_result,
-            output_path,
-            dem_data.geotransform,
-            dem_data.projection,
-            dem_data.nodata,
-        )
+        if context.willLoadLayerOnCompletion(output_path):
+            details = context.layerToLoadOnCompletionDetails(output_path)
+            details.setPostProcessor(
+                ReliefLayerPostProcessor(self.displayName(), stretch_type="stddev")
+            )
 
         return {self.OUTPUT: output_path}

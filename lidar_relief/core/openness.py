@@ -10,7 +10,7 @@ rules:
 """
 
 import numpy as np
-from .svf import _shift_array
+from .array_utils import _shift_array
 
 
 def topographic_openness(
@@ -72,13 +72,8 @@ def topographic_openness(
         dr = dir_rows[dir_idx]
         dc = dir_cols[dir_idx]
 
-        # Track maximum elevation angle along this direction
-        # Start at 0, meaning flat horizon.
-        # Wait: theoretically it could be negative if the terrain drops away,
-        # but openness is bounded by 90 deg (pi/2) for flat horizon.
-        # Actually, if the terrain drops away, the maximum angle can be negative.
-        # So we initialize with -pi/2 (straight down).
-        max_angle = np.full((rows, cols), -np.pi / 2, dtype=np.float32)
+        # Start at -1.0, which corresponds to -pi/2 (straight down)
+        max_sin = np.full((rows, cols), -1.0, dtype=np.float32)
 
         for dist in range(1, search_radius + 1):
             row_offset = dr * dist
@@ -96,10 +91,12 @@ def topographic_openness(
             )
 
             delta_z = shifted - dem_filled
-            angle = np.arctan2(delta_z, actual_dist)
+            hypot_3d = np.hypot(delta_z, actual_dist)
+            sin_angle = delta_z / hypot_3d
 
-            max_angle = np.maximum(max_angle, angle)
+            max_sin = np.maximum(max_sin, sin_angle)
 
+        max_angle = np.arcsin(max_sin)
         # Openness for this direction is zenith angle (pi/2 - max_angle)
         # Zenith angle = 0 if straight up, pi/2 if horizontal, >pi/2 if below horizontal
         openness_sum += np.pi / 2.0 - max_angle

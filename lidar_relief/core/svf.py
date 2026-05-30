@@ -1,16 +1,12 @@
 """svf.py — Sky-View Factor (SVF) computation for terrain analysis.
-exports: sky_view_factor(dem, cellsize, num_directions, search_radius) -> ndarray
+exports: sky_view_factor(dem, cellsize, num_directions, search_radius, noise_level) -> ndarray
 used_by: algorithms/svf_algorithm.py → sky_view_factor
-         algorithms/batch_algorithm.py → sky_view_factor
 rules:
   Pure NumPy — no QGIS imports.
-  Input dem must be float32 with nodata as np.nan.
-  Output is float32 in range [0, 1] (1 = full sky visibility, 0 = fully occluded).
-  This is the most computationally expensive algorithm — all operations MUST be vectorised.
-  No per-pixel Python loops.
 """
 
 import numpy as np
+from .array_utils import _shift_array
 
 
 def sky_view_factor(
@@ -18,59 +14,22 @@ def sky_view_factor(
     cellsize: float,
     num_directions: int = 16,
     search_radius: int = 10,
+    noise_level: int = 0,
     feedback=None,
 ) -> np.ndarray:
-    """Compute Sky-View Factor for each pixel of a DEM.
-
-    For each pixel, samples the horizon elevation angle at N evenly-spaced
-    azimuths over a search radius R:
-
-        γ_i = max elevation angle along direction i within radius R
-        SVF = 1 − mean(sin(γ_i)) for i = 1..N
-
-    Where the elevation angle at distance d along direction i is:
-        γ_i(d) = arctan((DEM(x_d, y_d) - DEM(x_0, y_0)) / (d * cellsize))
-
-    Args:
-        dem: 2D float32 elevation array (nodata as np.nan).
-        cellsize: Pixel size in map units.
-        num_directions: Number of azimuth directions (8, 16, or 32).
-                       More directions = more accurate but slower.
-        search_radius: Maximum search distance in pixels.
-        feedback: Optional QGIS feedback object for progress/cancellation.
-
-    Returns:
-        Float32 array of SVF values in [0, 1].
-        - 1.0 = full sky visibility (flat terrain, ridgetops)
-        - 0.0 = completely occluded (theoretical deep pit)
-
-    Rules:
-        All operations must be fully vectorised across the raster.
-        Shifted arrays are used to simulate ray-casting along each direction.
-        NaN pixels in input are preserved as NaN in output.
-        Must check feedback.isCanceled() in the direction loop.
-    """
     rows, cols = dem.shape
 
-    # Fill NaN with the array mean for shifted lookups
     nan_mask = np.isnan(dem)
     dem_mean = np.nanmean(dem)
     dem_filled = dem.copy()
     dem_filled[nan_mask] = dem_mean
 
-    # Generate evenly-spaced azimuth angles
     azimuths_rad = np.linspace(0, 2 * np.pi, num_directions, endpoint=False)
+    dir_rows = -np.cos(azimuths_rad)
+    dir_cols = np.sin(azimuths_rad)
 
-    # Pre-compute direction vectors (row_offset, col_offset) per unit step
-    # Note: in array coordinates, row increases downward (south), col increases right (east)
-    # Azimuth 0 = north = negative row direction
-    dir_rows = -np.cos(azimuths_rad)  # negative because north = row decrease
-    dir_cols = np.sin(azimuths_rad)  # east = col increase
-
-    # Accumulate sin(max_horizon_angle) for each direction
     sin_horizon_sum = np.zeros((rows, cols), dtype=np.float32)
 
-    total_steps = num_directions
     for dir_idx in range(num_directions):
         if feedback is not None and feedback.isCanceled():
             return np.full_like(dem, np.nan)
@@ -78,114 +37,79 @@ def sky_view_factor(
         dr = dir_rows[dir_idx]
         dc = dir_cols[dir_idx]
 
-        # Track maximum elevation angle along this direction for all pixels
-        max_angle = np.zeros((rows, cols), dtype=np.float32)
+        max_sin = np.zeros((rows, cols), dtype=np.float32)
+
+        if noise_level > 0:
+            candidate_sin = np.zeros((rows, cols), dtype=np.float32)
+            countdown = np.zeros((rows, cols), dtype=np.int8)
+            candidate_valid = np.zeros((rows, cols), dtype=bool)
 
         for dist in range(1, search_radius + 1):
-            # Compute the row/col offset for this distance step
             row_offset = dr * dist
             col_offset = dc * dist
-
-            # Compute shifted elevation using bilinear-like nearest sampling
-            # Use integer rounding for the shift offsets
             row_shift = int(round(row_offset))
             col_shift = int(round(col_offset))
 
-            # Skip if the shift is zero (would compare pixel to itself)
             if row_shift == 0 and col_shift == 0:
                 continue
 
-            # Create the shifted view via slicing (much faster than np.roll)
             shifted = _shift_array(dem_filled, row_shift, col_shift, dem_mean)
-
-            # Horizontal distance in map units
             actual_dist = np.sqrt(
                 (row_shift * cellsize) ** 2 + (col_shift * cellsize) ** 2
             )
 
-            # Elevation angle: arctan(Δz / distance)
             delta_z = shifted - dem_filled
-            angle = np.arctan2(delta_z, actual_dist)
+            hypot_3d = np.hypot(delta_z, actual_dist)
+            # Avoid division by zero
+            hypot_3d = np.where(hypot_3d == 0, 1.0, hypot_3d)
+            sin_angle = delta_z / hypot_3d
 
-            # Update running maximum
-            max_angle = np.maximum(max_angle, angle)
+            if noise_level > 0:
+                is_tracking = countdown > 0
 
-        # Clamp negative angles to 0 (below horizon doesn't occlude sky)
-        max_angle = np.maximum(max_angle, 0.0)
+                # Validate if subsequent pixel maintains or exceeds candidate
+                just_validated = is_tracking & (sin_angle >= candidate_sin)
+                candidate_valid = candidate_valid | just_validated
 
-        # Accumulate sin(max_horizon_angle)
-        sin_horizon_sum += np.sin(max_angle)
+                # New candidate found
+                is_new_candidate = sin_angle > np.maximum(max_sin, candidate_sin)
+
+                # If tracking and found new candidate, old candidate is validated implicitly (since sin_angle > candidate_sin)
+                max_sin = np.where(
+                    is_tracking & is_new_candidate, candidate_sin, max_sin
+                )
+
+                # Set new candidate
+                candidate_sin = np.where(is_new_candidate, sin_angle, candidate_sin)
+                countdown = np.where(is_new_candidate, noise_level, countdown)
+                candidate_valid = np.where(is_new_candidate, False, candidate_valid)
+
+                # Decrement countdown
+                countdown = np.where(
+                    ~is_new_candidate & is_tracking, countdown - 1, countdown
+                )
+
+                # Check expirations
+                expired = (countdown == 0) & is_tracking & ~is_new_candidate
+                max_sin = np.where(expired & candidate_valid, candidate_sin, max_sin)
+                candidate_sin = np.where(expired, max_sin, candidate_sin)
+                candidate_valid = np.where(expired, False, candidate_valid)
+            else:
+                max_sin = np.maximum(max_sin, sin_angle)
+
+        if noise_level > 0:
+            # At the end of the ray, promote candidates that were valid, or didn't get enough look-ahead pixels to be rejected
+            promote_end = candidate_valid | (countdown > 0)
+            max_sin = np.where(promote_end, np.maximum(max_sin, candidate_sin), max_sin)
+
+        max_sin = np.maximum(max_sin, 0.0)
+        sin_horizon_sum += max_sin
 
         if feedback is not None:
-            feedback.setProgress(int((dir_idx + 1) / total_steps * 100))
+            feedback.setProgress(int((dir_idx + 1) / num_directions * 100))
 
-    # SVF = 1 - mean(sin(horizon_angles))
     svf = 1.0 - (sin_horizon_sum / num_directions)
-
-    # Clamp to valid range
     svf = np.clip(svf, 0.0, 1.0).astype(np.float32)
-
-    # Restore NaN
     svf[nan_mask] = np.nan
 
     return svf
-
-
-def _shift_array(
-    array: np.ndarray,
-    row_shift: int,
-    col_shift: int,
-    fill_value: float,
-) -> np.ndarray:
-    """Create a shifted view of a 2D array, filling edges with a constant.
-
-    This is equivalent to np.roll but without wrapping — shifted-out pixels
-    are filled with fill_value instead of wrapping around.
-
-    Args:
-        array: 2D input array.
-        row_shift: Number of rows to shift (positive = shift down).
-        col_shift: Number of columns to shift (positive = shift right).
-        fill_value: Value to fill at shifted-out edges.
-
-    Returns:
-        Shifted array with same shape as input.
-
-    Rules:
-        No wrapping — edge-shifted pixels get fill_value.
-        This prevents horizon rays from wrapping around the raster edges.
-    """
-    rows, cols = array.shape
-    result = np.full_like(array, fill_value)
-
-    # Compute source and destination slices
-    if row_shift >= 0:
-        src_row_start, src_row_end = 0, rows - row_shift
-        dst_row_start, dst_row_end = row_shift, rows
-    else:
-        src_row_start, src_row_end = -row_shift, rows
-        dst_row_start, dst_row_end = 0, rows + row_shift
-
-    if col_shift >= 0:
-        src_col_start, src_col_end = 0, cols - col_shift
-        dst_col_start, dst_col_end = col_shift, cols
-    else:
-        src_col_start, src_col_end = -col_shift, cols
-        dst_col_start, dst_col_end = 0, cols + col_shift
-
-    # Bounds check
-    if any(
-        [
-            src_row_end <= src_row_start,
-            src_col_end <= src_col_start,
-            dst_row_end <= dst_row_start,
-            dst_col_end <= dst_col_start,
-        ]
-    ):
-        return result
-
-    result[dst_row_start:dst_row_end, dst_col_start:dst_col_end] = array[
-        src_row_start:src_row_end, src_col_start:src_col_end
-    ]
-
-    return result

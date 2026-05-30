@@ -16,12 +16,10 @@ from qgis.core import (
 )
 
 from ..core.raster_utils import (
-    read_dem_to_array,
-    write_array_to_raster,
-    apply_nodata_mask,
-    get_cell_size,
+    process_in_tiles,
 )
 from ..core.hillshade import multidirectional_hillshade
+from ..styling import ReliefLayerPostProcessor
 
 
 class HillshadeAlgorithm(QgsProcessingAlgorithm):
@@ -109,35 +107,26 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
             float(a.strip()) for a in azimuths_str.split(",") if a.strip()
         ]
 
-        feedback.setProgressText("Reading DEM...")
-        dem_data = read_dem_to_array(source.source(), feedback)
+        feedback.setProgressText("Computing multi-directional hillshade in tiles...")
 
-        if feedback.isCanceled():
-            return {}
-
-        float_cellsize = get_cell_size(dem_data.geotransform)
-
-        feedback.setProgressText("Computing multi-directional hillshade...")
-        array_result = multidirectional_hillshade(
-            dem_data.array,
-            float_cellsize,
-            list_float_azimuths,
-            float_altitude,
+        process_in_tiles(
+            source_path=source.source(),
+            output_path=output_path,
+            algorithm_func=multidirectional_hillshade,
+            halo_size=1,
+            tile_size=2048,
+            feedback=feedback,
+            azimuths=list_float_azimuths,
+            altitude=float_altitude,
         )
 
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText("Writing output...")
-        array_result = apply_nodata_mask(
-            dem_data.array, array_result, dem_data.nodata_mask
-        )
-        write_array_to_raster(
-            array_result,
-            output_path,
-            dem_data.geotransform,
-            dem_data.projection,
-            dem_data.nodata,
-        )
+        if context.willLoadLayerOnCompletion(output_path):
+            details = context.layerToLoadOnCompletionDetails(output_path)
+            details.setPostProcessor(
+                ReliefLayerPostProcessor(self.displayName(), stretch_type="stddev")
+            )
 
         return {self.OUTPUT: output_path}

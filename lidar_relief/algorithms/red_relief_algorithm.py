@@ -1,44 +1,37 @@
-"""slope_algorithm.py — QGIS Processing wrapper for Slope computation.
-exports: SlopeAlgorithm
+"""red_relief_algorithm.py — QGIS Processing wrapper for Simple Red Relief.
+exports: RedReliefAlgorithm
 used_by: provider.py → loadAlgorithms
 rules:
   all raster I/O through core.raster_utils
-  computation through core.slope
-  enum index maps to ['degrees', 'percent']
-  check feedback.isCanceled() between major steps
+  computation through core.blend
 """
 
 from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterRasterLayer,
-    QgsProcessingParameterEnum,
+    QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
 )
 
 from ..core.raster_utils import (
     process_in_tiles,
 )
-from ..core.slope import compute_slope
+from ..core.blend import simple_red_relief
 from ..styling import ReliefLayerPostProcessor
 
 
-class SlopeAlgorithm(QgsProcessingAlgorithm):
-    """Slope — terrain gradient in degrees or percent."""
+class RedReliefAlgorithm(QgsProcessingAlgorithm):
+    """Simple Red Relief Composite."""
 
     INPUT = "INPUT"
-    UNITS = "UNITS"
+    RADIUS = "RADIUS"
     OUTPUT = "OUTPUT"
 
-    _UNIT_OPTIONS = ["Degrees", "Percent"]
-    _UNIT_VALUES = ["degrees", "percent"]
-
-    # -- metadata -----------------------------------------------------------
-
     def name(self):
-        return "slope"
+        return "simple_red_relief"
 
     def displayName(self):
-        return "Slope"
+        return "Simple Red Relief Composite"
 
     def group(self):
         return "LiDAR Relief"
@@ -48,15 +41,13 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self):
         return (
-            "Computes terrain slope from a DEM. Output can be in "
-            "degrees (0–90) or percent (0–∞). Slope highlights "
-            "edges of features such as banks, scarps, and walls."
+            "Simple Red Relief Composite. "
+            "Blends Simple Local Relief Model (SLRM) and Slope "
+            "to create a visualization that highlights micro-topography."
         )
 
     def createInstance(self):
-        return SlopeAlgorithm()
-
-    # -- parameters ---------------------------------------------------------
+        return RedReliefAlgorithm()
 
     def initAlgorithm(self, config=None):
         self.addParameter(
@@ -66,45 +57,40 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
-            QgsProcessingParameterEnum(
-                self.UNITS,
-                "Output units",
-                options=self._UNIT_OPTIONS,
-                defaultValue=0,  # Degrees
+            QgsProcessingParameterNumber(
+                self.RADIUS,
+                "SLRM Smoothing radius (pixels)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=20,
+                minValue=2,
+                maxValue=500,
             )
         )
         self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
-                "Slope output",
+                "Red Relief output",
             )
         )
 
-    # -- processing ---------------------------------------------------------
-
     def processAlgorithm(self, parameters, context, feedback):
-        """Run slope computation.
-
-        Rules:
-            Map enum index to unit string via _UNIT_VALUES.
-            Abort gracefully on cancel.
-        """
         source = self.parameterAsRasterLayer(parameters, self.INPUT, context)
-        int_unit_index = self.parameterAsEnum(parameters, self.UNITS, context)
+        int_radius = self.parameterAsInt(parameters, self.RADIUS, context)
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        str_units = self._UNIT_VALUES[int_unit_index]
+        feedback.setProgressText("Computing Simple Red Relief in tiles...")
 
-        feedback.setProgressText(f"Computing slope ({str_units}) in tiles...")
+        def red_relief_wrapper(block, cellsize, slrm_radius, feedback):
+            return simple_red_relief(block, cellsize, slrm_radius, feedback)
 
         process_in_tiles(
             source_path=source.source(),
             output_path=output_path,
-            algorithm_func=compute_slope,
-            halo_size=1,
+            algorithm_func=red_relief_wrapper,
+            halo_size=int_radius,
             tile_size=2048,
             feedback=feedback,
-            units=str_units,
+            slrm_radius=int_radius,
         )
 
         if feedback.isCanceled():

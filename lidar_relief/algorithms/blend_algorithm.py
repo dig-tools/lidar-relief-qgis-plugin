@@ -9,6 +9,7 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterEnum,
+    QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
 )
 
@@ -17,6 +18,7 @@ from ..core.raster_utils import (
     write_array_to_raster,
 )
 from ..core.blend import blend_rasters
+from ..styling import ReliefLayerPostProcessor
 import numpy as np
 
 
@@ -26,6 +28,7 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
     INPUT_A = "INPUT_A"
     INPUT_B = "INPUT_B"
     BLEND_MODE = "BLEND_MODE"
+    OPACITY = "OPACITY"
     OUTPUT = "OUTPUT"
 
     def name(self):
@@ -66,8 +69,18 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterEnum(
                 self.BLEND_MODE,
                 "Blend Mode",
-                options=["Multiply", "Screen", "Overlay"],
+                options=["Multiply", "Screen", "Overlay", "Soft Light"],
                 defaultValue=0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.OPACITY,
+                "Opacity (0.0 to 1.0)",
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=1.0,
+                minValue=0.0,
+                maxValue=1.0,
             )
         )
         self.addParameter(
@@ -81,9 +94,10 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
         source_a = self.parameterAsRasterLayer(parameters, self.INPUT_A, context)
         source_b = self.parameterAsRasterLayer(parameters, self.INPUT_B, context)
         mode_idx = self.parameterAsEnum(parameters, self.BLEND_MODE, context)
+        opacity = self.parameterAsDouble(parameters, self.OPACITY, context)
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        mode_str = ["multiply", "screen", "overlay"][mode_idx]
+        mode_str = ["multiply", "screen", "overlay", "soft_light"][mode_idx]
 
         feedback.setProgressText("Reading Base Layer...")
         data_a = read_dem_to_array(source_a.source(), feedback)
@@ -118,7 +132,7 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
             arr_a = arr_a * 255.0
 
         feedback.setProgressText(f"Blending layers using {mode_str}...")
-        blended = blend_rasters(arr_a, arr_b, mode_str, feedback)
+        blended = blend_rasters(arr_a, arr_b, mode_str, opacity, feedback)
 
         if feedback.isCanceled():
             return {}
@@ -131,5 +145,11 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
             data_a.projection,
             data_a.nodata,
         )
+
+        if context.willLoadLayerOnCompletion(output_path):
+            details = context.layerToLoadOnCompletionDetails(output_path)
+            details.setPostProcessor(
+                ReliefLayerPostProcessor(self.displayName(), stretch_type="stddev")
+            )
 
         return {self.OUTPUT: output_path}

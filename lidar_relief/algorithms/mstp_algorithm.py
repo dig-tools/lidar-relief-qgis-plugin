@@ -13,10 +13,10 @@ from qgis.core import (
 )
 
 from ..core.raster_utils import (
-    read_dem_to_array,
-    write_array_to_raster,
+    process_in_tiles,
 )
 from ..core.mstp import multi_scale_topographic_position
+from ..styling import ReliefLayerPostProcessor
 
 
 class MstpAlgorithm(QgsProcessingAlgorithm):
@@ -106,33 +106,35 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
         lightness = self.parameterAsDouble(parameters, self.LIGHTNESS, context)
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
-        feedback.setProgressText("Reading DEM...")
-        dem_data = read_dem_to_array(source.source(), feedback)
-        if feedback.isCanceled():
-            return {}
+        feedback.setProgressText("Computing MSTP in tiles...")
 
-        feedback.setProgressText("Computing MSTP...")
-        rgb_result = multi_scale_topographic_position(
-            dem_data.array,
-            local_r,
-            meso_r,
-            broad_r,
-            lightness,
-            feedback,
+        def mstp_wrapper(
+            block, cellsize, local_r, meso_r, broad_r, lightness, feedback
+        ):
+            return multi_scale_topographic_position(
+                block, local_r, meso_r, broad_r, lightness, feedback
+            )
+
+        process_in_tiles(
+            source_path=source.source(),
+            output_path=output_path,
+            algorithm_func=mstp_wrapper,
+            halo_size=broad_r,
+            tile_size=2048,
+            feedback=feedback,
+            local_r=local_r,
+            meso_r=meso_r,
+            broad_r=broad_r,
+            lightness=lightness,
         )
 
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText("Writing RGB output...")
-        # Note: write_array_to_raster in raster_utils.py needs to handle 3D arrays
-        # (It already does, we just pass the array and it loops over bands if len(shape)==3)
-        write_array_to_raster(
-            rgb_result,
-            output_path,
-            dem_data.geotransform,
-            dem_data.projection,
-            0,  # nodata value for uint8
-        )
+        if context.willLoadLayerOnCompletion(output_path):
+            details = context.layerToLoadOnCompletionDetails(output_path)
+            details.setPostProcessor(
+                ReliefLayerPostProcessor(self.displayName(), stretch_type="stddev")
+            )
 
         return {self.OUTPUT: output_path}

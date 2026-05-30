@@ -2,9 +2,7 @@
 exports: BatchAlgorithm
 used_by: provider.py → loadAlgorithms
 rules:
-  read DEM once, run each enabled algorithm sequentially
   all raster I/O through core.raster_utils
-  use default params for each algorithm in batch mode
   check feedback.isCanceled() between major steps
   report progress as percentage across enabled algorithms
 """
@@ -12,34 +10,84 @@ rules:
 from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterBoolean,
+    QgsProcessingParameterNumber,
+    QgsProcessingParameterEnum,
     QgsProcessingParameterRasterDestination,
     QgsProcessingParameterRasterLayer,
 )
 
-from ..core.raster_utils import (
-    read_dem_to_array,
-    write_array_to_raster,
-    apply_nodata_mask,
-    get_cell_size,
-)
+import numpy as np
+from ..core.raster_utils import process_in_tiles
+from ..core.presets import get_preset
+
 from ..core.hillshade import multidirectional_hillshade
 from ..core.slrm import simple_local_relief_model
 from ..core.svf import sky_view_factor
 from ..core.slope import compute_slope
+from ..core.openness import topographic_openness
+from ..core.mstp import multi_scale_topographic_position
+from ..core.vat import compute_vat
+from ..core.blend import simple_red_relief
+from ..core.local_dominance import compute_local_dominance
+from ..core.asvf import anisotropic_sky_view_factor
+from ..core.pca import compute_pca_composite
+from ..core.emstp import compute_e4mstp
+from ..core.mstp import compute_mstp
 
 
 class BatchAlgorithm(QgsProcessingAlgorithm):
     """Run multiple LiDAR relief algorithms on the same DEM in one step."""
 
     INPUT = "INPUT"
+    PRESET = "PRESET"
+
     RUN_HILLSHADE = "RUN_HILLSHADE"
     RUN_SLRM = "RUN_SLRM"
     RUN_SVF = "RUN_SVF"
     RUN_SLOPE = "RUN_SLOPE"
+    RUN_OPENNESS = "RUN_OPENNESS"
+    RUN_MSTP = "RUN_MSTP"
+    RUN_VAT = "RUN_VAT"
+    RUN_RED_RELIEF = "RUN_RED_RELIEF"
+    RUN_LOCAL_DOMINANCE = "RUN_LOCAL_DOMINANCE"
+    RUN_ASVF = "RUN_ASVF"
+    RUN_E4MSTP = "RUN_E4MSTP"
+    RUN_PCA = "RUN_PCA"
+
     HILLSHADE_OUTPUT = "HILLSHADE_OUTPUT"
     SLRM_OUTPUT = "SLRM_OUTPUT"
     SVF_OUTPUT = "SVF_OUTPUT"
     SLOPE_OUTPUT = "SLOPE_OUTPUT"
+    OPENNESS_OUTPUT = "OPENNESS_OUTPUT"
+    MSTP_OUTPUT = "MSTP_OUTPUT"
+    VAT_OUTPUT = "VAT_OUTPUT"
+    RED_RELIEF_OUTPUT = "RED_RELIEF_OUTPUT"
+    LOCAL_DOMINANCE_OUTPUT = "LOCAL_DOMINANCE_OUTPUT"
+    ASVF_OUTPUT = "ASVF_OUTPUT"
+    E4MSTP_OUTPUT = "E4MSTP_OUTPUT"
+    PCA_OUTPUT = "PCA_OUTPUT"
+
+    SVF_NUM_DIRECTIONS = "SVF_NUM_DIRECTIONS"
+    OPENNESS_NUM_DIRECTIONS = "OPENNESS_NUM_DIRECTIONS"
+    LD_OBSERVER_HEIGHT = "LD_OBSERVER_HEIGHT"
+    SVF_RADIUS = "SVF_RADIUS"
+    SVF_NOISE = "SVF_NOISE"
+    OPENNESS_RADIUS = "OPENNESS_RADIUS"
+    SLRM_RADIUS = "SLRM_RADIUS"
+    LD_MIN_RAD = "LD_MIN_RAD"
+    LD_MAX_RAD = "LD_MAX_RAD"
+    MSTP_LOCAL = "MSTP_LOCAL"
+    MSTP_MESO = "MSTP_MESO"
+    MSTP_BROAD = "MSTP_BROAD"
+
+    _PRESET_OPTIONS = [
+        "Manual",
+        "Flat / Agricultural",
+        "Forested",
+        "Upland / Steep",
+        "Coastal",
+    ]
+    _PRESET_KEYS = [None, "flat_agricultural", "forested", "upland_steep", "coastal"]
 
     # -- metadata -----------------------------------------------------------
 
@@ -58,8 +106,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
     def shortHelpString(self):
         return (
             "Runs multiple relief visualisation algorithms on the same "
-            "DEM in a single step. The DEM is read once and each "
-            "selected algorithm is executed with default parameters. "
+            "DEM in a single step using landscape-scale presets. "
             "Disable any algorithms you do not need via the checkboxes."
         )
 
@@ -75,212 +122,667 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 "Input DEM",
             )
         )
+        self.addParameter(
+            QgsProcessingParameterEnum(
+                self.PRESET,
+                "Landscape Scale Preset",
+                options=self._PRESET_OPTIONS,
+                defaultValue=1,  # Meso default
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.SVF_NUM_DIRECTIONS,
+                "SVF Directions",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=16,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.OPENNESS_NUM_DIRECTIONS,
+                "Openness Directions",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=16,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.LD_OBSERVER_HEIGHT,
+                "Local Dominance Observer Height (m)",
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=1.7,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.SVF_RADIUS,
+                "SVF Search Radius (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=10,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.SVF_NOISE,
+                "SVF Noise Level",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.OPENNESS_RADIUS,
+                "Openness Search Radius (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=15,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.SLRM_RADIUS,
+                "SLRM Trend Radius (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=20,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.LD_MIN_RAD,
+                "Local Dominance Min Radius (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=10,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.LD_MAX_RAD,
+                "Local Dominance Max Radius (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=20,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.MSTP_LOCAL,
+                "MSTP Local Radius (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=3,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.MSTP_MESO,
+                "MSTP Meso Radius (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=20,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.MSTP_BROAD,
+                "MSTP Broad Radius (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=100,
+            )
+        )
 
         # Toggle switches
         self.addParameter(
             QgsProcessingParameterBoolean(
-                self.RUN_HILLSHADE,
-                "Run Multi-directional Hillshade",
-                defaultValue=True,
+                self.RUN_HILLSHADE, "Run Multi-directional Hillshade", defaultValue=True
             )
         )
         self.addParameter(
             QgsProcessingParameterBoolean(
-                self.RUN_SLRM,
-                "Run Simple Local Relief Model",
-                defaultValue=True,
+                self.RUN_SLRM, "Run Simple Local Relief Model", defaultValue=True
             )
         )
         self.addParameter(
             QgsProcessingParameterBoolean(
-                self.RUN_SVF,
-                "Run Sky-View Factor",
-                defaultValue=True,
+                self.RUN_SVF, "Run Sky-View Factor", defaultValue=True
             )
         )
         self.addParameter(
             QgsProcessingParameterBoolean(
-                self.RUN_SLOPE,
-                "Run Slope",
-                defaultValue=True,
+                self.RUN_SLOPE, "Run Slope", defaultValue=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.RUN_OPENNESS, "Run Positive Openness", defaultValue=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.RUN_MSTP, "Run Multi-Scale Topographic Position", defaultValue=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.RUN_VAT, "Run VAT Composite", defaultValue=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.RUN_RED_RELIEF, "Run Simple Red Relief", defaultValue=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.RUN_LOCAL_DOMINANCE, "Run Local Dominance", defaultValue=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(self.RUN_ASVF, "Run ASVF", defaultValue=True)
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.RUN_E4MSTP, "Run e4MSTP", defaultValue=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.RUN_PCA, "Run PCA Composite", defaultValue=True
             )
         )
 
         # Optional outputs
-        hillshade_param = QgsProcessingParameterRasterDestination(
-            self.HILLSHADE_OUTPUT,
-            "Hillshade output",
-            optional=True,
-            createByDefault=True,
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.HILLSHADE_OUTPUT,
+                "Hillshade output",
+                optional=True,
+                createByDefault=True,
+            )
         )
-        self.addParameter(hillshade_param)
-
-        slrm_param = QgsProcessingParameterRasterDestination(
-            self.SLRM_OUTPUT,
-            "SLRM output",
-            optional=True,
-            createByDefault=True,
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.SLRM_OUTPUT, "SLRM output", optional=True, createByDefault=True
+            )
         )
-        self.addParameter(slrm_param)
-
-        svf_param = QgsProcessingParameterRasterDestination(
-            self.SVF_OUTPUT,
-            "SVF output",
-            optional=True,
-            createByDefault=True,
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.SVF_OUTPUT, "SVF output", optional=True, createByDefault=True
+            )
         )
-        self.addParameter(svf_param)
-
-        slope_param = QgsProcessingParameterRasterDestination(
-            self.SLOPE_OUTPUT,
-            "Slope output",
-            optional=True,
-            createByDefault=True,
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.SLOPE_OUTPUT, "Slope output", optional=True, createByDefault=True
+            )
         )
-        self.addParameter(slope_param)
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.OPENNESS_OUTPUT,
+                "Openness output",
+                optional=True,
+                createByDefault=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.MSTP_OUTPUT, "MSTP output", optional=True, createByDefault=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.VAT_OUTPUT, "VAT output", optional=True, createByDefault=True
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.RED_RELIEF_OUTPUT,
+                "Red Relief output",
+                optional=True,
+                createByDefault=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.LOCAL_DOMINANCE_OUTPUT,
+                "Local Dominance output",
+                optional=True,
+                createByDefault=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.ASVF_OUTPUT,
+                "ASVF output",
+                optional=True,
+                createByDefault=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.E4MSTP_OUTPUT,
+                "e4MSTP output",
+                optional=True,
+                createByDefault=True,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterRasterDestination(
+                self.PCA_OUTPUT,
+                "PCA output",
+                optional=True,
+                createByDefault=True,
+            )
+        )
 
     # -- processing ---------------------------------------------------------
 
     def processAlgorithm(self, parameters, context, feedback):
-        """Run enabled algorithms sequentially on a single DEM read.
-
-        Rules:
-            Read DEM once.
-            Track progress as percentage of enabled algorithms completed.
-            Use default algorithm params: azimuths 315,45,135,225,270,360;
-            altitude 45; SLRM radius 20; SVF 16 dirs, radius 10;
-            slope degrees.
-        """
+        """Run enabled algorithms sequentially."""
         source = self.parameterAsRasterLayer(parameters, self.INPUT, context)
-        bool_hillshade = self.parameterAsBool(parameters, self.RUN_HILLSHADE, context)
-        bool_slrm = self.parameterAsBool(parameters, self.RUN_SLRM, context)
-        bool_svf = self.parameterAsBool(parameters, self.RUN_SVF, context)
-        bool_slope = self.parameterAsBool(parameters, self.RUN_SLOPE, context)
+        preset_idx = self.parameterAsEnum(parameters, self.PRESET, context)
+        preset_key = self._PRESET_KEYS[preset_idx]
 
-        dict_results = {}
+        # Read manual parameters first
+        p_cfg = {
+            "svf_num_directions": self.parameterAsInt(
+                parameters, self.SVF_NUM_DIRECTIONS, context
+            ),
+            "openness_num_directions": self.parameterAsInt(
+                parameters, self.OPENNESS_NUM_DIRECTIONS, context
+            ),
+            "ld_observer_height": self.parameterAsDouble(
+                parameters, self.LD_OBSERVER_HEIGHT, context
+            ),
+            "svf_radius": self.parameterAsInt(parameters, self.SVF_RADIUS, context),
+            "svf_noise": self.parameterAsInt(parameters, self.SVF_NOISE, context),
+            "openness_radius": self.parameterAsInt(
+                parameters, self.OPENNESS_RADIUS, context
+            ),
+            "slrm_radius": self.parameterAsInt(parameters, self.SLRM_RADIUS, context),
+            "ld_min_rad": self.parameterAsInt(parameters, self.LD_MIN_RAD, context),
+            "ld_max_rad": self.parameterAsInt(parameters, self.LD_MAX_RAD, context),
+            "mstp_local": self.parameterAsInt(parameters, self.MSTP_LOCAL, context),
+            "mstp_meso": self.parameterAsInt(parameters, self.MSTP_MESO, context),
+            "mstp_broad": self.parameterAsInt(parameters, self.MSTP_BROAD, context),
+        }
 
-        # Build task list for progress tracking
-        list_tasks = []
-        if bool_hillshade:
-            list_tasks.append("hillshade")
-        if bool_slrm:
-            list_tasks.append("slrm")
-        if bool_svf:
-            list_tasks.append("svf")
-        if bool_slope:
-            list_tasks.append("slope")
+        # Override with preset if not manual
+        if preset_key is not None:
+            preset = get_preset(preset_key)
+            p_cfg["svf_radius"] = preset["svf"]["search_radius"]
+            p_cfg["svf_noise"] = preset["svf"]["noise_level"]
+            p_cfg["openness_radius"] = preset["openness"]["search_radius"]
+            p_cfg["slrm_radius"] = preset["slrm"]["trend_radius"]
+            p_cfg["ld_min_rad"] = preset["local_dominance"]["min_rad"]
+            p_cfg["ld_max_rad"] = preset["local_dominance"]["max_rad"]
+            p_cfg["svf_num_directions"] = preset["svf"]["num_directions"]
+            p_cfg["openness_num_directions"] = preset["openness"]["num_directions"]
+            p_cfg["ld_observer_height"] = preset["local_dominance"]["observer_height"]
 
-        if not list_tasks:
+        tasks = []
+        if self.parameterAsBool(parameters, self.RUN_HILLSHADE, context):
+            tasks.append("hillshade")
+        if self.parameterAsBool(parameters, self.RUN_SLRM, context):
+            tasks.append("slrm")
+        if self.parameterAsBool(parameters, self.RUN_SVF, context):
+            tasks.append("svf")
+        if self.parameterAsBool(parameters, self.RUN_SLOPE, context):
+            tasks.append("slope")
+        if self.parameterAsBool(parameters, self.RUN_OPENNESS, context):
+            tasks.append("openness")
+        if self.parameterAsBool(parameters, self.RUN_MSTP, context):
+            tasks.append("mstp")
+        if self.parameterAsBool(parameters, self.RUN_VAT, context):
+            tasks.append("vat")
+        if self.parameterAsBool(parameters, self.RUN_RED_RELIEF, context):
+            tasks.append("red_relief")
+        if self.parameterAsBool(parameters, self.RUN_LOCAL_DOMINANCE, context):
+            tasks.append("local_dominance")
+        if self.parameterAsBool(parameters, self.RUN_ASVF, context):
+            tasks.append("asvf")
+        if self.parameterAsBool(parameters, self.RUN_E4MSTP, context):
+            tasks.append("e4mstp")
+        if self.parameterAsBool(parameters, self.RUN_PCA, context):
+            tasks.append("pca")
+
+        if not tasks:
             feedback.reportError("No algorithms selected — nothing to do.")
             return {}
 
-        int_total = len(list_tasks)
-        int_done = 0
+        dict_results = {}
+        total = len(tasks)
+        done = 0
 
-        # Read DEM once
-        feedback.setProgressText("Reading DEM...")
-        dem_data = read_dem_to_array(source.source(), feedback)
+        source_path = source.source()
 
-        if feedback.isCanceled():
-            return {}
+        def update_progress():
+            nonlocal done
+            done += 1
+            feedback.setProgress(int(100 * done / total))
 
-        float_cellsize = get_cell_size(dem_data.geotransform)
-
-        # -- Hillshade -------------------------------------------------------
-        if bool_hillshade:
-            if feedback.isCanceled():
-                return dict_results
-
-            feedback.setProgressText("Computing multi-directional hillshade...")
-            array_hs = multidirectional_hillshade(
-                dem_data.array,
-                float_cellsize,
-                [315.0, 45.0, 135.0, 225.0, 270.0, 360.0],
-                45.0,
-            )
-            array_hs = apply_nodata_mask(dem_data.array, array_hs, dem_data.nodata_mask)
-            hs_path = self.parameterAsOutputLayer(
+        if "hillshade" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing multi-directional hillshade...")
+            out_path = self.parameterAsOutputLayer(
                 parameters, self.HILLSHADE_OUTPUT, context
             )
-            write_array_to_raster(
-                array_hs,
-                hs_path,
-                dem_data.geotransform,
-                dem_data.projection,
-                dem_data.nodata,
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=multidirectional_hillshade,
+                halo_size=1,
+                feedback=feedback,
+                azimuths=[315.0, 45.0, 135.0, 225.0, 270.0, 360.0],
+                altitude=45.0,
             )
-            dict_results[self.HILLSHADE_OUTPUT] = hs_path
-            int_done += 1
-            feedback.setProgress(int(100 * int_done / int_total))
+            dict_results[self.HILLSHADE_OUTPUT] = out_path
+            update_progress()
 
-        # -- SLRM ------------------------------------------------------------
-        if bool_slrm:
-            if feedback.isCanceled():
-                return dict_results
-
-            feedback.setProgressText("Computing Simple Local Relief Model...")
-            array_slrm = simple_local_relief_model(dem_data.array, 20)
-            array_slrm = apply_nodata_mask(
-                dem_data.array, array_slrm, dem_data.nodata_mask
-            )
-            slrm_path = self.parameterAsOutputLayer(
+        if "slrm" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing Simple Local Relief Model...")
+            out_path = self.parameterAsOutputLayer(
                 parameters, self.SLRM_OUTPUT, context
             )
-            write_array_to_raster(
-                array_slrm,
-                slrm_path,
-                dem_data.geotransform,
-                dem_data.projection,
-                dem_data.nodata,
-            )
-            dict_results[self.SLRM_OUTPUT] = slrm_path
-            int_done += 1
-            feedback.setProgress(int(100 * int_done / int_total))
 
-        # -- SVF --------------------------------------------------------------
-        if bool_svf:
-            if feedback.isCanceled():
-                return dict_results
+            def slrm_wrapper(block, cellsize, radius):
+                return simple_local_relief_model(block, radius)
 
-            feedback.setProgressText("Computing Sky-View Factor (16 directions)...")
-            array_svf = sky_view_factor(dem_data.array, float_cellsize, 16, 10)
-            array_svf = apply_nodata_mask(
-                dem_data.array, array_svf, dem_data.nodata_mask
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=slrm_wrapper,
+                halo_size=p_cfg["slrm_radius"],
+                feedback=feedback,
+                radius=p_cfg["slrm_radius"],
             )
-            svf_path = self.parameterAsOutputLayer(parameters, self.SVF_OUTPUT, context)
-            write_array_to_raster(
-                array_svf,
-                svf_path,
-                dem_data.geotransform,
-                dem_data.projection,
-                dem_data.nodata,
-            )
-            dict_results[self.SVF_OUTPUT] = svf_path
-            int_done += 1
-            feedback.setProgress(int(100 * int_done / int_total))
+            dict_results[self.SLRM_OUTPUT] = out_path
+            update_progress()
 
-        # -- Slope ------------------------------------------------------------
-        if bool_slope:
-            if feedback.isCanceled():
-                return dict_results
-
-            feedback.setProgressText("Computing slope (degrees)...")
-            array_slope = compute_slope(dem_data.array, float_cellsize, "degrees")
-            array_slope = apply_nodata_mask(
-                dem_data.array, array_slope, dem_data.nodata_mask
+        if "svf" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing Sky-View Factor...")
+            out_path = self.parameterAsOutputLayer(parameters, self.SVF_OUTPUT, context)
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=sky_view_factor,
+                halo_size=p_cfg["svf_radius"],
+                feedback=feedback,
+                num_directions=p_cfg["svf_num_directions"],
+                search_radius=p_cfg["svf_radius"],
+                noise_level=p_cfg["svf_noise"],
             )
-            slope_path = self.parameterAsOutputLayer(
+            dict_results[self.SVF_OUTPUT] = out_path
+            update_progress()
+
+        if "slope" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing Slope...")
+            out_path = self.parameterAsOutputLayer(
                 parameters, self.SLOPE_OUTPUT, context
             )
-            write_array_to_raster(
-                array_slope,
-                slope_path,
-                dem_data.geotransform,
-                dem_data.projection,
-                dem_data.nodata,
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=compute_slope,
+                halo_size=1,
+                feedback=feedback,
+                units="degrees",
             )
-            dict_results[self.SLOPE_OUTPUT] = slope_path
-            int_done += 1
-            feedback.setProgress(int(100 * int_done / int_total))
+            dict_results[self.SLOPE_OUTPUT] = out_path
+            update_progress()
+
+        if "openness" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing Positive Openness...")
+            out_path = self.parameterAsOutputLayer(
+                parameters, self.OPENNESS_OUTPUT, context
+            )
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=topographic_openness,
+                halo_size=p_cfg["openness_radius"],
+                feedback=feedback,
+                num_directions=p_cfg["openness_num_directions"],
+                search_radius=p_cfg["openness_radius"],
+                is_negative=False,
+            )
+            dict_results[self.OPENNESS_OUTPUT] = out_path
+            update_progress()
+
+        if "mstp" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing MSTP...")
+            out_path = self.parameterAsOutputLayer(
+                parameters, self.MSTP_OUTPUT, context
+            )
+
+            def mstp_wrapper(
+                block, cellsize, local_r, meso_r, broad_r, lightness, feedback
+            ):
+                return multi_scale_topographic_position(
+                    block, local_r, meso_r, broad_r, lightness, feedback
+                )
+
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=mstp_wrapper,
+                halo_size=p_cfg["mstp_broad"],
+                feedback=feedback,
+                local_r=p_cfg["mstp_local"],
+                meso_r=p_cfg["mstp_meso"],
+                broad_r=p_cfg["mstp_broad"],
+                lightness=1.0,
+            )
+            dict_results[self.MSTP_OUTPUT] = out_path
+            update_progress()
+
+        if "vat" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing VAT Composite...")
+            out_path = self.parameterAsOutputLayer(parameters, self.VAT_OUTPUT, context)
+
+            def vat_wrapper(block, cellsize, svf_radius, openness_radius, feedback):
+                return compute_vat(
+                    block, cellsize, svf_radius, openness_radius, feedback
+                )
+
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=vat_wrapper,
+                halo_size=max(p_cfg["svf_radius"], p_cfg["openness_radius"]),
+                feedback=feedback,
+                svf_radius=p_cfg["svf_radius"],
+                openness_radius=p_cfg["openness_radius"],
+            )
+            dict_results[self.VAT_OUTPUT] = out_path
+            update_progress()
+
+        if "red_relief" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing Simple Red Relief...")
+            out_path = self.parameterAsOutputLayer(
+                parameters, self.RED_RELIEF_OUTPUT, context
+            )
+
+            def red_relief_wrapper(block, cellsize, slrm_radius, feedback):
+                return simple_red_relief(block, cellsize, slrm_radius, feedback)
+
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=red_relief_wrapper,
+                halo_size=p_cfg["slrm_radius"],
+                feedback=feedback,
+                slrm_radius=p_cfg["slrm_radius"],
+            )
+            dict_results[self.RED_RELIEF_OUTPUT] = out_path
+            update_progress()
+
+        if "local_dominance" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing Local Dominance...")
+            out_path = self.parameterAsOutputLayer(
+                parameters, self.LOCAL_DOMINANCE_OUTPUT, context
+            )
+
+            def ld_wrapper(block, cellsize, feedback):
+                return compute_local_dominance(
+                    block,
+                    cellsize,
+                    min_rad=p_cfg["ld_min_rad"],
+                    max_rad=p_cfg["ld_max_rad"],
+                    observer_h=p_cfg["ld_observer_height"],
+                    feedback=feedback,
+                )
+
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=ld_wrapper,
+                halo_size=p_cfg["ld_max_rad"],
+                feedback=feedback,
+            )
+            dict_results[self.LOCAL_DOMINANCE_OUTPUT] = out_path
+            update_progress()
+
+        if "asvf" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing ASVF...")
+            out_path = self.parameterAsOutputLayer(
+                parameters, self.ASVF_OUTPUT, context
+            )
+
+            def asvf_wrapper(block, cellsize, radius, feedback):
+                return anisotropic_sky_view_factor(
+                    block,
+                    cellsize,
+                    num_directions=p_cfg["svf_num_directions"],
+                    search_radius=radius,
+                    anisotropy_dir=315.0,
+                    anisotropy_weight=0.5,
+                    noise_level=p_cfg["svf_noise"],
+                    feedback=feedback,
+                )
+
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=asvf_wrapper,
+                halo_size=p_cfg["svf_radius"],
+                feedback=feedback,
+                radius=p_cfg["svf_radius"],
+            )
+            dict_results[self.ASVF_OUTPUT] = out_path
+            update_progress()
+
+        if "e4mstp" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing e4MSTP...")
+            out_path = self.parameterAsOutputLayer(
+                parameters, self.E4MSTP_OUTPUT, context
+            )
+
+            def e4mstp_wrapper(block, cellsize, feedback):
+                open_pos = (
+                    topographic_openness(
+                        block,
+                        cellsize,
+                        num_directions=p_cfg["openness_num_directions"],
+                        search_radius=p_cfg["openness_radius"],
+                        is_negative=False,
+                        feedback=feedback,
+                    )
+                    / 90.0
+                ).clip(0, 1)
+                open_neg = (
+                    topographic_openness(
+                        block,
+                        cellsize,
+                        num_directions=p_cfg["openness_num_directions"],
+                        search_radius=p_cfg["openness_radius"],
+                        is_negative=True,
+                        feedback=feedback,
+                    )
+                    / 90.0
+                ).clip(0, 1)
+                local_dom = (
+                    compute_local_dominance(
+                        block,
+                        cellsize,
+                        min_rad=p_cfg["ld_min_rad"],
+                        max_rad=p_cfg["ld_max_rad"],
+                        observer_h=p_cfg["ld_observer_height"],
+                        feedback=feedback,
+                    )
+                    / 255.0
+                ).clip(0, 1)
+                slope = (compute_slope(block, cellsize, units="degrees") / 90.0).clip(
+                    0, 1
+                )
+                mstp = compute_mstp(
+                    block,
+                    local_r=p_cfg["mstp_local"],
+                    meso_r=p_cfg["mstp_meso"],
+                    broad_r=p_cfg["mstp_broad"],
+                    lightness=1.0,
+                    feedback=feedback,
+                )
+                mstp_norm = mstp.astype(np.float32) / 255.0
+                return compute_e4mstp(
+                    open_pos,
+                    open_neg,
+                    local_dom,
+                    slope,
+                    mstp_norm,
+                    dem=block,
+                    cellsize=cellsize,
+                    feedback=feedback,
+                )
+
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=e4mstp_wrapper,
+                halo_size=p_cfg["mstp_broad"],
+                tile_size=1024,
+                feedback=feedback,
+            )
+            dict_results[self.E4MSTP_OUTPUT] = out_path
+            update_progress()
+
+        if "pca" in tasks and not feedback.isCanceled():
+            feedback.setProgressText("Batch: Computing PCA...")
+            out_path = self.parameterAsOutputLayer(parameters, self.PCA_OUTPUT, context)
+
+            def pca_wrapper(block, cellsize, feedback):
+                svf = sky_view_factor(
+                    block,
+                    cellsize,
+                    num_directions=p_cfg["svf_num_directions"],
+                    search_radius=p_cfg["svf_radius"],
+                    noise_level=p_cfg["svf_noise"],
+                    feedback=feedback,
+                )
+                openness = topographic_openness(
+                    block,
+                    cellsize,
+                    search_radius=p_cfg["openness_radius"],
+                    is_negative=False,
+                    feedback=feedback,
+                )
+                slope = compute_slope(block, cellsize, units="degrees")
+                ld = compute_local_dominance(
+                    block,
+                    cellsize,
+                    min_rad=p_cfg["ld_min_rad"],
+                    max_rad=p_cfg["ld_max_rad"],
+                    observer_h=p_cfg["ld_observer_height"],
+                    feedback=feedback,
+                )
+                return compute_pca_composite(
+                    svf, openness, slope, ld, feedback=feedback
+                )
+
+            process_in_tiles(
+                source_path=source_path,
+                output_path=out_path,
+                algorithm_func=pca_wrapper,
+                halo_size=p_cfg["ld_max_rad"],
+                tile_size=1024,
+                feedback=feedback,
+            )
+            dict_results[self.PCA_OUTPUT] = out_path
+            update_progress()
 
         return dict_results

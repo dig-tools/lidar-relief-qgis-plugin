@@ -8,10 +8,15 @@ This plugin integrates directly into the QGIS Processing Toolbox and provides th
 
 - **Multi-directional Hillshade**: Blends multiple illumination angles to eliminate the directional bias of traditional single-light-source hillshades.
 - **Simple Local Relief Model (SLRM)**: Removes macro-topography (large hills and slopes) to isolate micro-relief features like ancient ditches, walls, and mounds.
-- **Sky-View Factor (SVF)**: Computes the proportion of the sky visible from each pixel. Concave features (pits, ditches) appear dark, while convex features (ridges, mounds) appear bright.
+- **Sky-View Factor (SVF)**: Computes the proportion of the sky visible from each pixel. Concave features (pits, ditches) appear dark, while convex features (ridges, mounds) appear bright. Features a 1D look-ahead noise filter.
+- **Anisotropic Sky-View Factor (ASVF)**: Modifies SVF with a directional weight to simulate anisotropic lighting conditions.
 - **Topographic Openness (Positive/Negative)**: Measures the zenith or nadir angle of the horizon. Positive Openness highlights convex features; Negative Openness highlights concave features.
+- **Local Dominance**: Uses a horizon-scanning ray trace to identify locally dominant (mound/ridge) or dominated (ditch/pit) pixels.
 - **Multi-Scale Topographic Position (MSTP)**: Calculates Deviation from Mean Elevation (DEV) across three spatial scales (Broad, Meso, Local) and maps them to an RGB false-color image for holistic terrain interpretation.
-- **Batch Relief Visualisation**: A convenience tool that reads a DEM once and runs multiple enabled visualizations simultaneously.
+- **Enhanced 4-Scale Topographic Position (e4MSTP)**: Advanced 4-step composite combining Openness, Local Dominance, Slope, dual-scale SVF, and MSTP into a highly detailed RGB visualization.
+- **Visualization for Archaeological Topography (VAT)**: Multi-indicator composite blending Hillshade, Slope, and Positive Openness.
+- **Simple Red Relief**: Blends Topographic Openness and Slope into a vivid red overlay.
+- **Batch Relief Visualisation**: A convenience tool that reads a DEM once and runs multiple enabled visualizations simultaneously. Includes 4 static, research-validated terrain context presets.
 - **Blend Visualizations**: Replicates Photoshop-style blending (Multiply, Screen, Overlay) to combine two layers (e.g., SVF + Hillshade) into a single composite raster.
 
 ## Installation

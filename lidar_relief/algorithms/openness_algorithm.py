@@ -15,12 +15,10 @@ from qgis.core import (
 )
 
 from ..core.raster_utils import (
-    read_dem_to_array,
-    write_array_to_raster,
-    apply_nodata_mask,
-    get_cell_size,
+    process_in_tiles,
 )
 from ..core.openness import topographic_openness
+from ..styling import ReliefLayerPostProcessor
 
 
 class OpennessAlgorithm(QgsProcessingAlgorithm):
@@ -104,35 +102,29 @@ class OpennessAlgorithm(QgsProcessingAlgorithm):
         is_negative = type_idx == 1
         num_dirs = [8, 16, 32][dir_idx]
 
-        feedback.setProgressText("Reading DEM...")
-        dem_data = read_dem_to_array(source.source(), feedback)
-        if feedback.isCanceled():
-            return {}
-        float_cellsize = get_cell_size(dem_data.geotransform)
+        feedback.setProgressText(
+            f"Computing Openness ({num_dirs} dirs, r={radius}) in tiles..."
+        )
 
-        feedback.setProgressText(f"Computing Openness ({num_dirs} dirs, r={radius})...")
-        array_result = topographic_openness(
-            dem_data.array,
-            float_cellsize,
-            num_dirs,
-            radius,
-            is_negative,
-            feedback,
+        process_in_tiles(
+            source_path=source.source(),
+            output_path=output_path,
+            algorithm_func=topographic_openness,
+            halo_size=radius,
+            tile_size=2048,
+            feedback=feedback,
+            num_directions=num_dirs,
+            search_radius=radius,
+            is_negative=is_negative,
         )
 
         if feedback.isCanceled():
             return {}
 
-        feedback.setProgressText("Writing output...")
-        array_result = apply_nodata_mask(
-            dem_data.array, array_result, dem_data.nodata_mask
-        )
-        write_array_to_raster(
-            array_result,
-            output_path,
-            dem_data.geotransform,
-            dem_data.projection,
-            dem_data.nodata,
-        )
+        if context.willLoadLayerOnCompletion(output_path):
+            details = context.layerToLoadOnCompletionDetails(output_path)
+            details.setPostProcessor(
+                ReliefLayerPostProcessor(self.displayName(), stretch_type="stddev")
+            )
 
         return {self.OUTPUT: output_path}
