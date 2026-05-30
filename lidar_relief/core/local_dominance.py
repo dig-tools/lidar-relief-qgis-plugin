@@ -42,10 +42,9 @@ def compute_local_dominance(
             dy = int(np.round(r * np.sin(theta)))
 
             # Slice padded DEM to get target_z
-            target_z = padded_dem[
-                pad_w + dy : pad_w + dy + rows,
-                pad_w + dx : pad_w + dx + cols,  # fmt: skip
-            ]
+            y1, y2 = pad_w + dy, pad_w + dy + rows
+            x1, x2 = pad_w + dx, pad_w + dx + cols
+            target_z = padded_dem[y1:y2, x1:x2]
 
             delta_z = z_obs - target_z
             dist = r * cellsize

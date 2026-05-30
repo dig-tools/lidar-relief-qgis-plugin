@@ -674,39 +674,33 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             )
 
             def e4mstp_wrapper(block, cellsize, feedback):
-                open_pos = (
-                    topographic_openness(
-                        block,
-                        cellsize,
-                        num_directions=p_cfg["openness_num_directions"],
-                        search_radius=p_cfg["openness_radius"],
-                        is_negative=False,
-                        feedback=feedback,
-                    )
-                    / 90.0  # fmt: skip
-                ).clip(0, 1)
-                open_neg = (
-                    topographic_openness(
-                        block,
-                        cellsize,
-                        num_directions=p_cfg["openness_num_directions"],
-                        search_radius=p_cfg["openness_radius"],
-                        is_negative=True,
-                        feedback=feedback,
-                    )
-                    / 90.0  # fmt: skip
-                ).clip(0, 1)
-                local_dom = (
-                    compute_local_dominance(
-                        block,
-                        cellsize,
-                        min_rad=p_cfg["ld_min_rad"],
-                        max_rad=p_cfg["ld_max_rad"],
-                        observer_h=p_cfg["ld_observer_height"],
-                        feedback=feedback,
-                    )
-                    / 255.0  # fmt: skip
-                ).clip(0, 1)
+                open_pos_raw = topographic_openness(
+                    block,
+                    cellsize,
+                    num_directions=p_cfg["openness_num_directions"],
+                    search_radius=p_cfg["openness_radius"],
+                    is_negative=False,
+                    feedback=feedback,
+                )
+                open_pos = (open_pos_raw / 90.0).clip(0, 1)
+                open_neg_raw = topographic_openness(
+                    block,
+                    cellsize,
+                    num_directions=p_cfg["openness_num_directions"],
+                    search_radius=p_cfg["openness_radius"],
+                    is_negative=True,
+                    feedback=feedback,
+                )
+                open_neg = (open_neg_raw / 90.0).clip(0, 1)
+                local_dom_raw = compute_local_dominance(
+                    block,
+                    cellsize,
+                    min_rad=p_cfg["ld_min_rad"],
+                    max_rad=p_cfg["ld_max_rad"],
+                    observer_h=p_cfg["ld_observer_height"],
+                    feedback=feedback,
+                )
+                local_dom = (local_dom_raw / 255.0).clip(0, 1)
                 slope = (compute_slope(block, cellsize, units="degrees") / 90.0).clip(
                     0, 1
                 )
