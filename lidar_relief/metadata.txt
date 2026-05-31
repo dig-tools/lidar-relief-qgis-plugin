@@ -2,12 +2,12 @@
 name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
-description=Generate LiDAR-derived archaeological relief visualizations (Hillshade, SLRM, SVF, Slope) directly from a loaded DEM layer.
+description=15 LiDAR relief visualization algorithms (Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, and more) with batch processing, direct from a loaded DEM.
 version=1.3.4
 author=LiDAR Relief Contributors
 email=lidar.relief@example.com
 
-about=A native QGIS plugin that generates standard LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), Slope, Topographic Openness, Multi-Scale Topographic Position (MSTP), VAT Composite, Simple Red Relief, Local Dominance, Anisotropic Sky-View Factor (ASVF), Enhanced 4-Scale Topographic Position (e4MSTP), PCA RGB Composite, and ML-Ready VRT Export — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
+about=A native QGIS plugin that generates 15 standard LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), Slope, Topographic Openness, Multi-Scale Topographic Position (MSTP), VAT Composite, Simple Red Relief, Blend, Local Dominance, Anisotropic Sky-View Factor (ASVF), Enhanced 4-Scale Topographic Position (e4MSTP), PCA RGB Composite, and ML-Ready VRT Export — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. A Batch mode lets you run multiple algorithms on the same DEM in a single pass, with built-in landscape scale presets for Flat/Agricultural, Forested, Upland/Steep, and Coastal terrain. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
 
 tracker=https://github.com/mabo-du/lidar-relief-qgis-plugin/issues
 repository=https://github.com/mabo-du/lidar-relief-qgis-plugin
@@ -15,7 +15,7 @@ homepage=https://github.com/mabo-du/lidar-relief-qgis-plugin
 
 hasProcessingProvider=yes
 
-tags=lidar,relief,hillshade,svf,slrm,slope,archaeology,dem,visualization,terrain,landscape,openness,mstp,pca,local dominance,vat,asvf,e4mstp
+tags=lidar,relief,hillshade,svf,slrm,slope,archaeology,dem,visualization,terrain,landscape,openness,mstp,pca,local dominance,vat,asvf,e4mstp,batch
 
 category=Raster
 icon=resources/icon.png
