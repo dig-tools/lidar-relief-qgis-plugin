@@ -3,11 +3,11 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=Generate LiDAR-derived archaeological relief visualizations (Hillshade, SLRM, SVF, Slope) directly from a loaded DEM layer.
-version=1.3.3
+version=1.3.4
 author=LiDAR Relief Contributors
 email=lidar.relief@example.com
 
-about=A native QGIS plugin that generates standard LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), and Slope — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
+about=A native QGIS plugin that generates standard LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), Slope, Topographic Openness, Multi-Scale Topographic Position (MSTP), VAT Composite, Simple Red Relief, Local Dominance, Anisotropic Sky-View Factor (ASVF), Enhanced 4-Scale Topographic Position (e4MSTP), PCA RGB Composite, and ML-Ready VRT Export — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
 
 tracker=https://github.com/mabo-du/lidar-relief-qgis-plugin/issues
 repository=https://github.com/mabo-du/lidar-relief-qgis-plugin
@@ -15,7 +15,7 @@ homepage=https://github.com/mabo-du/lidar-relief-qgis-plugin
 
 hasProcessingProvider=yes
 
-tags=lidar,relief,hillshade,svf,slrm,slope,archaeology,dem,visualization,terrain,landscape
+tags=lidar,relief,hillshade,svf,slrm,slope,archaeology,dem,visualization,terrain,landscape,openness,mstp,pca,local dominance,vat,asvf,e4mstp
 
 category=Raster
 icon=resources/icon.png
@@ -24,6 +24,34 @@ experimental=False
 deprecated=False
 
 changelog=
+    1.3.4 - Housekeeping
+    - Bumped version to clear broken 1.3.3 release tag.
+    - Updated changelog to document all algorithms added since initial release.
+    - Added package.sh helper script for correct local ZIP packaging.
+    - Removed leftover development scripts from project root.
+
+    1.3.3 - Packaging Fix
+    - Corrected plugin ZIP structure: files now correctly nested under lidar_relief/ parent directory as required by QGIS Plugin Manager.
+
+    1.3.0 - Advanced Composite Algorithms
+    - Added Enhanced 4-Scale Topographic Position (e4MSTP) composite visualisation (Kokalj 2025 method).
+    - Added PCA RGB Composite algorithm combining SVF, Openness, Slope, and Local Dominance.
+    - Added ML-Ready Export (VRT Stack) for machine learning and multi-band analysis workflows.
+
+    1.2.0 - Extended Algorithm Suite
+    - Added Topographic Openness algorithm (positive and negative modes).
+    - Added Multi-Scale Topographic Position (MSTP) algorithm.
+    - Added VAT Composite algorithm.
+    - Added Anisotropic Sky-View Factor (ASVF) with configurable direction and weight.
+    - Added Simple Red Relief and Blend algorithms.
+    - Added Local Dominance algorithm.
+    - Added Landscape Scale Presets to Batch algorithm: Flat/Agricultural, Forested, Upland/Steep, Coastal.
+
+    1.1.0 - Processing Architecture
+    - Implemented tile-based processing engine for memory-efficient large DEM handling.
+    - Added automatic layer styling post-processor for all output layers.
+    - Refactored all algorithms to share raster I/O utilities.
+
     1.0.13 - CI Fix
     - Added contents:write permissions for GitHub Action.
 
@@ -31,10 +59,10 @@ changelog=
     - Added --release-tag to qgis-plugin-ci command to fix GitHub Release lookup.
 
     1.0.11 - CI Fix
-    - Fixed .qgis-plugin-ci github repository configuration parameter names
+    - Fixed .qgis-plugin-ci github repository configuration parameter names.
 
     1.0.10 - CI Fix
-    - Added GitHub org/repo configuration to .qgis-plugin-ci
+    - Added GitHub org/repo configuration to .qgis-plugin-ci.
 
     1.0.9 - CI Fix
     - Fixed .qgis-plugin-ci formatting to YAML.
@@ -50,26 +78,26 @@ changelog=
 
     1.0.5 - Documentation Update
     - Removed unused docs folder from tracking and fixed README zip instructions.
-    
+
     1.0.4 - Official Stable Release
     - Removed Experimental flag to make the plugin visible to all users by default in the QGIS Plugin Manager.
-    
+
     1.0.3 - Bypass strict linter rules
     - Bypassed mutually exclusive W503/W504 flake8 rules using any().
-    
+
     1.0.2 - Final PEP8 & Permission Fixes
     - Fixed final PEP8 W503 strict warnings for QGIS linter.
     - Standardized file permissions across the package.
-    
+
     1.0.1 - PEP8 Linting and Metadata Fixes
     - Fixed PEP8 formatting (W291, W293, W503) and removed unused imports (F401).
     - Updated plugin homepage, repository, and tracker metadata links.
     - Included LICENSE file in the QGIS package.
     - Updated QGIS compatibility range (3.0 - 4.99).
-    
+
     1.0.0 - Initial release
-    - Multi-directional Hillshade algorithm
-    - Simple Local Relief Model (SLRM) algorithm
-    - Sky-View Factor (SVF) algorithm
-    - Slope (degrees and percent) algorithm
-    - Batch mode for running multiple algorithms on the same DEM
+    - Multi-directional Hillshade algorithm.
+    - Simple Local Relief Model (SLRM) algorithm.
+    - Sky-View Factor (SVF) algorithm.
+    - Slope (degrees and percent) algorithm.
+    - Batch mode for running multiple algorithms on the same DEM.
