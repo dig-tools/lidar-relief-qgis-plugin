@@ -51,7 +51,8 @@ jobs:
               --release-tag v${VERSION} \
               --github-token ${GITHUB_TOKEN} \
               --qgis-token ${{ secrets.QGIS_TOKEN }} \
-              --create-plugin-repo
+              --create-plugin-repo \
+              -c
           elif [ -n "${{ secrets.OSGEO_USERNAME }}" ]; then
             echo "Publishing to QGIS using OSGEO credentials..."
             qgis-plugin-ci release ${VERSION} \
@@ -59,11 +60,13 @@ jobs:
               --github-token ${GITHUB_TOKEN} \
               --osgeo-username ${{ secrets.OSGEO_USERNAME }} \
               --osgeo-password ${{ secrets.OSGEO_PASSWORD }} \
-              --create-plugin-repo
+              --create-plugin-repo \
+              -c
           else
             echo "QGIS credentials not found. Releasing only to GitHub."
             qgis-plugin-ci release ${VERSION} \
               --release-tag v${VERSION} \
               --github-token ${GITHUB_TOKEN} \
-              --create-plugin-repo
+              --create-plugin-repo \
+              -c
           fi
