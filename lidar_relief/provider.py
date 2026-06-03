@@ -25,6 +25,14 @@ from .algorithms.asvf_algorithm import AsvfAlgorithm
 from .algorithms.e4mstp_algorithm import E4MstpAlgorithm
 from .algorithms.pca_algorithm import PcaAlgorithm
 from .algorithms.ml_export_algorithm import MlExportAlgorithm
+from .algorithms.cog_export_algorithm import CogExportAlgorithm
+from .algorithms.field_export_algorithm import FieldExportAlgorithm
+from .algorithms.pdf_report_algorithm import PdfReportAlgorithm
+from .algorithms.recipe_io_algorithm import RecipeExportAlgorithm, RecipeImportAlgorithm
+from .algorithms.csf_algorithm import CsfAlgorithm
+from .algorithms.temporal_difference_algorithm import TemporalDifferenceAlgorithm
+from .algorithms.fusion_algorithm import FusionAlgorithm
+from .algorithms.ai_detection_algorithm import AiDetectionAlgorithm
 
 
 class LidarReliefProvider(QgsProcessingProvider):
@@ -66,3 +74,12 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(E4MstpAlgorithm())
         self.addAlgorithm(PcaAlgorithm())
         self.addAlgorithm(MlExportAlgorithm())
+        self.addAlgorithm(CogExportAlgorithm())
+        self.addAlgorithm(FieldExportAlgorithm())
+        self.addAlgorithm(PdfReportAlgorithm())
+        self.addAlgorithm(RecipeExportAlgorithm())
+        self.addAlgorithm(RecipeImportAlgorithm())
+        self.addAlgorithm(CsfAlgorithm())
+        self.addAlgorithm(TemporalDifferenceAlgorithm())
+        self.addAlgorithm(FusionAlgorithm())
+        self.addAlgorithm(AiDetectionAlgorithm())

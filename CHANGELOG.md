@@ -4,10 +4,95 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.0] - 2026-06-04
+
+### Added — Export Pipeline (LiDAR Relief — Export group)
+
+- **Cloud-Optimized GeoTIFF (COG) Export**: Convert any algorithm output to a
+  cloud-optimized GeoTIFF with internal tiling, overviews, and DEFLATE/LZW/ZSTD
+  compression. Optionally generates an interactive MapLibre GL JS web viewer
+  with opacity controls, coordinate display, dark/light themes, and share-link
+  copying. Suitable for direct upload to GitHub Pages or any static host.
+  (`export/cog_exporter.py`, `export/web_viewer.py`; algorithm: `cog_export`)
+
+- **Field Survey Export**: Package relief rasters and anomaly detection points
+  into a GeoPackage with structured archaeological schema (anomaly_id,
+  detection_method, confidence, feature_type, field_status) plus a QGIS project
+  file that opens directly in QField/Mergin Maps for mobile ground-truthing.
+  (`export/field_packager.py`; algorithm: `field_survey_export`)
+
+- **PDF Report Generator**: Generate CIfA-compliant PDF reports with title page,
+  full algorithm parameter documentation, input DEM metadata (CRS, resolution,
+  extent), band statistics with percentiles, histogram chart, and certification
+  section. Uses ReportLab (pure Python, OSGeo4W-safe).
+  (`export/report_generator.py`; algorithm: `pdf_report`)
+
+- **Visualization Recipes**: Import/export all algorithm parameters as
+  shareable JSON files with versioned schema, validation, type checking, and
+  metadata fields (name, author, tags, landscape type). Enables community
+  sharing of optimized parameter presets beyond the 4 built-in landscape
+  presets. (`recipes/__init__.py`; algorithms: `recipe_export`, `recipe_import`)
+
+### Added — Point Cloud Processing (LiDAR Relief — Point Cloud group)
+
+- **CSF Ground Filter (LAS/LAZ → DEM)**: Archaeology-tuned ground extraction
+  using the Cloth Simulation Filter (CSF) with 4 presets: Archaeology Fine
+  (maximum micro-relief preservation), Archaeology Standard (balanced),
+  Forested (aggressive canopy), and Urban. Supports laspy and PDAL readers.
+  (`point_cloud/csf_filter.py`; algorithm: `csf_ground_filter`)
+
+- **PDAL Ground Classification Pipelines**: JSON-based pipeline builder for
+  Progressive Morphological Filter (PMF) ground classification with
+  archaeology-optimized parameters. Presets for fine, standard, and forested
+  terrain, plus statistical outlier removal.
+  (`point_cloud/pdal_pipeline.py`; 4 pipeline presets)
+
+### Added — Multi-temporal Analysis (LiDAR Relief — Temporal group)
+
+- **Multi-temporal Change Detection**: Compute a probabilistic DEM of
+  Difference (DoD) between two temporally separated DEMs with propagated
+  RMSE-based Level of Detection (LoD) masking. Outputs include signed DoD
+  raster, significance mask (erosion/deposition), and cut/fill volume report.
+  (`temporal/dem_difference.py`; algorithm: `temporal_difference`)
+
+### Added — Multi-Sensor Fusion (LiDAR Relief — Fusion group)
+
+- **Multi-Sensor Fusion**: Co-register Sentinel-2 multispectral bands with
+  LiDAR relief and apply blend recipes combining topographic and spectral
+  information. Four recipes: Terrain+CIR (SVF + Colour Infrared), Crop Mark
+  Enhancement (Local Dominance + true colour), Erosion Risk (Slope + SWIR),
+  and Bare Earth Composite (SLRM + SWIR). Blend modes: luminance overlay,
+  overlay, multiply, screen.
+  (`fusion/sentinel_fusion.py`; algorithm: `multi_sensor_fusion`)
+
+### Added — AI/ML Inference (LiDAR Relief — AI/ML group)
+
+- **AI Feature Detection**: Load user-provided ONNX models for object
+  detection (YOLO) or semantic segmentation (U-Net) on plugin visualizations.
+  Features tiled processing for large rasters, Non-Maximum Suppression,
+  confidence filtering, and GeoPackage export of bounding box detections.
+  Pure NumPy preprocessing — no OpenCV dependency at inference time.
+  (`ml/detector.py`; algorithm: `ai_feature_detection`)
+
+### Added — GPU Acceleration
+
+- **CuPy Compute Backend**: Transparent GPU acceleration for computationally
+  intensive horizon-scanning algorithms (SVF, Openness). Automatically detects
+  CUDA availability and dispatches to CuPy with graceful NumPy fallback. Uses
+  the trigonometric identity `sin(arctan(dz/d)) = dz / sqrt(dz² + d²)` for GPU-
+  optimized horizon scanning. (`gpu/compute_backend.py`)
+
+### Fixed
+- Fixed missing `compute_mstp` wrapper function in `core/mstp.py` that caused an
+  `ImportError` when running the e4MSTP algorithm via Batch mode.
+
+---
+
 ## [1.3.5] - 2026-06-04
 
 ### Fixed
-- Fixed missing `compute_mstp` wrapper function in `core/mstp.py` that caused an `ImportError` when running the e4MSTP algorithm via Batch mode.
+- Fixed missing `compute_mstp` wrapper function in `core/mstp.py` that caused an
+  `ImportError` when running the e4MSTP algorithm via Batch mode.
 
 ---
 
