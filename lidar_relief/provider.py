@@ -26,6 +26,7 @@ from .algorithms.e4mstp_algorithm import E4MstpAlgorithm
 from .algorithms.pca_algorithm import PcaAlgorithm
 from .algorithms.ml_export_algorithm import MlExportAlgorithm
 from .algorithms.cog_export_algorithm import CogExportAlgorithm
+from .algorithms.field_export_algorithm import FieldExportAlgorithm
 
 
 class LidarReliefProvider(QgsProcessingProvider):
@@ -68,3 +69,4 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(PcaAlgorithm())
         self.addAlgorithm(MlExportAlgorithm())
         self.addAlgorithm(CogExportAlgorithm())
+        self.addAlgorithm(FieldExportAlgorithm())
