@@ -7,7 +7,11 @@ version=2.0.0
 author=Mark Bouck
 email=markbouck@duck.com
 
-about=A native QGIS plugin that generates 15 standard LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), Slope, Topographic Openness, Multi-Scale Topographic Position (MSTP), VAT Composite, Simple Red Relief, Blend, Local Dominance, Anisotropic Sky-View Factor (ASVF), Enhanced 4-Scale Topographic Position (e4MSTP), PCA RGB Composite, and ML-Ready VRT Export — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. A Batch mode lets you run multiple algorithms on the same DEM in a single pass, with built-in landscape scale presets for Flat/Agricultural, Forested, Upland/Steep, and Coastal terrain. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
+about=A comprehensive archaeological terrain analysis toolkit for QGIS that generates 15 LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), Slope, Topographic Openness, Multi-Scale Topographic Position (MSTP), VAT Composite, Simple Red Relief, Blend, Local Dominance, Anisotropic Sky-View Factor (ASVF), Enhanced 4-Scale Topographic Position (e4MSTP), PCA RGB Composite, and ML-Ready VRT Export — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. A Batch mode lets you run multiple algorithms on the same DEM in a single pass, with built-in landscape scale presets for Flat/Agricultural, Forested, Upland/Steep, and Coastal terrain.
+
+NEW in v2.0: Export visualizations as Cloud-Optimized GeoTIFFs with interactive MapLibre web viewers. Package rasters and anomaly detections as GeoPackage + QGIS project for mobile field validation in QField/Mergin Maps. Generate CIfA-compliant PDF reports with full parameter provenance and statistics. Share and reapply algorithm parameters via JSON Visualization Recipes. Process raw LAS/LAZ point clouds directly using the Cloth Simulation Filter with archaeology-tuned presets. Compute probabilistic DEMs of Difference for multi-temporal change detection with propagated error thresholds. Fuse LiDAR relief with Sentinel-2 multispectral bands using four blend recipes. Run AI feature detection using your own ONNX models (YOLO, U-Net). GPU acceleration via CuPy for horizon-scanning algorithms with transparent CPU fallback.
+
+Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
 
 tracker=https://github.com/mabo-du/lidar-relief-qgis-plugin/issues
 repository=https://github.com/mabo-du/lidar-relief-qgis-plugin
@@ -15,7 +19,7 @@ homepage=https://github.com/mabo-du/lidar-relief-qgis-plugin
 
 hasProcessingProvider=yes
 
-tags=lidar,relief,hillshade,svf,slrm,slope,archaeology,dem,visualization,terrain,landscape,openness,mstp,pca,local dominance,vat,asvf,e4mstp,batch
+tags=lidar,relief,hillshade,svf,slrm,slope,archaeology,dem,visualization,terrain,landscape,openness,mstp,pca,local dominance,vat,asvf,e4mstp,batch,cog,point cloud,csf,ground filter,laz,las,change detection,temporal,dod,fusion,sentinel,multispectral,ai,machine learning,onnx,yolo,gpu,cupy,export,field survey,qfield,report,pdf,recipe
 
 category=Raster
 icon=resources/icon.png
