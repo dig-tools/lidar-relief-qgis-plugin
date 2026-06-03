@@ -190,12 +190,13 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
                 if point is None:
                     continue
 
+                anom_idx = i + 1
                 record = {
                     "x": point.x(),
                     "y": point.y(),
                     "anomaly_id": (
                         str(feat[id_field]) if id_field and feat.hasField(id_field)
-                        else f"ANOM-{i + 1:04d}"
+                        else f"ANOM-{anom_idx:04d}"
                     ),
                     "confidence": (
                         float(feat[conf_field]) if conf_field and feat.hasField(conf_field)

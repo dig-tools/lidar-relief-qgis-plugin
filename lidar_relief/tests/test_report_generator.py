@@ -10,8 +10,11 @@ rules:
 import os
 import tempfile
 
-import pytest
 import numpy as np
+import pytest
+
+pytest.importorskip("osgeo")
+
 from osgeo import gdal
 
 

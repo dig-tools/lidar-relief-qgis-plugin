@@ -199,9 +199,9 @@ class RecipeImportAlgorithm(QgsProcessingAlgorithm):
 
         errors = validate_recipe(recipe_data)
         if errors:
+            warning_lines = "\n".join(f"  - {e}" for e in errors)
             feedback.pushWarning(
-                "Recipe validation warnings:\n"
-                + "\n".join(f"  - {e}" for e in errors)
+                "Recipe validation warnings:\n" + warning_lines
             )
 
         # Output the parameters as JSON

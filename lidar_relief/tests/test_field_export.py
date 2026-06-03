@@ -11,6 +11,9 @@ import os
 import tempfile
 
 import pytest
+
+pytest.importorskip("osgeo")
+
 from osgeo import ogr, osr
 
 

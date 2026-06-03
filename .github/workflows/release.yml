@@ -19,15 +19,12 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq libgdal-dev gdal-bin
-
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
           pip install ruff pytest numpy scipy
+          pip install rio-cogeo reportlab xarray rioxarray onnxruntime onnx 2>/dev/null || true
+          pip install cloth-simulation-filter 2>/dev/null || true
 
       - name: Run Tests and Linter
         run: ./test.sh

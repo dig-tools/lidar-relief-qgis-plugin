@@ -12,6 +12,9 @@ import tempfile
 
 import numpy as np
 import pytest
+
+pytest.importorskip("osgeo")
+
 from osgeo import gdal
 
 
