@@ -3,7 +3,7 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=15 LiDAR relief visualization algorithms (Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, and more) with batch processing, direct from a loaded DEM.
-version=1.3.4
+version=1.3.5
 author=LiDAR Relief Contributors
 email=lidar.relief@example.com
 

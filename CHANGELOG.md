@@ -4,6 +4,13 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [1.3.5] - 2026-06-04
+
+### Fixed
+- Fixed missing `compute_mstp` wrapper function in `core/mstp.py` that caused an `ImportError` when running the e4MSTP algorithm via Batch mode.
+
+---
+
 ## [1.3.4] - 2026-05-31
 
 ### Changed

@@ -151,3 +151,27 @@ def multi_scale_topographic_position(
 
     rgb = np.dstack((r, g, b))
     return rgb
+
+
+def compute_mstp(
+    dem: np.ndarray,
+    local_r: int = 5,
+    meso_r: int = 50,
+    broad_r: int = 500,
+    feedback=None,
+) -> np.ndarray:
+    """Compute MSTP RGB composite (wrapper for multi_scale_topographic_position).
+
+    Used by batch_algorithm.py for the e4MSTP pipeline, which needs the
+    raw MSTP composite before running the edge-enhancement step.
+
+    Returns:
+        3D uint8 RGB array of shape (rows, cols, 3).
+    """
+    return multi_scale_topographic_position(
+        dem,
+        local_radius=local_r,
+        meso_radius=meso_r,
+        broad_radius=broad_r,
+        feedback=feedback,
+    )
