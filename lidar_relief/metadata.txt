@@ -4,8 +4,8 @@ qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=15 LiDAR relief visualization algorithms (Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, and more) with batch processing, direct from a loaded DEM.
 version=2.0.0
-author=LiDAR Relief Contributors
-email=lidar.relief@example.com
+author=Mark Bouck
+email=markbouck@duck.com
 
 about=A native QGIS plugin that generates 15 standard LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), Slope, Topographic Openness, Multi-Scale Topographic Position (MSTP), VAT Composite, Simple Red Relief, Blend, Local Dominance, Anisotropic Sky-View Factor (ASVF), Enhanced 4-Scale Topographic Position (e4MSTP), PCA RGB Composite, and ML-Ready VRT Export — directly from a loaded Digital Elevation Model (DEM) layer, without requiring export to standalone tools like RVT or SAGA GIS. A Batch mode lets you run multiple algorithms on the same DEM in a single pass, with built-in landscape scale presets for Flat/Agricultural, Forested, Upland/Steep, and Coastal terrain. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
 
