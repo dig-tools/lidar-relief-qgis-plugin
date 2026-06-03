@@ -216,7 +216,7 @@ def package_for_qfield(
     # Add features
     for i, pt in enumerate(anomaly_points):
         feature = ogr.Feature(layer.GetLayerDefn())
-        feature.SetField("anomaly_id", pt.get("anomaly_id", f"ANOM-{i+1:04d}"))
+        feature.SetField("anomaly_id", pt.get("anomaly_id", f"ANOM-{i + 1:04d}"))
         feature.SetField("detection_method", pt.get("detection_method", "manual"))
         feature.SetField("confidence", float(pt.get("confidence", 0.5)))
         feature.SetField("feature_type", pt.get("feature_type", "unknown"))
