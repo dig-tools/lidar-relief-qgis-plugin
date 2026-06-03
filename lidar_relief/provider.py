@@ -27,6 +27,7 @@ from .algorithms.pca_algorithm import PcaAlgorithm
 from .algorithms.ml_export_algorithm import MlExportAlgorithm
 from .algorithms.cog_export_algorithm import CogExportAlgorithm
 from .algorithms.field_export_algorithm import FieldExportAlgorithm
+from .algorithms.pdf_report_algorithm import PdfReportAlgorithm
 
 
 class LidarReliefProvider(QgsProcessingProvider):
@@ -70,3 +71,4 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(MlExportAlgorithm())
         self.addAlgorithm(CogExportAlgorithm())
         self.addAlgorithm(FieldExportAlgorithm())
+        self.addAlgorithm(PdfReportAlgorithm())
