@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 try:
     from rio_cogeo.cogeo import cog_translate
     from rio_cogeo.profiles import cog_profiles
+    import rasterio
 
     _RIO_COGEO_AVAILABLE = True
 except ImportError:
@@ -91,10 +92,6 @@ def convert_to_cog(
     """
     check_dependencies()
 
-    import rasterio
-    from rio_cogeo.cogeo import cog_translate
-    from rio_cogeo.profiles import cog_profiles
-
     # Resolve the profile
     try:
         available_profiles = cog_profiles.get(profile)
@@ -114,8 +111,6 @@ def convert_to_cog(
     profile_config = available_profiles.copy()
 
     # Build overview level and perform conversion
-    import rasterio
-
     try:
         with rasterio.open(input_path) as src:
             dst_kwargs = profile_config

@@ -12,7 +12,6 @@ from qgis.core import (
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
     QgsProcessingParameterRasterDestination,
-    QgsProcessingOutputNumber,
     QgsProcessingOutputString,
     QgsProcessingException,
 )

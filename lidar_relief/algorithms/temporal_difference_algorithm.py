@@ -10,10 +10,8 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterNumber,
-    QgsProcessingParameterString,
     QgsProcessingParameterFileDestination,
     QgsProcessingOutputString,
-    QgsProcessingOutputNumber,
     QgsProcessingException,
 )
 

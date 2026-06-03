@@ -16,15 +16,13 @@ from qgis.core import (
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterBoolean,
     QgsProcessingParameterEnum,
-    QgsProcessingParameterNumber,
     QgsProcessingParameterString,
     QgsProcessingParameterFileDestination,
-    QgsProcessingOutputFile,
     QgsProcessingOutputString,
     QgsProcessingException,
 )
 
-from ..export.cog_exporter import convert_to_cog, cog_is_supported, validate_cog
+from ..export.cog_exporter import convert_to_cog, cog_is_supported
 from ..export.web_viewer import generate_web_viewer
 
 # Available COG compression profiles

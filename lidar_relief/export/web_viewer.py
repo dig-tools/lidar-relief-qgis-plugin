@@ -174,9 +174,6 @@ def _generate_viewer_html(
         if dark_mode
         else "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
     )
-    style_attr = (
-        "CARTO (dark)" if dark_mode else "CARTO (light)"
-    )
 
     # Min/max zoom for COG display: constrain to avoid requesting
     # tiles outside the raster's resolution

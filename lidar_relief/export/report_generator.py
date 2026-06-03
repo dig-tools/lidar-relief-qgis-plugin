@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 try:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
-    from reportlab.lib.units import mm, cm
+    from reportlab.lib.units import mm
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.platypus import (
         SimpleDocTemplate,
@@ -32,10 +32,9 @@ try:
         TableStyle,
         Image,
         PageBreak,
-        KeepTogether,
     )
-    from reportlab.graphics.shapes import Drawing, Rect, String, Line
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+    from reportlab.graphics.shapes import Drawing, Rect
+    from reportlab.lib.enums import TA_CENTER
 
     _REPORTLAB_AVAILABLE = True
 except ImportError:
@@ -348,7 +347,7 @@ def generate_report(
     ))
     story.append(Spacer(1, 6 * mm))
     story.append(Paragraph(
-        f"Signed: ___________________________    Date: _______________",
+        "Signed: ___________________________    Date: _______________",
         styles["Field"],
     ))
     story.append(Spacer(1, 2 * mm))

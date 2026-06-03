@@ -20,14 +20,10 @@ from qgis.core import (
     QgsProcessingParameterString,
     QgsProcessingParameterBoolean,
     QgsProcessingOutputNumber,
-    QgsProcessingOutputString,
     QgsProcessingException,
 )
 
-from ..export.field_packager import (
-    package_for_qfield,
-    create_anomaly_template,
-)
+from ..export.field_packager import package_for_qfield
 
 
 class FieldExportAlgorithm(QgsProcessingAlgorithm):

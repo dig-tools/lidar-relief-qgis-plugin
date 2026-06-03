@@ -11,7 +11,6 @@ from qgis.core import (
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterFile,
     QgsProcessingParameterNumber,
-    QgsProcessingParameterBoolean,
     QgsProcessingParameterFileDestination,
     QgsProcessingOutputNumber,
     QgsProcessingException,

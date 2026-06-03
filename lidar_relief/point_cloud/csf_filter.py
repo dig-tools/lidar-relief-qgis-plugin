@@ -16,7 +16,6 @@ rules:
 import logging
 import os
 import tempfile
-from typing import Optional
 
 import numpy as np
 
@@ -346,9 +345,11 @@ def _points_to_dem(
         feedback.setProgressText("Generating DEM from ground points...")
 
     # Write points to temporary XYZ file for GDAL grid
-    tmp_xyz = tempfile.mktemp(suffix=".xyz")
+    tmp_xyz_fd, tmp_xyz_path = tempfile.mkstemp(suffix=".xyz")
+    os.close(tmp_xyz_fd)
     try:
-        np.savetxt(tmp_xyz, xyz, fmt="%.3f %.3f %.3f")
+        np.savetxt(tmp_xyz_path, xyz, fmt="%.3f %.3f %.3f")
+        np.savetxt(tmp_xyz_path, xyz, fmt="%.3f %.3f %.3f")
 
         # Compute extent
         x_min, x_max = xyz[:, 0].min(), xyz[:, 0].max()
@@ -388,13 +389,13 @@ def _points_to_dem(
             zfield=2,
         )
 
-        gdal.Grid(output_path, tmp_xyz, options=grid_options)
+        gdal.Grid(output_path, tmp_xyz_path, options=grid_options)
 
         # Copy to our output
         ds = None
 
     finally:
-        if os.path.exists(tmp_xyz):
-            os.unlink(tmp_xyz)
+        if os.path.exists(tmp_xyz_path):
+            os.unlink(tmp_xyz_path)
 
     return output_path

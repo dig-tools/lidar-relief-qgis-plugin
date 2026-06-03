@@ -13,10 +13,9 @@ rules:
   Structured attribute schema follows archaeological survey conventions.
 """
 
-import json
 import logging
 import os
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
@@ -265,7 +264,6 @@ def _create_qgis_project(
       - Coordinate display in WGS84
     """
     from xml.etree import ElementTree as ET
-    from xml.dom import minidom
 
     # Build a minimal QGIS project XML
     # This is schema-compatible with QGIS 3.x / 4.x project files
@@ -330,10 +328,9 @@ def _create_qgis_project(
         else:
             ET.SubElement(fld, "editType").text = "TextEdit"
 
-    # Prettify XML
-    rough_string = ET.tostring(doc, encoding="utf-8")
-    reparsed = minidom.parseString(rough_string)
-    pretty_xml = reparsed.toprettyxml(indent="  ", encoding="utf-8")
+    # Prettify XML using safe ElementTree indentation
+    ET.indent(doc, space="  ")
+    pretty_xml = ET.tostring(doc, encoding="utf-8", xml_declaration=False)
 
     with open(qgs_path, "wb") as f:
         f.write(pretty_xml)

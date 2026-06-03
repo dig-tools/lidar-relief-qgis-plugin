@@ -14,7 +14,6 @@ rules:
 
 import logging
 import os
-from typing import Optional
 
 import numpy as np
 
@@ -164,7 +163,7 @@ def compute_dod_xarray(
     """
     check_dependencies()
 
-    import rioxarray as rxr
+    import rioxarray  # noqa: F401 — registers .rio accessor on xarray objects
 
     # Align new DEM to old DEM grid (reproject / match CRS)
     if dem_old.rio.crs != dem_new.rio.crs:

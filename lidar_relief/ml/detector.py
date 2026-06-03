@@ -245,9 +245,6 @@ def detect_features(
 
     raster_x = ds.RasterXSize
     raster_y = ds.RasterYSize
-    bands = ds.RasterCount
-    geotransform = ds.GetGeoTransform()
-    projection = ds.GetProjection()
 
     all_detections = []
     tiles_processed = 0

@@ -4,16 +4,11 @@ exports: PdfReportAlgorithm
 used_by: provider.py → loadAlgorithms
 """
 
-import os
-from datetime import datetime
-
 from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterString,
     QgsProcessingParameterFileDestination,
-    QgsProcessingOutputNumber,
-    QgsProcessingOutputString,
     QgsProcessingException,
 )
 

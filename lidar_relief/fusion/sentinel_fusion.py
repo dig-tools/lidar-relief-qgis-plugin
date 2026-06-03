@@ -14,7 +14,6 @@ rules:
 """
 
 import logging
-import os
 from typing import Optional
 
 import numpy as np
@@ -22,10 +21,9 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 try:
-    import rasterio
+    import rasterio  # noqa: F401 — used by function bodies
     from rasterio.enums import Resampling
     import rioxarray
-    import xarray as xr
 
     _FUSION_AVAILABLE = True
 except ImportError:

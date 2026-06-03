@@ -15,8 +15,6 @@ rules:
 
 import json
 import logging
-import os
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -200,15 +198,12 @@ def run_pipeline(pipeline_json: str, feedback=None) -> dict:
     except Exception as e:
         raise RuntimeError(f"PDAL pipeline failed: {e}") from e
 
-    # Extract metadata
-    point_count = 0
-    stage_count = 0
-    if isinstance(metadata, dict):
-        metadata_str = json.dumps(metadata)
-        stage_count = len(pipeline_data.get("pipeline", []))
-
     if feedback:
         feedback.setProgressText("PDAL pipeline complete.")
+
+    # Extract basic metadata from the pipeline
+    stage_count = len(pipeline_data.get("pipeline", []))
+    point_count = metadata.get("num_points", 0) if isinstance(metadata, dict) else 0
 
     return {
         "point_count": point_count,

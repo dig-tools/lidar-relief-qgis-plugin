@@ -17,7 +17,6 @@ rules:
 """
 
 import logging
-from typing import Optional
 
 import numpy as np
 
@@ -186,8 +185,9 @@ def compute_svf_gpu(
     dy = cp.round(cp.sin(angles)).astype(cp.int32)
 
     for i in range(num_directions):
-        horizon = _compute_horizon_gpu(d_dem, int(dx[i]), int(dy[i]),
-                                        cellsize, search_radius)
+        horizon = _compute_horizon_gpu(
+            d_dem, int(dx[i]), int(dy[i]), cellsize, search_radius
+        )
         svf_accum += 1.0 - horizon
 
     svf = svf_accum / num_directions
@@ -222,8 +222,9 @@ def compute_openness_gpu(
     if not _CUDA_AVAILABLE:
         logger.warning("CUDA not available, falling back to NumPy Openness")
         from ..core.openness import topographic_openness
-        return topographic_openness(dem, cellsize, num_directions,
-                                     search_radius, is_negative)
+        return topographic_openness(
+            dem, cellsize, num_directions, search_radius, is_negative
+        )
 
     # Transfer to GPU
     d_dem = cp.asarray(dem, dtype=cp.float32)
@@ -235,8 +236,9 @@ def compute_openness_gpu(
     dy = cp.round(cp.sin(angles)).astype(cp.int32)
 
     for i in range(num_directions):
-        horizon = _compute_horizon_gpu(d_dem, int(dx[i]), int(dy[i]),
-                                        cellsize, search_radius)
+        horizon = _compute_horizon_gpu(
+            d_dem, int(dx[i]), int(dy[i]), cellsize, search_radius
+        )
         if is_negative:
             # Negative openness: use max elevation angle
             openness_accum += cp.arcsin(horizon)

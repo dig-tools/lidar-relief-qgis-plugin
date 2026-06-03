@@ -8,7 +8,6 @@ from qgis.core import (
     QgsProcessingAlgorithm,
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterEnum,
-    QgsProcessingParameterNumber,
     QgsProcessingParameterFile,
     QgsProcessingParameterRasterDestination,
     QgsProcessingException,
