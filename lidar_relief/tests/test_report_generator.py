@@ -141,14 +141,13 @@ class TestReportGenerator:
         raster_path = self._create_test_raster()
         pdf_path = os.path.join(self.tmpdir, "no_hist.pdf")
 
-        result = generate_report(
+        generate_report(
             raster_path=raster_path,
             output_path=pdf_path,
             algorithm_name="Test",
             include_histogram=False,
             include_stats=False,
         )
-
         assert os.path.exists(pdf_path)
 
     def test_generate_minimal_report(self):
