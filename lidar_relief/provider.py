@@ -28,6 +28,8 @@ from .algorithms.ml_export_algorithm import MlExportAlgorithm
 from .algorithms.cog_export_algorithm import CogExportAlgorithm
 from .algorithms.field_export_algorithm import FieldExportAlgorithm
 from .algorithms.pdf_report_algorithm import PdfReportAlgorithm
+from .algorithms.recipe_io_algorithm import RecipeExportAlgorithm, RecipeImportAlgorithm
+from .algorithms.csf_algorithm import CsfAlgorithm
 
 
 class LidarReliefProvider(QgsProcessingProvider):
@@ -72,3 +74,6 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(CogExportAlgorithm())
         self.addAlgorithm(FieldExportAlgorithm())
         self.addAlgorithm(PdfReportAlgorithm())
+        self.addAlgorithm(RecipeExportAlgorithm())
+        self.addAlgorithm(RecipeImportAlgorithm())
+        self.addAlgorithm(CsfAlgorithm())

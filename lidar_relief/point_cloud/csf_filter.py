@@ -1,0 +1,400 @@
+"""csf_filter.py — Cloth Simulation Filter for archaeology-tuned ground extraction.
+
+exports: csf_available() -> bool,
+         filter_point_cloud(xyz_array, **params) -> tuple,
+         filter_las_file(las_path, output_dem_path, **params) -> dict,
+         ARCHAEOLOGY_PRESETS
+
+used_by: algorithms/csf_algorithm.py
+
+rules:
+  Uses cloth-simulation-filter (CSF) C++ library via Python bindings.
+  Provides archaeology-specific presets that preserve micro-relief.
+  Pure Python dependency — no GDAL needed for the filter itself.
+"""
+
+import logging
+import os
+import tempfile
+from typing import Optional
+
+import numpy as np
+
+logger = logging.getLogger(__name__)
+
+try:
+    from CSF import CSF, VecInt, VecFloat, VecVecFloat
+
+    _CSF_AVAILABLE = True
+except ImportError:
+    _CSF_AVAILABLE = False
+
+# Archaeology-tuned parameter presets
+# Based on research: older deterministic filters (CSF, PMF, MCC)
+# outperform modern AI filters at preserving archaeological micro-relief
+ARCHAEOLOGY_PRESETS = {
+    "archaeology_fine": {
+        "cloth_resolution": 0.5,
+        "class_threshold": 0.5,
+        "rigidness": 1,
+        "time_step": 0.65,
+        "b_slope_smooth": False,
+        "description": "Maximum micro-relief preservation. Use for subtle "
+        "earthworks on flat terrain.",
+    },
+    "archaeology_standard": {
+        "cloth_resolution": 1.0,
+        "class_threshold": 0.8,
+        "rigidness": 2,
+        "time_step": 0.65,
+        "b_slope_smooth": True,
+        "description": "Balance of vegetation removal and earthwork "
+        "preservation. Suitable for most surveys.",
+    },
+    "forested": {
+        "cloth_resolution": 2.0,
+        "class_threshold": 1.2,
+        "rigidness": 3,
+        "time_step": 0.50,
+        "b_slope_smooth": True,
+        "description": "Aggressive ground detection for dense canopy. "
+        "May remove subtle features.",
+    },
+    "urban": {
+        "cloth_resolution": 1.0,
+        "class_threshold": 0.5,
+        "rigidness": 1,
+        "time_step": 0.65,
+        "b_slope_smooth": True,
+        "description": "Standard filtering for built-up areas with "
+        "sharp building edges.",
+    },
+}
+
+DEFAULT_PRESET = "archaeology_standard"
+
+
+def csf_available() -> bool:
+    """Check if the CSF library is installed and importable."""
+    return _CSF_AVAILABLE
+
+
+def check_dependencies() -> None:
+    """Raise ImportError with clear instructions if CSF missing."""
+    if not _CSF_AVAILABLE:
+        raise ImportError(
+            "CSF (Cloth Simulation Filter) is required for point "
+            "cloud ground filtering.\n\n"
+            "Install it via the OSGeo4W Shell:\n"
+            "  pip install cloth-simulation-filter\n\n"
+            "Or via your system terminal:\n"
+            "  pip install cloth-simulation-filter"
+        )
+
+
+def _numpy_to_csf_points(xyz: np.ndarray) -> VecVecFloat:
+    """Convert a NumPy XYZ array to CSF's VecVecFloat format.
+
+    Args:
+        xyz: (N, 3) float32/float64 array of XYZ points.
+
+    Returns:
+        VecVecFloat suitable for CSF.setPointCloud().
+    """
+    pts = VecVecFloat()
+    for row in xyz:
+        pt = VecFloat()
+        pt.push_back(float(row[0]))
+        pt.push_back(float(row[1]))
+        pt.push_back(float(row[2]))
+        pts.push_back(pt)
+    return pts
+
+
+def filter_point_cloud(
+    xyz: np.ndarray,
+    cloth_resolution: float = 1.0,
+    class_threshold: float = 0.8,
+    rigidness: int = 2,
+    time_step: float = 0.65,
+    b_slope_smooth: bool = True,
+    iterations: int = 500,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Run CSF ground filtering on a point cloud.
+
+    Args:
+        xyz: (N, 3) float32 NumPy array of XYZ point coordinates.
+        cloth_resolution: Grid resolution of the cloth (metres).
+            Smaller = finer detail, higher memory.
+        class_threshold: Classification threshold. Lower = more
+            aggressive ground detection.
+        rigidness: Cloth rigidness (1–3). 1 = flexible (follows
+            terrain), 3 = stiff (filters more).
+        time_step: Simulation time step (0.3–1.0). Lower = more
+            accurate but slower.
+        b_slope_smooth: Enable slope post-processing smoothing.
+        iterations: Maximum simulation iterations.
+
+    Returns:
+        (ground_xyz, offground_xyz) — filtered point cloud arrays.
+    """
+    check_dependencies()
+
+    if xyz.ndim != 2 or xyz.shape[1] < 3:
+        raise ValueError(f"Expected (N, 3) array, got {xyz.shape}")
+
+    if len(xyz) == 0:
+        return np.empty((0, 3), dtype=np.float32), np.empty((0, 3), dtype=np.float32)
+
+    # Build CSF point cloud
+    pts = _numpy_to_csf_points(xyz)
+
+    # Configure CSF
+    csf = CSF()
+    csf.params.cloth_resolution = float(cloth_resolution)
+    csf.params.class_threshold = float(class_threshold)
+    csf.params.rigidness = int(rigidness)
+    csf.params.time_step = float(time_step)
+    csf.params.bSloopSmooth = bool(b_slope_smooth)
+    csf.params.interations = int(iterations)
+
+    # Run
+    csf.setPointCloud(pts)
+    ground_indices = VecInt()
+    offground_indices = VecInt()
+    csf.do_filtering(ground_indices, offground_indices)
+
+    # Convert results to numpy arrays
+    g_idx = list(ground_indices)
+    og_idx = list(offground_indices)
+
+    ground_xyz = xyz[g_idx] if len(g_idx) > 0 else np.empty((0, 3), dtype=xyz.dtype)
+    offground_xyz = (
+        xyz[og_idx] if len(og_idx) > 0 else np.empty((0, 3), dtype=xyz.dtype)
+    )
+
+    return ground_xyz, offground_xyz
+
+
+def filter_las_file(
+    las_path: str,
+    output_dem_path: str,
+    preset: str = DEFAULT_PRESET,
+    cellsize: float = 1.0,
+    ground_only: bool = True,
+    feedback=None,
+) -> dict:
+    """Read a LAS/LAZ file, run CSF ground filtering, write a DEM.
+
+    This is the primary entry point for the QGIS Processing algorithm.
+
+    Args:
+        las_path: Path to the input LAS/LAZ file.
+        output_dem_path: Path for the output DEM GeoTIFF.
+        preset: Parameter preset name from ARCHAEOLOGY_PRESETS.
+        cellsize: Output DEM cell size in map units.
+        ground_only: If True, output only ground points as DEM.
+            If False, output a binary ground/non-ground classification.
+        feedback: Optional progress callback.
+
+    Returns:
+        dict with processing statistics.
+
+    Raises:
+        ImportError: If CSF or laspy/PDAL is not installed.
+        RuntimeError: If processing fails.
+    """
+    check_dependencies()
+
+    # Try to read point cloud from LAS/LAZ
+    xyz = _read_las_points(las_path, feedback)
+
+    if feedback:
+        feedback.setProgressText(
+            f"Read {len(xyz)} points from {os.path.basename(las_path)}"
+        )
+
+    if len(xyz) == 0:
+        raise RuntimeError(f"No valid points found in {las_path}")
+
+    # Get preset parameters
+    if preset in ARCHAEOLOGY_PRESETS:
+        params = ARCHAEOLOGY_PRESETS[preset].copy()
+        params.pop("description", None)
+    else:
+        params = ARCHAEOLOGY_PRESETS[DEFAULT_PRESET].copy()
+        params.pop("description", None)
+        logger.warning("Unknown preset '%s', using '%s'", preset, DEFAULT_PRESET)
+
+    if feedback:
+        feedback.setProgressText(f"Running CSF ground filtering ({preset})...")
+
+    ground_xyz, offground_xyz = filter_point_cloud(xyz, **params)
+
+    if feedback:
+        feedback.setProgressText(
+            f"Classified: {len(ground_xyz)} ground, "
+            f"{len(offground_xyz)} non-ground"
+        )
+
+    if len(ground_xyz) < 10:
+        raise RuntimeError(
+            f"Only {len(ground_xyz)} ground points detected. "
+            f"Try a less aggressive preset."
+        )
+
+    # Generate DEM from ground points
+    dem_path = _points_to_dem(
+        ground_xyz, output_dem_path, cellsize=cellsize, feedback=feedback
+    )
+
+    return {
+        "dem_path": dem_path,
+        "total_points": len(xyz),
+        "ground_points": len(ground_xyz),
+        "offground_points": len(offground_xyz),
+        "preset": preset,
+        "cellsize": cellsize,
+    }
+
+
+def _read_las_points(las_path: str, feedback=None) -> np.ndarray:
+    """Read XYZ points from a LAS/LAZ file.
+
+    Tries laspy first, then PDAL, then falls back to simple text parse.
+
+    Args:
+        las_path: Path to LAS/LAZ file.
+
+    Returns:
+        (N, 3) float64 NumPy array.
+
+    Raises:
+        RuntimeError: If no reader is available.
+    """
+    # Try laspy
+    try:
+        import laspy
+
+        las = laspy.read(las_path)
+        xyz = np.column_stack([
+            las.x,
+            las.y,
+            las.z,
+        ]).astype(np.float64)
+        logger.info("Read %d points via laspy", len(xyz))
+        return xyz
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning("laspy failed: %s, trying PDAL...", e)
+
+    # Try PDAL
+    try:
+        import pdal
+
+        pipeline = pdal.Pipeline()
+        pipeline |= pdal.Reader.las(filename=las_path)
+        pipeline |= pdal.Filter.ferry(dimensions="Intensity=>Ignored")
+        pipeline.execute()
+        arrays = pipeline.arrays
+        if arrays:
+            arr = arrays[0]
+            xyz = np.column_stack([arr["X"], arr["Y"], arr["Z"]]).astype(np.float64)
+            logger.info("Read %d points via PDAL", len(xyz))
+            return xyz
+    except ImportError:
+        pass
+    except Exception as e:
+        logger.warning("PDAL failed: %s", e)
+
+    raise RuntimeError(
+        "Cannot read LAS/LAZ files. Install 'laspy' or 'pdal' Python "
+        "packages:\n"
+        "  pip install laspy\n"
+        "  pip install pdal"
+    )
+
+
+def _points_to_dem(
+    xyz: np.ndarray,
+    output_path: str,
+    cellsize: float = 1.0,
+    feedback=None,
+) -> str:
+    """Rasterize XYZ ground points to a DEM GeoTIFF.
+
+    Uses GDAL's grid API for inverse-distance weighting interpolation.
+
+    Args:
+        xyz: (N, 3) float64 NumPy array (X, Y, Z).
+        output_path: Output GeoTIFF path.
+        cellsize: Output cell size.
+        feedback: Optional progress callback.
+
+    Returns:
+        Path to the output DEM.
+    """
+    try:
+        from osgeo import gdal, osr
+    except ImportError:
+        raise RuntimeError(
+            "GDAL is required for DEM generation but not available."
+        )
+
+    if feedback:
+        feedback.setProgressText("Generating DEM from ground points...")
+
+    # Write points to temporary XYZ file for GDAL grid
+    tmp_xyz = tempfile.mktemp(suffix=".xyz")
+    try:
+        np.savetxt(tmp_xyz, xyz, fmt="%.3f %.3f %.3f")
+
+        # Compute extent
+        x_min, x_max = xyz[:, 0].min(), xyz[:, 0].max()
+        y_min, y_max = xyz[:, 1].min(), xyz[:, 1].max()
+
+        # Add half-cell padding
+        x_min -= cellsize / 2
+        x_max += cellsize / 2
+        y_min -= cellsize / 2
+        y_max += cellsize / 2
+
+        cols = int((x_max - x_min) / cellsize) + 1
+        rows = int((y_max - y_min) / cellsize) + 1
+
+        # Create output dataset
+        driver = gdal.GetDriverByName("GTiff")
+        ds = driver.Create(
+            output_path, cols, rows, 1, gdal.GDT_Float32,
+            options=["COMPRESS=LZW", "TILED=YES"],
+        )
+
+        geotransform = (x_min, cellsize, 0, y_max, 0, -cellsize)
+        ds.SetGeoTransform(geotransform)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)  # Default WGS84; user can reproject
+        ds.SetProjection(srs.ExportToWkt())
+
+        # Use GDAL grid with IDW interpolation
+        grid_options = gdal.GridOptions(
+            format="GTiff",
+            width=cols,
+            height=rows,
+            outputBounds=(x_min, y_min, x_max, y_max),
+            outputSRS="EPSG:4326",
+            algorithm="invdist:power=2:smoothing=1.0",
+            zfield=2,
+        )
+
+        gdal.Grid(output_path, tmp_xyz, options=grid_options)
+
+        # Copy to our output
+        ds = None
+
+    finally:
+        if os.path.exists(tmp_xyz):
+            os.unlink(tmp_xyz)
+
+    return output_path
