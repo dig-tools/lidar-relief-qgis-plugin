@@ -4,6 +4,14 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.2] - 2026-06-04
+
+### Fixed
+- Bumped to 2.0.2 as v2.0.1 tag was already claimed by an earlier build before lint fixes landed.
+- All lint fixes (W503, E203, E402) and `setup.cfg` restore are included in this release.
+
+---
+
 ## [2.0.1] - 2026-06-04
 
 ### Fixed
