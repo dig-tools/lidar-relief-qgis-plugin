@@ -91,7 +91,7 @@ def check_dependencies() -> None:
         )
 
 
-def _numpy_to_csf_points(xyz: np.ndarray) -> VecVecFloat:
+def _numpy_to_csf_points(xyz: np.ndarray) -> "VecVecFloat":
     """Convert a NumPy XYZ array to CSF's VecVecFloat format.
 
     Args:
