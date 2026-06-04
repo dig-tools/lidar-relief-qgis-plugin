@@ -4,6 +4,17 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.1] - 2026-06-04
+
+### Fixed
+- Fixed `NameError: name 'VecVecFloat' is not defined` in `point_cloud/csf_filter.py`
+  when loading the plugin without the `cloth-simulation-filter` package installed.
+  The return type annotation `-> VecVecFloat` was evaluated at module import time;
+  changed to a string literal for lazy evaluation so the plugin loads correctly
+  regardless of optional dependencies.
+
+---
+
 ## [2.0.0] - 2026-06-04
 
 ### Added — Export Pipeline (LiDAR Relief — Export group)
