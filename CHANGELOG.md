@@ -7,6 +7,9 @@ All notable changes to LiDAR Relief Visualization are documented here.
 ## [2.0.1] - 2026-06-04
 
 ### Fixed
+- Bumped version to align with plugins.qgis.org submission.
+- Fixed flake8 W503, E203, E402 lint warnings in `fusion_algorithm.py`, `compute_backend.py`, and `test_csf_filter.py`.
+- Restored `setup.cfg` with flake8 ignore rules for W503 and E203.
 - Fixed `NameError: name 'VecVecFloat' is not defined` in `point_cloud/csf_filter.py`
   when loading the plugin without the `cloth-simulation-filter` package installed.
   The return type annotation `-> VecVecFloat` was evaluated at module import time;

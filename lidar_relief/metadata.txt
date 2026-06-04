@@ -3,7 +3,7 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=22+ LiDAR relief visualization, point cloud, temporal change detection, multi-sensor fusion, and AI feature detection tools — Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, VAT, Openness, LD, Slope, Blend, Batch, COG export, QField survey, PDF reports, CSF ground filter, DoD, Sentinel-2 fusion, ONNX AI inference, and CuPy GPU acceleration. Direct from a loaded DEM or LAS/LAZ point cloud.
-version=2.0.0
+version=2.0.1
 author=Mark Bouck
 email=markbouck@duck.com
 
@@ -24,6 +24,26 @@ experimental=False
 deprecated=False
 
 changelog=
+    2.0.1 - Release Stabilisation
+    - Bumped version to align with plugins.qgis.org submission.
+    - Fixed flake8 W503, E203, E402 lint warnings in fusion_algorithm.py, compute_backend.py, and test_csf_filter.py.
+    - Restored setup.cfg with flake8 ignore rules for W503 and E203.
+
+    2.0.0 - Major Feature Expansion
+    - Added Cloud-Optimized GeoTIFF (COG) export with auto-generated MapLibre web viewer.
+    - Added QField survey package export for mobile field data collection.
+    - Added CIfA-compliant PDF report generation.
+    - Added JSON Visualization Recipe sharing.
+    - Added LAS/LAZ point cloud processing via Cloth Simulation Filter (CSF) ground extraction.
+    - Added multi-temporal DEM of Difference (DoD) for change detection.
+    - Added Sentinel-2 multi-sensor fusion algorithm.
+    - Added ONNX AI feature detection (YOLO and U-Net model support).
+    - Added CuPy GPU acceleration for SVF and Topographic Openness.
+    - Added Multi-Sensor Fusion algorithm.
+
+    1.3.5 - Housekeeping
+    - Bumped version to clear broken 1.3.4 release tag.
+
     1.3.4 - Housekeeping
     - Bumped version to clear broken 1.3.3 release tag.
     - Updated changelog to document all algorithms added since initial release.
