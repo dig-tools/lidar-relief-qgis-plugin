@@ -109,8 +109,8 @@ def _shift_array_gpu(
     h = src_y_end - src_y_start
     w = src_x_end - src_x_start
     if h > 0 and w > 0:
-        result[dst_y_start:dst_y_start + h, dst_x_start:dst_x_start + w] = (
-            arr[src_y_start:src_y_start + h, src_x_start:src_x_start + w]
+        result[dst_y_start:dst_y_start + h, dst_x_start:dst_x_start + w] = (  # noqa: E203
+            arr[src_y_start:src_y_start + h, src_x_start:src_x_start + w]  # noqa: E203
         )
 
     return result

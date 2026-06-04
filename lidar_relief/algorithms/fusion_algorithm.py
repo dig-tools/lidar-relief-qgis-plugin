@@ -50,15 +50,16 @@ class FusionAlgorithm(QgsProcessingAlgorithm):
         return "lidar_relief_fusion"
 
     def shortHelpString(self):
+        recipe_list = "\n".join(
+            f"  - {r['name']}: {r['description']}"
+            for r in FUSION_RECIPES.values()
+        )
         return (
             "Fuse LiDAR relief visualizations with Sentinel-2 multispectral "
             "bands into a single RGB composite.\n\n"
             "Available recipes:\n"
-        ) + "\n".join(
-            f"  - {r['name']}: {r['description']}"
-            for r in FUSION_RECIPES.values()
-        ) + (
-            "\n\nNote: All Sentinel-2 bands must be co-registered to the "
+            f"{recipe_list}\n\n"
+            "Note: All Sentinel-2 bands must be co-registered to the "
             "LiDAR layer's CRS and resolution before use. Use the "
             "'Co-register Bands' tool if needed."
         )

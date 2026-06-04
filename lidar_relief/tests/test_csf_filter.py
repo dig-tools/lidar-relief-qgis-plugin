@@ -13,7 +13,7 @@ import pytest
 
 pytest.importorskip("CSF")
 
-from lidar_relief.point_cloud.csf_filter import (
+from lidar_relief.point_cloud.csf_filter import (  # noqa: E402
     csf_available,
     filter_point_cloud,
     ARCHAEOLOGY_PRESETS,
