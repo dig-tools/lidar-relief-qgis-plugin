@@ -16,15 +16,14 @@ import pytest
 
 pytest.importorskip("osgeo")
 
-from osgeo import gdal
+from osgeo import gdal  # noqa: E402
 
-from lidar_relief.export.cog_exporter import (
+from lidar_relief.export.cog_exporter import (  # noqa: E402
     cog_is_supported,
     convert_to_cog,
     validate_cog,
 )
-from lidar_relief.export.web_viewer import generate_web_viewer
-from lidar_relief.core.raster_utils import write_array_to_raster
+from lidar_relief.export.web_viewer import generate_web_viewer  # noqa: E402
 
 
 @pytest.fixture
@@ -124,7 +123,7 @@ class TestCogExporter:
     def test_convert_missing_input(self):
         """A missing input file should raise RuntimeError."""
         with pytest.raises(RuntimeError, match="COG conversion failed"):
-            convert_to_cog("/nonexistent/path.tif", "/tmp/out.tif")
+            convert_to_cog("/nonexistent/path.tif", "/dev/null/out.tif")
 
 
 class TestWebViewer:

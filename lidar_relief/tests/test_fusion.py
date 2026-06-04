@@ -15,7 +15,7 @@ import pytest
 
 pytest.importorskip("osgeo")
 
-from osgeo import gdal
+from osgeo import gdal  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -121,7 +121,8 @@ class TestFusion:
         """Unknown recipe should raise ValueError."""
         from lidar_relief.fusion.sentinel_fusion import apply_fusion_recipe
         with pytest.raises(ValueError, match="Unknown fusion recipe"):
-            apply_fusion_recipe("nonexistent.tif", {}, "fake_recipe", "/tmp/out.tif")
+            out_path = os.path.join(self.tmpdir, "out.tif")
+            apply_fusion_recipe("nonexistent.tif", {}, "fake_recipe", out_path)
 
     def test_missing_band(self, setup):
         """Missing required bands should raise ValueError."""
@@ -132,4 +133,5 @@ class TestFusion:
         _create_raster(lidar_path, lidar)
 
         with pytest.raises(ValueError, match="Missing band"):
-            apply_fusion_recipe(lidar_path, {}, "terrain_cir", "/tmp/out.tif")
+            out_path = os.path.join(self.tmpdir, "out2.tif")
+            apply_fusion_recipe(lidar_path, {}, "terrain_cir", out_path)

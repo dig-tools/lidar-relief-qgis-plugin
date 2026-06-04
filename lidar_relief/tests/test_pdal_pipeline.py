@@ -8,14 +8,19 @@ rules:
 """
 
 import json
+import os
+import tempfile
+
 import pytest
 
 from lidar_relief.point_cloud.pdal_pipeline import (
     pdal_available,
     build_pipeline,
-    run_pipeline,
     ARCHAEOLOGY_PIPELINES,
 )
+
+_TMP_LAS = os.path.join(tempfile.gettempdir(), "test_pdal.las")
+_TMP_TIF = os.path.join(tempfile.gettempdir(), "test_pdal.tif")
 
 
 class TestPDALPipeline:
@@ -23,7 +28,6 @@ class TestPDALPipeline:
 
     def test_pdal_available(self):
         """Check if PDAL is available (informational)."""
-        # Not required to pass — PDAL may not be installed
         pass
 
     def test_pipelines_defined(self):
@@ -47,16 +51,15 @@ class TestPDALPipeline:
             pytest.skip("PDAL not installed")
 
         pipeline_json = build_pipeline(
-            las_path="/tmp/test.las",
-            output_path="/tmp/output.tif",
+            las_path=_TMP_LAS,
+            output_path=_TMP_TIF,
             preset="pmf_archaeology_standard",
         )
         data = json.loads(pipeline_json)
         assert "pipeline" in data
         stages = data["pipeline"]
         assert len(stages) >= 2
-        # First stage should be reader
-        assert stages[0]["filename"] == "/tmp/test.las"
+        assert stages[0]["filename"] == _TMP_LAS
 
     def test_build_with_custom_resolution(self):
         """Custom resolution should be applied to GDAL writer."""
@@ -64,8 +67,8 @@ class TestPDALPipeline:
             pytest.skip("PDAL not installed")
 
         pipeline_json = build_pipeline(
-            las_path="/tmp/test.las",
-            output_path="/tmp/output.tif",
+            las_path=_TMP_LAS,
+            output_path=_TMP_TIF,
             preset="pmf_archaeology_fine",
             resolution=0.5,
         )
@@ -78,8 +81,8 @@ class TestPDALPipeline:
         """Unknown preset should raise ValueError."""
         with pytest.raises(ValueError, match="Unknown pipeline preset"):
             build_pipeline(
-                las_path="/tmp/test.las",
-                output_path="/tmp/output.tif",
+                las_path=_TMP_LAS,
+                output_path=_TMP_TIF,
                 preset="nonexistent",
             )
 
@@ -89,7 +92,6 @@ class TestPDALPipeline:
             for i, stage in enumerate(preset["pipeline"]):
                 assert "type" in stage, \
                     f"Pipeline '{name}' stage {i} missing 'type'"
-                # Verify type starts with a valid prefix
                 type_str = stage["type"]
                 assert type_str.startswith(("readers.", "filters.", "writers.")), \
                     f"Pipeline '{name}' stage {i}: invalid type '{type_str}'"

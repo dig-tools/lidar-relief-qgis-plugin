@@ -15,7 +15,7 @@ import pytest
 
 pytest.importorskip("osgeo")
 
-from osgeo import gdal
+from osgeo import gdal  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -50,8 +50,9 @@ def _create_minimal_onnx_model(path):
     from onnx import helper, TensorProto, numpy_helper
 
     # Input: (1, 3, 64, 64)
-    X = helper.make_tensor_value_info("input", TensorProto.FLOAT,
-                                       [1, 3, 64, 64])
+    X = helper.make_tensor_value_info(
+        "input", TensorProto.FLOAT, [1, 3, 64, 64]
+    )
 
     # Weight initializer: 3 filters, 3 input channels, 1x1 kernel
     W_data = np.ones((3, 3, 1, 1), dtype=np.float32)

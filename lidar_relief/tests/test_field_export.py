@@ -14,7 +14,7 @@ import pytest
 
 pytest.importorskip("osgeo")
 
-from osgeo import ogr, osr
+from osgeo import ogr  # noqa: E402
 
 
 class TestFieldPackager:
@@ -75,8 +75,9 @@ class TestFieldPackager:
         gpkg_path = os.path.join(self.tmpdir, "template.gpkg")
         create_anomaly_template(gpkg_path)
 
-        fields = self._geopackage_has_fields(gpkg_path, "anomalies",
-                                              list(ANOMALY_SCHEMA.keys()))
+        fields = self._geopackage_has_fields(
+            gpkg_path, "anomalies", list(ANOMALY_SCHEMA.keys())
+        )
         for field_name in ANOMALY_SCHEMA:
             assert field_name in fields, f"Missing field: {field_name}"
 

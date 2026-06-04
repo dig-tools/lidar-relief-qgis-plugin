@@ -15,7 +15,7 @@ import pytest
 
 pytest.importorskip("osgeo")
 
-from osgeo import gdal
+from osgeo import gdal  # noqa: E402
 
 
 class TestReportGenerator:

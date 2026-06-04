@@ -15,7 +15,7 @@ import pytest
 
 pytest.importorskip("osgeo")
 
-from osgeo import gdal
+from osgeo import gdal  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -150,6 +150,8 @@ class TestTemporalDifference:
         result = compute_dod(old_path, new_path, tmpdir)
         vr = result["volume_report"]
 
-        for key in ["cut_volume_m3", "fill_volume_m3", "net_volume_m3",
-                     "propagated_error_m", "lod_threshold_m"]:
+        for key in [
+            "cut_volume_m3", "fill_volume_m3", "net_volume_m3",
+            "propagated_error_m", "lod_threshold_m",
+        ]:
             assert key in vr, f"Missing key: {key}"

@@ -86,10 +86,12 @@ class TestGPUCompute:
         dem = np.random.random((30, 30)).astype(np.float32) * 50.0
 
         # Compute on both backends
-        open_numpy = topographic_openness(dem, 1.0, num_directions=8,
-                                           search_radius=5)
-        open_gpu = compute_openness_gpu(dem, 1.0, num_directions=8,
-                                         search_radius=5)
+        open_numpy = topographic_openness(
+            dem, 1.0, num_directions=8, search_radius=5
+        )
+        open_gpu = compute_openness_gpu(
+            dem, 1.0, num_directions=8, search_radius=5
+        )
 
         valid = ~np.isnan(open_numpy) & ~np.isnan(open_gpu)
         if valid.any():

@@ -11,6 +11,8 @@ rules:
 import numpy as np
 import pytest
 
+pytest.importorskip("CSF")
+
 from lidar_relief.point_cloud.csf_filter import (
     csf_available,
     filter_point_cloud,
@@ -101,7 +103,7 @@ class TestCSFFilter:
 
     def test_filter_deterministic(self):
         """Same inputs should produce approximately similar results.
-        
+
         CSF is a physical simulation with floating-point accumulation
         that may vary slightly across runs. We check approximate agreement.
         """
