@@ -96,7 +96,7 @@ class PcaAlgorithm(QgsProcessingAlgorithm):
             if feedback and feedback.isCanceled():
                 return None
 
-            ld = compute_local_dominance(block, search_radius=10, feedback=feedback)
+            ld = compute_local_dominance(block, cellsize, min_rad=10, max_rad=20, feedback=feedback)
             if feedback and feedback.isCanceled():
                 return None
 

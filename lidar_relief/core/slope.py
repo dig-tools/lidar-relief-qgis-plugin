@@ -44,8 +44,10 @@ def compute_slope(
     if units not in ("degrees", "percent"):
         raise ValueError(f"units must be 'degrees' or 'percent', got '{units}'")
 
-    # Replace NaN for gradient computation
-    dem_filled = np.nan_to_num(dem, nan=0.0)
+    # Replace NaN with global mean for gradient computation to prevent edge halos
+    dem_mean = np.nanmean(dem)
+    dem_filled = np.copy(dem)
+    dem_filled[np.isnan(dem)] = dem_mean
 
     # Pad with edge replication
     padded = np.pad(dem_filled, 1, mode="edge")

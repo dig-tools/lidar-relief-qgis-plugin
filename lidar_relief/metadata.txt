@@ -3,7 +3,7 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=22+ LiDAR relief visualization, point cloud, temporal change detection, multi-sensor fusion, and AI feature detection tools — Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, VAT, Openness, LD, Slope, Blend, Batch, COG export, QField survey, PDF reports, CSF ground filter, DoD, Sentinel-2 fusion, ONNX AI inference, and CuPy GPU acceleration. Direct from a loaded DEM or LAS/LAZ point cloud.
-version=2.0.2
+version=2.0.3
 author=Mark Bouck
 email=markbouck@duck.com
 
@@ -24,6 +24,14 @@ experimental=False
 deprecated=False
 
 changelog=
+    2.0.3 - Comprehensive Bug Fixes
+    - Fixed NoData cliffs in Hillshade, Slope, and SLRM.
+    - Corrected integer overflow in SVF and ASVF.
+    - Handled dynamic shapes for ONNX AI models.
+    - Resolved file handle leaks in Sentinel Fusion.
+    - Improved export robustness in MapLibre Web Viewer and CIfA PDF reporting.
+    - Maintained CuPy/NumPy array compatibility across GPU compute backend.
+
     2.0.2 - Release Fix
     - Bumped to 2.0.2 as v2.0.1 tag was already claimed by an earlier build before lint fixes landed.
     - All lint fixes (W503, E203, E402) and setup.cfg restore are now included.

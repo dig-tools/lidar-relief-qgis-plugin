@@ -46,6 +46,8 @@ def compute_e4mstp(
     # Step 2 — Dual SVF:
     # SVF_S uses radius ~10px, SVF_L uses radius ~50px. Both computed internally.
     SVF_S = sky_view_factor(dem, cellsize, search_radius=10, feedback=feedback)
+    if feedback and feedback.isCanceled():
+        return np.array([])
     SVF_L = sky_view_factor(dem, cellsize, search_radius=50, feedback=feedback)
 
     svf_s_stretched = np.clip((SVF_S - 0.7) / (1.0 - 0.7), 0.0, 1.0)
@@ -63,12 +65,6 @@ def compute_e4mstp(
         return np.array([])
 
     # Step 4 — Overlay MSTP at 90% opacity:
-    # Overlay blend mode
-    overlay = np.where(
-        step3 < 0.5,
-        2 * step3 * MSTP[..., np.newaxis] if MSTP.ndim == 2 else 2 * step3 * MSTP,
-        1 - 2 * (1 - step3) * (1 - (MSTP[..., np.newaxis] if MSTP.ndim == 2 else MSTP)),
-    )
 
     # The user pseudo-code assumed MSTP was 2D or needed expansion: `MSTP[..., np.newaxis]`.
     # However, MSTP is typically an RGB array (H, W, 3). If it's already 3D, no newaxis is needed.

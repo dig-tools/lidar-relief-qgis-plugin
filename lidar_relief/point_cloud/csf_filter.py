@@ -181,6 +181,7 @@ def filter_las_file(
     preset: str = DEFAULT_PRESET,
     cellsize: float = 1.0,
     ground_only: bool = True,
+    crs: str = "EPSG:4326",
     feedback=None,
 ) -> dict:
     """Read a LAS/LAZ file, run CSF ground filtering, write a DEM.
@@ -244,7 +245,7 @@ def filter_las_file(
 
     # Generate DEM from ground points
     dem_path = _points_to_dem(
-        ground_xyz, output_dem_path, cellsize=cellsize, feedback=feedback
+        ground_xyz, output_dem_path, cellsize=cellsize, crs=crs, feedback=feedback
     )
 
     return {
@@ -319,6 +320,7 @@ def _points_to_dem(
     xyz: np.ndarray,
     output_path: str,
     cellsize: float = 1.0,
+    crs: str = "EPSG:4326",
     feedback=None,
 ) -> str:
     """Rasterize XYZ ground points to a DEM GeoTIFF.
@@ -349,7 +351,6 @@ def _points_to_dem(
     os.close(tmp_xyz_fd)
     try:
         np.savetxt(tmp_xyz_path, xyz, fmt="%.3f %.3f %.3f")
-        np.savetxt(tmp_xyz_path, xyz, fmt="%.3f %.3f %.3f")
 
         # Compute extent
         x_min, x_max = xyz[:, 0].min(), xyz[:, 0].max()
@@ -364,35 +365,18 @@ def _points_to_dem(
         cols = int((x_max - x_min) / cellsize) + 1
         rows = int((y_max - y_min) / cellsize) + 1
 
-        # Create output dataset
-        driver = gdal.GetDriverByName("GTiff")
-        ds = driver.Create(
-            output_path, cols, rows, 1, gdal.GDT_Float32,
-            options=["COMPRESS=LZW", "TILED=YES"],
-        )
-
-        geotransform = (x_min, cellsize, 0, y_max, 0, -cellsize)
-        ds.SetGeoTransform(geotransform)
-
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(4326)  # Default WGS84; user can reproject
-        ds.SetProjection(srs.ExportToWkt())
-
         # Use GDAL grid with IDW interpolation
         grid_options = gdal.GridOptions(
             format="GTiff",
             width=cols,
             height=rows,
             outputBounds=(x_min, y_min, x_max, y_max),
-            outputSRS="EPSG:4326",
+            outputSRS=crs,
             algorithm="invdist:power=2:smoothing=1.0",
             zfield=2,
         )
 
         gdal.Grid(output_path, tmp_xyz_path, options=grid_options)
-
-        # Copy to our output
-        ds = None
 
     finally:
         if os.path.exists(tmp_xyz_path):

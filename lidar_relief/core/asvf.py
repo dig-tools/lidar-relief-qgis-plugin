@@ -57,7 +57,7 @@ def anisotropic_sky_view_factor(
 
         if noise_level > 0:
             candidate_sin = np.zeros((rows, cols), dtype=np.float32)
-            countdown = np.zeros((rows, cols), dtype=np.int8)
+            countdown = np.zeros((rows, cols), dtype=np.int32)
             candidate_valid = np.zeros((rows, cols), dtype=bool)
 
         for dist in range(1, search_radius + 1):

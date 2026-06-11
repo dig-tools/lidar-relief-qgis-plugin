@@ -236,7 +236,11 @@ def detect_features(
 
     # Expected input size from model (H, W)
     _, _, model_h, model_w = input_shape
-    model_input_size = (model_h, model_w)
+    if isinstance(model_h, int) and isinstance(model_w, int):
+        model_input_size = (model_h, model_w)
+    else:
+        logger.info("Dynamic input shape %s, using tile_size %sx%s", input_shape, tile_size, tile_size)
+        model_input_size = (tile_size, tile_size)
 
     # Open raster
     ds = gdal.Open(raster_path, gdal.GA_ReadOnly)

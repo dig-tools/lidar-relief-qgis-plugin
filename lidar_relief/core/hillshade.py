@@ -36,8 +36,10 @@ def _horn_gradients(dem: np.ndarray, cellsize: float):
         Handles NaN by treating them as 0 gradient contribution.
         Uses np.nan_to_num internally for the kernel computation.
     """
-    # Replace NaN with local mean for gradient computation
-    dem_filled = np.nan_to_num(dem, nan=0.0)
+    # Replace NaN with global mean for gradient computation to prevent edge halos
+    dem_mean = np.nanmean(dem)
+    dem_filled = np.copy(dem)
+    dem_filled[np.isnan(dem)] = dem_mean
 
     # Extract the 8 neighbours via slicing (avoids np.roll overhead)
     # Pad with edge values to handle boundaries

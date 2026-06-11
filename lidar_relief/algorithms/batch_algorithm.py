@@ -551,7 +551,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             )
 
             def mstp_wrapper(
-                block, cellsize, local_r, meso_r, broad_r, lightness, feedback
+                block, cellsize, local_r, meso_r, broad_r, lightness
             ):
                 return multi_scale_topographic_position(
                     block, local_r, meso_r, broad_r, lightness, feedback
@@ -709,7 +709,6 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                     local_r=p_cfg["mstp_local"],
                     meso_r=p_cfg["mstp_meso"],
                     broad_r=p_cfg["mstp_broad"],
-                    lightness=1.0,
                     feedback=feedback,
                 )
                 mstp_norm = mstp.astype(np.float32) / 255.0
@@ -728,7 +727,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 source_path=source_path,
                 output_path=out_path,
                 algorithm_func=e4mstp_wrapper,
-                halo_size=p_cfg["mstp_broad"],
+                halo_size=min(p_cfg["mstp_broad"], 50),
                 tile_size=1024,
                 feedback=feedback,
             )
@@ -751,6 +750,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 openness = topographic_openness(
                     block,
                     cellsize,
+                    num_directions=p_cfg["openness_num_directions"],
                     search_radius=p_cfg["openness_radius"],
                     is_negative=False,
                     feedback=feedback,

@@ -100,7 +100,7 @@ def generate_web_viewer(
     # Provide default description mentioning the COG file
     if not description:
         description = (
-            f"Visualization generated from <code>{cog_filename}</code>"
+            f"Visualization generated from <code>{_escape_html(cog_filename)}</code>"
         )
 
     # Generate HTML
@@ -170,9 +170,9 @@ def _generate_viewer_html(
     GeoTIFF directly in the browser without a tile server.
     """
     style = (
-        "https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
         if dark_mode
-        else "https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"
+        else "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
     )
 
     # Min/max zoom for COG display: constrain to avoid requesting

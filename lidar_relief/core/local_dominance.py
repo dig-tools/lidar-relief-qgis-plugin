@@ -19,6 +19,9 @@ def compute_local_dominance(
     feedback=None,
 ) -> np.ndarray:
     """Compute Local Dominance using horizon-scanning ray trace."""
+    if cellsize <= 0:
+        raise ValueError("cellsize must be greater than 0")
+    
     rows, cols = dem.shape
 
     z_obs = dem + observer_h
@@ -38,8 +41,8 @@ def compute_local_dominance(
             return np.array([])
 
         for r in radii:
-            dx = int(np.round(r * np.cos(theta)))
-            dy = int(np.round(r * np.sin(theta)))
+            dy = int(np.round(-r * np.cos(theta)))
+            dx = int(np.round(r * np.sin(theta)))
 
             # Slice padded DEM to get target_z
             y1, y2 = pad_w + dy, pad_w + dy + rows

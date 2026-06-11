@@ -288,16 +288,19 @@ def generate_report(
             story.append(Spacer(1, 4 * mm))
 
             stat_data = [["Statistic", "Value"]]
+            def fmt(k):
+                return f"{stats[k]:.4f}" if k in stats else "—"
+
             stat_rows = [
-                ("Min", f"{stats.get('min', '—'):.4f}"),
-                ("Max", f"{stats.get('max', '—'):.4f}"),
-                ("Mean", f"{stats.get('mean', '—'):.4f}"),
-                ("Std Dev", f"{stats.get('std', '—'):.4f}"),
-                ("P5", f"{stats.get('p5', '—'):.4f}"),
-                ("P25", f"{stats.get('p25', '—'):.4f}"),
-                ("P50 (Median)", f"{stats.get('p50', '—'):.4f}"),
-                ("P75", f"{stats.get('p75', '—'):.4f}"),
-                ("P95", f"{stats.get('p95', '—'):.4f}"),
+                ("Min", fmt("min")),
+                ("Max", fmt("max")),
+                ("Mean", fmt("mean")),
+                ("Std Dev", fmt("std")),
+                ("P5", fmt("p5")),
+                ("P25", fmt("p25")),
+                ("P50 (Median)", fmt("p50")),
+                ("P75", fmt("p75")),
+                ("P95", fmt("p95")),
                 ("Valid Pixels", str(stats.get('valid_pixels', '—'))),
                 ("Nodata Pixels", str(stats.get('nodata_pixels', '—'))),
             ]
@@ -367,6 +370,14 @@ def generate_report(
                   onLaterPages=add_header_footer)
     except Exception as e:
         raise RuntimeError(f"PDF generation failed: {e}") from e
+    finally:
+        if include_histogram and stats:
+            hist_path = os.path.join(os.path.dirname(output_path), "_histogram.png")
+            if os.path.exists(hist_path):
+                try:
+                    os.remove(hist_path)
+                except OSError:
+                    pass
 
     size_bytes = os.path.getsize(output_path)
 

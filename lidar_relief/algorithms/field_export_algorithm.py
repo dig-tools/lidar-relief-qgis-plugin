@@ -186,7 +186,7 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
                 if geom is None or geom.isEmpty():
                     continue
 
-                point = geom.asPoint()
+                point = geom.centroid().asPoint()
                 if point is None:
                     continue
 
@@ -195,15 +195,15 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
                     "x": point.x(),
                     "y": point.y(),
                     "anomaly_id": (
-                        str(feat[id_field]) if id_field and feat.hasField(id_field)
+                        str(feat[id_field]) if id_field and id_field in feat.fields().names()
                         else f"ANOM-{anom_idx:04d}"
                     ),
                     "confidence": (
-                        float(feat[conf_field]) if conf_field and feat.hasField(conf_field)
+                        float(feat[conf_field]) if conf_field and conf_field in feat.fields().names()
                         else 0.5
                     ),
                     "detection_method": (
-                        str(feat[method_field]) if method_field and feat.hasField(method_field)
+                        str(feat[method_field]) if method_field and method_field in feat.fields().names()
                         else "manual"
                     ),
                     "feature_type": "unknown",

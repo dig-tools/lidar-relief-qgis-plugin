@@ -165,15 +165,13 @@ def compute_dod_xarray(
 
     import rioxarray  # noqa: F401 — registers .rio accessor on xarray objects
 
-    # Align new DEM to old DEM grid (reproject / match CRS)
+    # Align new DEM to old DEM grid (handles both CRS and grid alignment)
     if dem_old.rio.crs != dem_new.rio.crs:
         logger.info(
-            "CRS mismatch: %s → %s. Reprojecting...",
+            "CRS mismatch: %s → %s. Reprojecting and aligning...",
             dem_new.rio.crs, dem_old.rio.crs,
         )
-        dem_new = dem_new.rio.reproject_match(dem_old, resampling=align_method)
 
-    # Match grid to old DEM
     dem_new_aligned = dem_new.rio.reproject_match(
         dem_old, resampling=align_method
     )
@@ -201,17 +199,8 @@ def compute_dod_xarray(
     # Significance mask
     # 0 = no significant change, 1 = negative change (erosion/cut),
     # 2 = positive change (deposition/fill)
-    mask = xr.where(np.abs(dod) > threshold, 1, 0).astype(np.int8)
-    mask = xr.where(
-        (dod < -threshold) & (np.abs(dod) > threshold),
-        np.int8(1),  # negative change
-        mask,
-    )
-    mask = xr.where(
-        (dod > threshold) & (np.abs(dod) > threshold),
-        np.int8(2),  # positive change
-        mask,
-    )
+    mask = xr.where(dod < -threshold, np.int8(1), np.int8(0))
+    mask = xr.where(dod > threshold, np.int8(2), mask)
 
     # Statistics
     valid_mask = ~np.isnan(dod)
@@ -303,8 +292,11 @@ def _write_array_via_gdal(
     )
 
     if hasattr(template, "rio"):
-        ds.SetGeoTransform(template.rio.transform())
-        ds.SetProjection(str(template.rio.crs))
+        ds.SetGeoTransform(template.rio.transform().to_gdal())
+        if hasattr(template.rio.crs, "to_wkt"):
+            ds.SetProjection(template.rio.crs.to_wkt())
+        else:
+            ds.SetProjection(str(template.rio.crs))
 
     band = ds.GetRasterBand(1)
     values = data.values

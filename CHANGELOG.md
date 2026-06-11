@@ -4,6 +4,24 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.3] - 2026-06-12
+
+### Fixed
+- Replaced `np.nan_to_num(0.0)` with `np.nanmean()` in `hillshade.py`, `slope.py`, and `slrm.py` to prevent false cliffs at NoData boundaries.
+- Corrected `np.int8` overflow to `np.int16` in `svf.py` and `asvf.py` preventing integer wrap-around.
+- Added checks for `cellsize <= 0` in `local_dominance.py` to avoid divide-by-zero errors.
+- Fixed hardcoded CRS strings to extract them dynamically in AI Detection. Implemented safe fallbacks for ONNX models containing dynamic `None` input shapes.
+- Closed open file handles on `rioxarray` raster objects using `with` blocks in Sentinel Fusion to prevent "Too many open files" errors. Fixed `.to_wkt()` calls.
+- Replaced double reprojection with a single correct call to `reproject_match` in Temporal Change Detection.
+- Cleaned up the DEM export logic in Point Cloud Filters by removing a duplicate `np.savetxt` call.
+- Cleaned up batch processing wrapper arguments to match actual function signatures.
+- Swapped out raw XYZ tile URLs for proper Carto GL Style JSON strings in MapLibre Web Viewer and escaped HTML attributes properly.
+- Added safeguards to float string formatting in PDF Report Generator.
+- Updated field export algorithm to correctly call `geom.centroid().asPoint()`.
+- Aligned trigonometric equations in the GPU openness calculation with the CPU NumPy versions and corrected array conversions in `gpu/compute_backend.py`.
+
+---
+
 ## [2.0.2] - 2026-06-04
 
 ### Fixed

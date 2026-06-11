@@ -153,6 +153,7 @@ def write_array_to_raster(
     out_dataset.SetGeoTransform(geotransform)
     out_dataset.SetProjection(projection)
 
+    out_band = None
     if bands == 1:
         out_band = out_dataset.GetRasterBand(1)
 
@@ -340,18 +341,6 @@ def process_in_tiles(
             # Run algorithm
             result_block = algorithm_func(block, cellsize, **kwargs)
 
-            # Reapply nodata mask
-            if result_block.ndim == 3:
-                for b in range(out_bands):
-                    band_slice = result_block[:, :, b]
-                    band_slice[block_nodata_mask] = (
-                        0 if gdal_dtype == gdal.GDT_Byte else np.nan
-                    )
-            else:
-                result_block[block_nodata_mask] = (
-                    0 if gdal_dtype == gdal.GDT_Byte else np.nan
-                )
-
             # Extract the interior (remove halo)
             crop_top = y - read_y
             crop_bottom = crop_top + win_y_size
@@ -362,6 +351,19 @@ def process_in_tiles(
                 interior = result_block[crop_top:crop_bottom, crop_left:crop_right, :]
             else:
                 interior = result_block[crop_top:crop_bottom, crop_left:crop_right]
+
+            # Reapply nodata mask to interior ONLY
+            interior_nodata_mask = block_nodata_mask[crop_top:crop_bottom, crop_left:crop_right]
+            if interior.ndim == 3:
+                for b in range(out_bands):
+                    band_slice = interior[:, :, b]
+                    band_slice[interior_nodata_mask] = (
+                        0 if gdal_dtype == gdal.GDT_Byte else np.nan
+                    )
+            else:
+                interior[interior_nodata_mask] = (
+                    0 if gdal_dtype == gdal.GDT_Byte else np.nan
+                )
 
             # Replace remaining NaNs with nodata for writing
             if gdal_dtype != gdal.GDT_Byte and nodata is not None:

@@ -134,26 +134,27 @@ def co_register_bands(
     }
     resampler = resampling_map.get(resampling, Resampling.bilinear)
 
-    ref = rioxarray.open_rasterio(reference_path)
-    target = rioxarray.open_rasterio(target_path)
+    with rioxarray.open_rasterio(reference_path) as ref:
+        with rioxarray.open_rasterio(target_path) as target:
+            # Reproject match
+            aligned = target.rio.reproject_match(ref, resampling=resampler)
 
-    # Reproject match
-    aligned = target.rio.reproject_match(ref, resampling=resampler)
+            # Write output
+            aligned.rio.to_raster(
+                output_path,
+                compress="LZW",
+                tiled=True,
+                dtype=aligned.dtype,
+            )
 
-    # Write output
-    aligned.rio.to_raster(
-        output_path,
-        compress="LZW",
-        tiled=True,
-        dtype=aligned.dtype,
-    )
+            crs_wkt = aligned.rio.crs.to_wkt() if hasattr(aligned.rio, "crs") and aligned.rio.crs else None
 
-    return {
-        "output_path": output_path,
-        "width": aligned.sizes.get("x", 0),
-        "height": aligned.sizes.get("y", 0),
-        "crs": str(aligned.rio.crs) if hasattr(aligned, "rio") else None,
-    }
+            return {
+                "output_path": output_path,
+                "width": aligned.sizes.get("x", 0),
+                "height": aligned.sizes.get("y", 0),
+                "crs": crs_wkt,
+            }
 
 
 def _normalize(array: np.ndarray) -> np.ndarray:
@@ -275,28 +276,34 @@ def apply_fusion_recipe(
     required_bands = recipe["s2_bands"]
 
     # Load LiDAR layer
-    lidar_da = rioxarray.open_rasterio(lidar_path)
-    if "band" in lidar_da.dims:
-        lidar_da = lidar_da.squeeze("band")
+    with rioxarray.open_rasterio(lidar_path) as lidar_da:
+        if "band" in lidar_da.dims:
+            lidar_da_sq = lidar_da.squeeze("band")
+        else:
+            lidar_da_sq = lidar_da
 
-    lidar_array = lidar_da.values.astype(np.float64)
+        lidar_array = lidar_da_sq.values.astype(np.float64)
+        lidar_crs = lidar_da.rio.crs.to_wkt() if hasattr(lidar_da.rio, "crs") and lidar_da.rio.crs else None
+        lidar_transform = lidar_da.rio.transform() if hasattr(lidar_da, 'rio') else None
 
-    # Load and co-register S2 bands
-    s2_arrays = []
-    for band in required_bands:
-        if band not in s2_paths:
-            raise ValueError(
-                f"Missing band {band} required for recipe '{recipe_name}'. "
-                f"Provided: {list(s2_paths.keys())}"
-            )
-        band_da = rioxarray.open_rasterio(s2_paths[band])
-        if "band" in band_da.dims:
-            band_da = band_da.squeeze("band")
-        # Align to LiDAR grid
-        band_aligned = band_da.rio.reproject_match(
-            lidar_da, resampling=Resampling.bilinear
-        )
-        s2_arrays.append(band_aligned.values.astype(np.float64))
+        # Load and co-register S2 bands
+        s2_arrays = []
+        for band in required_bands:
+            if band not in s2_paths:
+                raise ValueError(
+                    f"Missing band {band} required for recipe '{recipe_name}'. "
+                    f"Provided: {list(s2_paths.keys())}"
+                )
+            with rioxarray.open_rasterio(s2_paths[band]) as band_da:
+                if "band" in band_da.dims:
+                    band_da_sq = band_da.squeeze("band")
+                else:
+                    band_da_sq = band_da
+                # Align to LiDAR grid
+                band_aligned = band_da_sq.rio.reproject_match(
+                    lidar_da_sq, resampling=Resampling.bilinear
+                )
+                s2_arrays.append(band_aligned.values.astype(np.float64))
 
     s2_stack = np.dstack(s2_arrays) if len(s2_arrays) > 1 else s2_arrays[0][:, :, np.newaxis]
 
@@ -314,8 +321,8 @@ def apply_fusion_recipe(
     _write_rgb_raster(
         result,
         output_path,
-        crs=str(lidar_da.rio.crs) if hasattr(lidar_da, 'rio') else None,
-        transform=lidar_da.rio.transform() if hasattr(lidar_da, 'rio') else None,
+        crs=lidar_crs,
+        transform=lidar_transform,
     )
 
     return {

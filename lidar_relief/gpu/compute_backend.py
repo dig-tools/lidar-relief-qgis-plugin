@@ -122,15 +122,14 @@ def _compute_horizon_gpu(
     dy: int,
     cellsize: float,
     max_steps: int,
+    init_val: float = 0.0,
 ) -> "cp.ndarray":
     """Compute the horizon angle in a given direction using CuPy.
 
     Parallel to the NumPy version in core/svf.py.
-    Uses the trigonometric identity:
-        sin(arctan(dz/d)) = dz / sqrt(dz² + d²)
     """
     rows, cols = dem.shape
-    horizon = cp.zeros((rows, cols), dtype=cp.float64)
+    horizon = cp.full((rows, cols), init_val, dtype=cp.float64)
 
     distance = cp.sqrt(
         cp.float64(dx * cellsize) ** 2 + cp.float64(dy * cellsize) ** 2
@@ -142,8 +141,8 @@ def _compute_horizon_gpu(
 
         sin_angle = cp.where(
             ~cp.isnan(shifted) & ~cp.isnan(dem),
-            cp.abs(dz) / cp.sqrt(dz ** 2 + distance ** 2 * step ** 2),
-            cp.float64(0.0),
+            dz / cp.sqrt(dz ** 2 + distance ** 2 * step ** 2),
+            init_val,
         )
 
         horizon = cp.maximum(horizon, sin_angle)
@@ -175,6 +174,9 @@ def compute_svf_gpu(
 
     # Transfer to GPU
     d_dem = cp.asarray(dem, dtype=cp.float32)
+    nan_mask = cp.isnan(d_dem)
+    d_dem[nan_mask] = cp.nanmean(d_dem)
+    
     rows, cols = d_dem.shape
     svf_accum = cp.zeros((rows, cols), dtype=cp.float64)
 
@@ -185,18 +187,16 @@ def compute_svf_gpu(
 
     for i in range(num_directions):
         horizon = _compute_horizon_gpu(
-            d_dem, int(dx[i]), int(dy[i]), cellsize, search_radius
+            d_dem, int(dx[i]), int(dy[i]), cellsize, search_radius, init_val=0.0
         )
+        horizon = cp.maximum(horizon, 0.0)
         svf_accum += 1.0 - horizon
 
     svf = svf_accum / num_directions
-    result = cp.asnumpy(svf).astype(np.float32)
-    result = cp.clip(result, 0.0, 1.0)
+    svf = cp.clip(svf, 0.0, 1.0).astype(cp.float32)
+    svf[nan_mask] = cp.nan
 
-    # Propagate NaN from input
-    result[cp.isnan(dem)] = cp.nan
-
-    return cp.asnumpy(result) if isinstance(result, cp.ndarray) else result
+    return cp.asnumpy(svf)
 
 
 def compute_openness_gpu(
@@ -226,7 +226,15 @@ def compute_openness_gpu(
         )
 
     # Transfer to GPU
-    d_dem = cp.asarray(dem, dtype=cp.float32)
+    if is_negative:
+        dem_copy = -dem
+    else:
+        dem_copy = dem
+
+    d_dem = cp.asarray(dem_copy, dtype=cp.float32)
+    nan_mask = cp.isnan(d_dem)
+    d_dem[nan_mask] = cp.nanmean(d_dem)
+
     rows, cols = d_dem.shape
     openness_accum = cp.zeros((rows, cols), dtype=cp.float64)
 
@@ -236,17 +244,12 @@ def compute_openness_gpu(
 
     for i in range(num_directions):
         horizon = _compute_horizon_gpu(
-            d_dem, int(dx[i]), int(dy[i]), cellsize, search_radius
+            d_dem, int(dx[i]), int(dy[i]), cellsize, search_radius, init_val=-1.0
         )
-        if is_negative:
-            # Negative openness: use max elevation angle
-            openness_accum += cp.arcsin(horizon)
-        else:
-            # Positive openness: complement of max elevation angle
-            openness_accum += cp.pi / 2 - cp.arcsin(horizon)
+        openness_accum += cp.pi / 2.0 - cp.arcsin(horizon)
 
     result = openness_accum / num_directions
-    result_deg = cp.degrees(result).astype(np.float32)
-    result_deg[cp.isnan(d_dem)] = cp.nan
+    result_deg = cp.degrees(result).astype(cp.float32)
+    result_deg[nan_mask] = cp.nan
 
-    return cp.asnumpy(result_deg) if isinstance(result_deg, cp.ndarray) else result_deg
+    return cp.asnumpy(result_deg)

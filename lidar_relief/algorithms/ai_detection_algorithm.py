@@ -204,15 +204,21 @@ def _write_detections_gpkg(
     raster_path: str,
 ) -> None:
     """Write detection results to a GeoPackage vector layer."""
-    from osgeo import ogr, osr
+    from osgeo import ogr, osr, gdal
 
     driver = ogr.GetDriverByName("GPKG")
     if os.path.exists(output_path):
         driver.DeleteDataSource(output_path)
 
     ds = driver.CreateDataSource(output_path)
+    
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(4326)
+    raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
+    if raster_ds and raster_ds.GetProjection():
+        srs.ImportFromWkt(raster_ds.GetProjection())
+        raster_ds = None
+    else:
+        srs.ImportFromEPSG(4326)
 
     layer = ds.CreateLayer("detections", srs, ogr.wkbPolygon)
 

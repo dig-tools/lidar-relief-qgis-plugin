@@ -110,10 +110,11 @@ def simple_local_relief_model(
         Uses scipy.ndimage.uniform_filter if available; otherwise falls back
         to cumulative-sum box filter.
     """
-    # Fill NaN with local mean estimate (0.0 is acceptable for trend removal)
+    # Fill NaN with global mean estimate for trend removal to prevent edge halos
     nan_mask = np.isnan(dem)
+    dem_mean = np.nanmean(dem)
     dem_filled = dem.copy()
-    dem_filled[nan_mask] = 0.0
+    dem_filled[nan_mask] = dem_mean
 
     # Compute smoothed surface
     kernel_size = 2 * radius + 1
