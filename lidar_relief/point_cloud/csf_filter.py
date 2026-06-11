@@ -337,7 +337,7 @@ def _points_to_dem(
         Path to the output DEM.
     """
     try:
-        from osgeo import gdal, osr
+        from osgeo import gdal
     except ImportError:
         raise RuntimeError(
             "GDAL is required for DEM generation but not available."
