@@ -7,7 +7,6 @@ rules:
 """
 
 import numpy as np
-from scipy import linalg
 
 
 def compute_pca_composite(
@@ -28,6 +27,11 @@ def compute_pca_composite(
     Returns:
         3D numpy array (rows, cols, 3) in [0, 255] float32.
     """
+    try:
+        from scipy import linalg
+    except ImportError:
+        raise ImportError("PCA composite requires scipy. Install with: pip install scipy")
+
     rows, cols = svf.shape
 
     # Mask out NaNs
@@ -44,8 +48,6 @@ def compute_pca_composite(
     if len(v_svf) == 0:
         return np.zeros((rows, cols, 3), dtype=np.float32)
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     # Standardize data (0 mean, 1 variance)
     data = np.stack([v_svf, v_open, v_slope, v_ld], axis=1)  # (N, 4)
@@ -56,8 +58,6 @@ def compute_pca_composite(
     std[std == 0] = 1.0
     data_std = (data - mean) / std
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     # Covariance matrix (4x4)
     cov = np.cov(data_std, rowvar=False)
@@ -72,8 +72,6 @@ def compute_pca_composite(
     # Take first 3 principal components (N, 3)
     pc = np.dot(data_std, evecs[:, :3])
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     # Normalize PCs to [0, 255]
     # Use 2-98 percentile for robust contrast stretch

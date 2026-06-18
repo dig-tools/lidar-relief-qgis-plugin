@@ -95,4 +95,5 @@ def test_local_dominance_shape_and_dtype():
     dem = np.random.rand(25, 30).astype(np.float32)
     result = compute_local_dominance(dem, 1.0, min_rad=5, max_rad=10)
     assert result.shape == dem.shape
-    assert result.dtype == np.uint8
+    assert result.dtype == np.float32
+

@@ -51,16 +51,12 @@ def compute_vat(
     )
     base = _normalize(hillshade)
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     if feedback:
         feedback.setProgressText("VAT: Computing Slope...")
     slope = compute_slope(array, cellsize, units="degrees")
     slope_norm = _normalize(slope, invert=True)
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     if feedback:
         feedback.setProgressText("VAT: Computing Positive Openness...")
@@ -73,8 +69,6 @@ def compute_vat(
     )
     openness_norm = _normalize(openness)
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     if feedback:
         feedback.setProgressText("VAT: Computing Sky-View Factor...")
@@ -83,8 +77,6 @@ def compute_vat(
     )
     svf_norm = _normalize(svf)
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     if feedback:
         feedback.setProgressText("VAT: Blending layers...")

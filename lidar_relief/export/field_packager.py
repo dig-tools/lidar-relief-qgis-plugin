@@ -236,9 +236,12 @@ def package_for_qfield(
     ds.FlushCache()
     ds = None
 
+    rel_raster_ref = os.path.basename(raster_ref) if include_raster_copy else os.path.relpath(raster_ref, output_dir)
+    rel_gpkg_path = os.path.basename(gpkg_path)
+
     # Create QGIS project file
     _create_qgis_project(
-        qgs_path, raster_ref, gpkg_path, project_name, crs
+        qgs_path, rel_raster_ref, rel_gpkg_path, project_name, crs
     )
 
     return {
@@ -300,8 +303,9 @@ def _create_qgis_project(
     ET.SubElement(vector_maplayer, "id").text = "anomalies"
     ET.SubElement(vector_maplayer, "name").text = "Anomalies"
     ET.SubElement(vector_maplayer, "type").text = "vector"
+    escaped_gpkg_path = gpkg_path.replace("'", "''")
     ET.SubElement(vector_maplayer, "datasource").text = (
-        f"dbname='{gpkg_path}' table=\"anomalies\" (geometry)"
+        f"dbname='{escaped_gpkg_path}' table=\"anomalies\" (geometry)"
     )
 
     # Field configuration (for QField digitising form)

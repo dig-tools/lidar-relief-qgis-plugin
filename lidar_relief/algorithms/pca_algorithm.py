@@ -78,8 +78,6 @@ class PcaAlgorithm(QgsProcessingAlgorithm):
                 noise_level=0,
                 feedback=feedback,
             )
-            if feedback and feedback.isCanceled():
-                return None
 
             openness = topographic_openness(
                 block,
@@ -89,16 +87,10 @@ class PcaAlgorithm(QgsProcessingAlgorithm):
                 is_negative=False,
                 feedback=feedback,
             )
-            if feedback and feedback.isCanceled():
-                return None
 
             slope = compute_slope(block, cellsize, units="degrees")
-            if feedback and feedback.isCanceled():
-                return None
 
             ld = compute_local_dominance(block, cellsize, min_rad=10, max_rad=20, feedback=feedback)
-            if feedback and feedback.isCanceled():
-                return None
 
             return compute_pca_composite(svf, openness, slope, ld, feedback=feedback)
 

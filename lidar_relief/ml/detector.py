@@ -104,9 +104,10 @@ def load_model(
     sess_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
     sess_options.enable_cpu_mem_arena = True
 
+    providers = ort.get_available_providers()
     session = ort.InferenceSession(
         model_path, sess_options,
-        providers=["CPUExecutionProvider"],
+        providers=providers,
     )
 
     # Get model metadata
@@ -176,16 +177,20 @@ def preprocess_tile(
     src_h, src_w = tile.shape[:2]
 
     # Create coordinate grids
-    y_ratio = src_h / h
-    x_ratio = src_w / w
-    y_coords = np.clip(
-        np.floor(np.arange(h) * y_ratio).astype(np.int32), 0, src_h - 1
-    )
-    x_coords = np.clip(
-        np.floor(np.arange(w) * x_ratio).astype(np.int32), 0, src_w - 1
-    )
-
-    tile_resized = tile[y_coords[:, np.newaxis], x_coords[np.newaxis, :]]
+    try:
+        import cv2
+        tile_resized = cv2.resize(tile, (w, h), interpolation=cv2.INTER_LINEAR)
+    except ImportError:
+        y_ratio = src_h / h
+        x_ratio = src_w / w
+        y_coords = np.clip(
+            np.floor(np.arange(h) * y_ratio).astype(np.int32), 0, src_h - 1
+        )
+        x_coords = np.clip(
+            np.floor(np.arange(w) * x_ratio).astype(np.int32), 0, src_w - 1
+        )
+    
+        tile_resized = tile[y_coords[:, np.newaxis], x_coords[np.newaxis, :]]
 
     # Normalize to [0, 1]
     tile_float = tile_resized.astype(np.float32)
@@ -402,7 +407,13 @@ def _postprocess_yolo(
     except Exception as e:
         logger.warning("Postprocessing error: %s", e)
 
-    return detections
+    valid_detections = []
+    for det in detections:
+        bx1, by1, bx2, by2 = det["bbox"]
+        if bx2 > bx1 and by2 > by1:
+            valid_detections.append(det)
+
+    return valid_detections
 
 
 def _make_detection(
@@ -423,7 +434,12 @@ def _make_detection(
     tx2 = float(x2) * scale_x + x_off
     ty2 = float(y2) * scale_y + y_off
 
-    class_name = str(labels[class_id]) if class_id < len(labels) else f"class_{class_id}"
+    tx1 = max(x_off, min(tx1, x_off + tw))
+    ty1 = max(y_off, min(ty1, y_off + th))
+    tx2 = max(x_off, min(tx2, x_off + tw))
+    ty2 = max(y_off, min(ty2, y_off + th))
+
+    class_name = str(labels[class_id]) if 0 <= class_id < len(labels) else f"class_{class_id}"
 
     return {
         "bbox": [round(tx1, 2), round(ty1, 2), round(tx2, 2), round(ty2, 2)],

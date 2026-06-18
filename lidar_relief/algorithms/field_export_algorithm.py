@@ -116,7 +116,7 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterString(
                 self.PROJECT_NAME,
                 "Survey project name",
-                defaultValue=f"LiDAR Survey {datetime.now().strftime('%Y-%m-%d')}",
+                defaultValue="LiDAR Survey",
             )
         )
 
@@ -151,6 +151,8 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
             parameters, self.INPUT_ANOMALIES, context
         )
         project_name = self.parameterAsString(parameters, self.PROJECT_NAME, context)
+        if not project_name or project_name == "LiDAR Survey":
+            project_name = f"LiDAR Survey {datetime.now().strftime('%Y-%m-%d')}"
         include_raster = self.parameterAsBoolean(
             parameters, self.INCLUDE_RASTER, context
         )

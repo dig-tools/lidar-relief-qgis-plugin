@@ -21,7 +21,7 @@ import numpy as np
 from osgeo import gdal
 
 # Suppress GDAL printing errors to stderr; we handle them ourselves.
-gdal.UseExceptions()
+
 
 
 @dataclass
@@ -310,6 +310,12 @@ def process_in_tiles(
             if feedback and feedback.isCanceled():
                 out_dataset = None
                 dataset = None
+                import os
+                if os.path.exists(output_path):
+                    try:
+                        os.remove(output_path)
+                    except OSError:
+                        pass
                 return
 
             # Compute actual tile dimensions (handling edges)

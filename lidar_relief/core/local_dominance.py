@@ -73,9 +73,4 @@ def compute_local_dominance(
     # Byte-scale
     ld_byte = np.clip((ld_final - 0.5) / (1.8 - 0.5) * 255, 0, 255)
 
-    # User requested astype(np.uint8) but typically we restore NaNs if needed.
-    # We can cast to uint8 directly.
-    # wait, if input had NaNs, we usually want them back. Since the astype cast to uint8 will convert NaNs to 0,
-    # we'll just return it as requested by the user. "Byte-scale: np.clip((ld_final - 0.5) / (1.8 - 0.5) * 255, 0, 255).astype(np.uint8)"
-    ld_byte = np.nan_to_num(ld_byte, nan=0)
-    return ld_byte.astype(np.uint8)
+    return ld_byte.astype(np.float32)

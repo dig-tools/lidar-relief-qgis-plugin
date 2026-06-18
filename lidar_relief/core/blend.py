@@ -31,8 +31,6 @@ def blend_rasters(
     if array_a.shape != array_b.shape:
         raise ValueError("Arrays must have the same shape to blend.")
 
-    if feedback is not None and feedback.isCanceled():
-        return np.full_like(array_a, np.nan)
 
     # Normalize inputs to [0, 1] for blending maths
     # We assume standard 8-bit inputs scaled 0-255.
@@ -90,15 +88,11 @@ def simple_red_relief(
         feedback.setProgressText("Simple Red Relief: Computing SLRM...")
     slrm = simple_local_relief_model(array, slrm_radius)
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     if feedback:
         feedback.setProgressText("Simple Red Relief: Computing Slope...")
     slope = compute_slope(array, cellsize, units="degrees")
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     if feedback:
         feedback.setProgressText("Simple Red Relief: Blending layers...")

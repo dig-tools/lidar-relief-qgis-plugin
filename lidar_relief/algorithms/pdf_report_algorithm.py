@@ -9,6 +9,7 @@ from qgis.core import (
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterString,
     QgsProcessingParameterFileDestination,
+    QgsProcessingParameterBoolean,
     QgsProcessingException,
 )
 
@@ -85,6 +86,13 @@ class PdfReportAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
+            QgsProcessingParameterBoolean(
+                self.INCLUDE_HISTOGRAM,
+                "Include Histogram",
+                defaultValue=True,
+            )
+        )
+        self.addParameter(
             QgsProcessingParameterFileDestination(
                 self.OUTPUT_PDF,
                 "Output PDF report",
@@ -107,6 +115,7 @@ class PdfReportAlgorithm(QgsProcessingAlgorithm):
         alg_name = self.parameterAsString(parameters, self.ALGORITHM_NAME, context)
         author = self.parameterAsString(parameters, self.AUTHOR, context)
         site_name = self.parameterAsString(parameters, self.SITE_NAME, context)
+        include_histogram = self.parameterAsBoolean(parameters, self.INCLUDE_HISTOGRAM, context)
         output_path = self.parameterAsFileOutput(parameters, self.OUTPUT_PDF, context)
 
         if not alg_name:
@@ -141,7 +150,7 @@ class PdfReportAlgorithm(QgsProcessingAlgorithm):
                 title=f"LiDAR Relief Visualization — {alg_name}",
                 author=author,
                 site_name=site_name,
-                include_histogram=True,
+                include_histogram=include_histogram,
                 include_stats=True,
             )
         except Exception as e:

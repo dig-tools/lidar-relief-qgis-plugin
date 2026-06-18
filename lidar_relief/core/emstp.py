@@ -30,8 +30,6 @@ def compute_e4mstp(
         dem: Input DEM array (for internal SVF calculation)
         cellsize: Pixel size (for internal SVF calculation)
     """
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     # Step 1 — Morphological base:
     texture = O_pos * O_neg * LD  # all normalised [0,1], element-wise multiply
@@ -40,29 +38,22 @@ def compute_e4mstp(
     B = texture * (1.0 - S)
     base = np.stack([R, G, B], axis=-1)
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     # Step 2 — Dual SVF:
     # SVF_S uses radius ~10px, SVF_L uses radius ~50px. Both computed internally.
     SVF_S = sky_view_factor(dem, cellsize, search_radius=10, feedback=feedback)
-    if feedback and feedback.isCanceled():
-        return np.array([])
+
     SVF_L = sky_view_factor(dem, cellsize, search_radius=50, feedback=feedback)
 
     svf_s_stretched = np.clip((SVF_S - 0.7) / (1.0 - 0.7), 0.0, 1.0)
     svf_l_stretched = np.clip((SVF_L - 0.9) / (1.0 - 0.9), 0.0, 1.0)
     combined_svf = (svf_l_stretched * 1.0 + svf_s_stretched * 0.5) / 1.5
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     # Step 3 — Multiply blend at 25% opacity:
     multiplied = base * combined_svf[..., np.newaxis]
     step3 = 0.25 * multiplied + 0.75 * base
 
-    if feedback and feedback.isCanceled():
-        return np.array([])
 
     # Step 4 — Overlay MSTP at 90% opacity:
 
