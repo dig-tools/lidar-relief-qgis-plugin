@@ -17,6 +17,8 @@ pytest.importorskip("osgeo")
 
 from osgeo import gdal  # noqa: E402
 
+from lidar_relief.version import get_version  # noqa: E402
+
 
 class TestReportGenerator:
     """Tests for the report_generator module."""
@@ -70,7 +72,7 @@ class TestReportGenerator:
                 "altitude": 45.0,
                 "cellsize": 1.0,
             },
-            plugin_version="1.3.5",
+            plugin_version=get_version(),
             metadata={
                 "crs": "EPSG:32630",
                 "resolution": "1.0m",
@@ -103,7 +105,7 @@ class TestReportGenerator:
                 "directions": 32,
                 "noise": "low",
             },
-            plugin_version="1.3.5",
+            plugin_version=get_version(),
             metadata={
                 "crs": "EPSG:27700",
                 "resolution": "0.5m",
@@ -129,7 +131,7 @@ class TestReportGenerator:
             output_path=pdf_path,
             algorithm_name="Slope",
             algorithm_params={"units": "degrees"},
-            plugin_version="1.3.5",
+            plugin_version=get_version(),
             include_histogram=True,
             include_stats=True,
         )

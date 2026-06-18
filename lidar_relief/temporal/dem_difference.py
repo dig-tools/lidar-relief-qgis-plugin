@@ -165,13 +165,18 @@ def compute_dod_xarray(
 
     import rioxarray  # noqa: F401 — registers .rio accessor on xarray objects
 
-    # Align new DEM to old DEM grid (handles both CRS and grid alignment)
+    # Align new DEM to old DEM grid
+    # Step 1: reproject CRS if needed (reproject_match only aligns
+    #         grid/extent/resolution — it does NOT reproject between CRSes)
     if dem_old.rio.crs != dem_new.rio.crs:
         logger.info(
-            "CRS mismatch: %s → %s. Reprojecting and aligning...",
+            "CRS mismatch: %s → %s. Step 1: reprojecting CRS...",
             dem_new.rio.crs, dem_old.rio.crs,
         )
+        dem_new = dem_new.rio.reproject(dem_old.rio.crs)
 
+    # Step 2: align grid extent and resolution
+    logger.info("Aligning grid extent and resolution...")
     dem_new_aligned = dem_new.rio.reproject_match(
         dem_old, resampling=align_method
     )

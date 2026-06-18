@@ -3,7 +3,7 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=22+ LiDAR relief visualization, point cloud, temporal change detection, multi-sensor fusion, and AI feature detection tools — Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, VAT, Openness, LD, Slope, Blend, Batch, COG export, QField survey, PDF reports, CSF ground filter, DoD, Sentinel-2 fusion, ONNX AI inference, and CuPy GPU acceleration. Direct from a loaded DEM or LAS/LAZ point cloud.
-version=2.0.3
+version=2.0.4
 author=Mark Bouck
 email=markbouck@duck.com
 
@@ -24,6 +24,13 @@ experimental=False
 deprecated=False
 
 changelog=
+    2.0.4 - Critical Hotfixes
+    - Fixed post-processor crash: output layers are now auto-styled correctly (contrast stretch) instead of appearing as raw grey rasters.
+    - Fixed hardcoded version "1.3.5": PDF reports and exported recipes now show the real plugin version read from metadata.txt.
+    - Fixed CSF ground filter silently tagging all output DEMs as EPSG:4326: CRS is now read from the LAS/LAZ file header, preserving the original coordinate system.
+    - Fixed multi-temporal DoD producing incorrect results when input DEMs have different CRSes: CRS reprojection now happens before grid alignment.
+    - Fixed AI detection silently returning zero results for semantic segmentation models: the plugin now warns clearly that only object detection is supported (segmentation coming in v2.1).
+
     2.0.3 - Comprehensive Bug Fixes
     - Fixed NoData cliffs in Hillshade, Slope, and SLRM.
     - Corrected integer overflow in SVF and ASVF.

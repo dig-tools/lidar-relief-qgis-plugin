@@ -87,7 +87,7 @@ def generate_report(
         output_path: Path for the generated PDF.
         algorithm_name: Display name of the algorithm used.
         algorithm_params: Dict of parameter name → value.
-        plugin_version: Plugin version string (e.g. '1.3.5').
+        plugin_version: Plugin version string (read from metadata.txt via get_version()).
         metadata: Dict with optional metadata fields:
             - crs: CRS authority string
             - resolution: Pixel resolution

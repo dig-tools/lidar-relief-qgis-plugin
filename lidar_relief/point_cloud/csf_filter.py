@@ -16,6 +16,7 @@ rules:
 import logging
 import os
 import tempfile
+from typing import Optional
 
 import numpy as np
 
@@ -181,7 +182,7 @@ def filter_las_file(
     preset: str = DEFAULT_PRESET,
     cellsize: float = 1.0,
     ground_only: bool = True,
-    crs: str = "EPSG:4326",
+    crs: Optional[str] = None,
     feedback=None,
 ) -> dict:
     """Read a LAS/LAZ file, run CSF ground filtering, write a DEM.
@@ -195,6 +196,11 @@ def filter_las_file(
         cellsize: Output DEM cell size in map units.
         ground_only: If True, output only ground points as DEM.
             If False, output a binary ground/non-ground classification.
+        crs: CRS to tag the output DEM with, as an authority string
+            (e.g. ``'EPSG:27700'``) or WKT. If ``None`` (the default),
+            the CRS is read from the LAS file header. If the file has
+            no CRS either, a ``ValueError`` is raised — silently
+            assuming WGS84 led to misplaced DEMs in the field.
         feedback: Optional progress callback.
 
     Returns:
@@ -203,11 +209,31 @@ def filter_las_file(
     Raises:
         ImportError: If CSF or laspy/PDAL is not installed.
         RuntimeError: If processing fails.
+        ValueError: If no CRS can be determined for the output DEM.
     """
     check_dependencies()
 
     # Try to read point cloud from LAS/LAZ
-    xyz = _read_las_points(las_path, feedback)
+    xyz, detected_crs = _read_las_points(las_path, feedback)
+
+    # Resolve output CRS: explicit arg wins, else detected from file, else fail
+    resolved_crs = crs or detected_crs
+    if resolved_crs is None:
+        raise ValueError(
+            f"No CRS available for '{las_path}'. The LAS file header has no "
+            f"coordinate system information, and no explicit CRS was supplied. "
+            f"Either:\n"
+            f"  - Re-export the LAS file with embedded CRS (recommended), or\n"
+            f"  - Pass an explicit crs= argument (e.g. crs='EPSG:27700').\n"
+            f"Previously this plugin silently assumed EPSG:4326 (WGS84), "
+            f"which produced misplaced DEMs for projected point clouds."
+        )
+    if crs is None and detected_crs is not None:
+        logger.info("Using CRS detected from LAS file: %s", resolved_crs)
+        if feedback:
+            feedback.setProgressText(
+                f"Using CRS from LAS file: {resolved_crs}"
+            )
 
     if feedback:
         feedback.setProgressText(
@@ -245,7 +271,8 @@ def filter_las_file(
 
     # Generate DEM from ground points
     dem_path = _points_to_dem(
-        ground_xyz, output_dem_path, cellsize=cellsize, crs=crs, feedback=feedback
+        ground_xyz, output_dem_path, cellsize=cellsize, crs=resolved_crs,
+        feedback=feedback,
     )
 
     return {
@@ -255,11 +282,12 @@ def filter_las_file(
         "offground_points": len(offground_xyz),
         "preset": preset,
         "cellsize": cellsize,
+        "crs": resolved_crs,
     }
 
 
-def _read_las_points(las_path: str, feedback=None) -> np.ndarray:
-    """Read XYZ points from a LAS/LAZ file.
+def _read_las_points(las_path: str, feedback=None):
+    """Read XYZ points (and CRS) from a LAS/LAZ file.
 
     Tries laspy first, then PDAL, then falls back to simple text parse.
 
@@ -267,7 +295,9 @@ def _read_las_points(las_path: str, feedback=None) -> np.ndarray:
         las_path: Path to LAS/LAZ file.
 
     Returns:
-        (N, 3) float64 NumPy array.
+        Tuple ``(xyz, crs)`` where ``xyz`` is an (N, 3) float64 NumPy array
+        and ``crs`` is a CRS authority string like ``'EPSG:27700'``, or
+        ``None`` if the file has no CRS information.
 
     Raises:
         RuntimeError: If no reader is available.
@@ -282,8 +312,9 @@ def _read_las_points(las_path: str, feedback=None) -> np.ndarray:
             las.y,
             las.z,
         ]).astype(np.float64)
-        logger.info("Read %d points via laspy", len(xyz))
-        return xyz
+        crs = _crs_to_authid(las.header.parse_crs(prefer_wkt=True))
+        logger.info("Read %d points via laspy (crs=%s)", len(xyz), crs)
+        return xyz, crs
     except ImportError:
         pass
     except Exception as e:
@@ -301,8 +332,9 @@ def _read_las_points(las_path: str, feedback=None) -> np.ndarray:
         if arrays:
             arr = arrays[0]
             xyz = np.column_stack([arr["X"], arr["Y"], arr["Z"]]).astype(np.float64)
-            logger.info("Read %d points via PDAL", len(xyz))
-            return xyz
+            crs = _crs_from_pdal_metadata(pipeline.metadata)
+            logger.info("Read %d points via PDAL (crs=%s)", len(xyz), crs)
+            return xyz, crs
     except ImportError:
         pass
     except Exception as e:
@@ -314,6 +346,57 @@ def _read_las_points(las_path: str, feedback=None) -> np.ndarray:
         "  pip install laspy\n"
         "  pip install pdal"
     )
+
+
+def _crs_to_authid(crs) -> Optional[str]:
+    """Convert a pyproj.CRS (or anything with .to_epsg()) to 'EPSG:NNNN'.
+
+    Returns None if no EPSG code can be derived. Falls back to WKT if the
+    CRS object exposes it but has no EPSG code — callers can pass that
+    string straight to GDAL's outputSRS, which accepts WKT.
+    """
+    if crs is None:
+        return None
+    try:
+        epsg = crs.to_epsg()
+        if epsg is not None:
+            return f"EPSG:{epsg}"
+    except AttributeError:
+        pass
+    # Fall back to WKT if available
+    try:
+        wkt = crs.to_wkt()
+        if wkt:
+            return wkt
+    except (AttributeError, Exception):
+        pass
+    return None
+
+
+def _crs_from_pdal_metadata(metadata) -> Optional[str]:
+    """Extract a CRS string from a PDAL pipeline metadata tree.
+
+    PDAL stores the inferred CRS under metadata > 'stages' >
+    'readers.las' > 'srs' > various keys (compoundwkt, wkt, proj4, id).
+    Returns an 'EPSG:NNNN' string if found, else None.
+    """
+    try:
+        stages = metadata.get("metadata", {}).get("stages", {})
+        reader = stages.get("readers.las", {})
+        srs = reader.get("srs", {})
+        # Prefer explicit EPSG id, then WKT, then proj4
+        srs_id = srs.get("id")
+        if srs_id and str(srs_id).isdigit():
+            return f"EPSG:{srs_id}"
+        wkt = srs.get("compoundwkt") or srs.get("wkt")
+        if wkt:
+            return wkt
+        proj4 = srs.get("proj4")
+        if proj4:
+            return proj4
+    except (AttributeError, KeyError, TypeError):
+        pass
+    return None
 
 
 def _points_to_dem(

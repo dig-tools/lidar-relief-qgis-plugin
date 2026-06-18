@@ -32,16 +32,14 @@ except ImportError:
     _ONNX_AVAILABLE = False
 
 # Supported model types and their expected output formats
+# NOTE (v2.0.4): semantic_segmentation is detected but NOT supported yet.
+# The postprocessor is not implemented — see _postprocess_segmentation() stub.
+# Full implementation is planned for v2.1.
 SUPPORTED_MODEL_TYPES = {
     "object_detection": {
         "description": "Bounding box detection (YOLO, SSD, etc.)",
         "expected_outputs": ["num_dets", "det_boxes", "det_scores", "det_classes"],
         "postprocess": "yolo",
-    },
-    "semantic_segmentation": {
-        "description": "Pixel-wise classification (U-Net, DeepLab, etc.)",
-        "expected_outputs": ["label_map"],
-        "postprocess": "segmentation",
     },
 }
 
@@ -124,6 +122,17 @@ def load_model(
         if "label_map" in o_name:
             model_type = "semantic_segmentation"
             break
+
+    # Warn immediately if the model is a type we can't postprocess yet
+    if model_type not in SUPPORTED_MODEL_TYPES:
+        logger.warning(
+            "Model '%s' was detected as '%s', but only object detection "
+            "is currently supported (v2.0.4). Inference will run but "
+            "results will be empty. Semantic segmentation postprocessing "
+            "is planned for v2.1.",
+            os.path.basename(model_path),
+            model_type,
+        )
 
     logger.info(
         "Loaded ONNX model: %s, type=%s, inputs=%s, outputs=%s",
@@ -286,17 +295,24 @@ def detect_features(
             # Preprocess
             input_tensor = preprocess_tile(tile_array, model_input_size)
 
-            # Run inference
-            outputs = session.run(output_names, {input_name: input_tensor})
-
-            # Postprocess
+            # Postprocess — only object_detection is supported in v2.0.4
             if model_type == "object_detection":
+                # Run inference
+                outputs = session.run(output_names, {input_name: input_tensor})
                 detections = _postprocess_yolo(
                     outputs, confidence_threshold, iou_threshold,
                     labels, x_off, y_off, tile_size, tile_array.shape,
                     model_input_size,
                 )
                 all_detections.extend(detections)
+            elif tiles_processed == 0:
+                # Log once per run for unsupported model types
+                logger.warning(
+                    "Skipping inference: model type '%s' has no "
+                    "postprocessor in v2.0.4. Only 'object_detection' "
+                    "is supported. Returning zero detections.",
+                    model_type,
+                )
 
             tiles_processed += 1
             if feedback:

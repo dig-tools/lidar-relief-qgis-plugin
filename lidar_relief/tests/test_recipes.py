@@ -17,6 +17,7 @@ from lidar_relief.recipes import (
     recipe_to_presets,
     get_recipe_schema,
 )
+from lidar_relief.version import get_version
 
 
 class TestRecipeExport:
@@ -46,7 +47,7 @@ class TestRecipeExport:
             tags=["barrows", "chalk", "wiltshire"],
             batch_preset="upland_steep",
             output_crs="EPSG:27700",
-            plugin_version="1.3.5",
+            plugin_version=get_version(),
         )
         data = json.loads(json_str)
         assert data["name"] == "Barrow Detection - Wiltshire"
@@ -54,7 +55,7 @@ class TestRecipeExport:
         assert data["landscape_type"] == "upland_steep"
         assert data["tags"] == ["barrows", "chalk", "wiltshire"]
         assert data["output_crs"] == "EPSG:27700"
-        assert data["plugin_version"] == "1.3.5"
+        assert data["plugin_version"] == get_version()
 
     def test_export_pretty_print(self):
         """Exported JSON should be pretty-printed."""
@@ -71,7 +72,7 @@ class TestRecipeImport:
         """Valid JSON should be imported successfully."""
         json_str = json.dumps({
             "recipe_version": "1.0.0",
-            "plugin_version": "1.3.5",
+            "plugin_version": get_version(),
             "name": "Test Recipe",
             "algorithms": {
                 "svf": {"search_radius": 10, "num_directions": 16},
@@ -125,7 +126,7 @@ class TestRecipeValidation:
         """A valid recipe should have no errors."""
         data = {
             "recipe_version": "1.0.0",
-            "plugin_version": "1.3.5",
+            "plugin_version": get_version(),
             "algorithms": {
                 "svf": {"search_radius": 10, "num_directions": 16},
                 "hillshade": {"azimuths": "315,45", "altitude": 45.0},

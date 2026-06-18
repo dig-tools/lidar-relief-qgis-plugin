@@ -17,6 +17,7 @@ from qgis.core import (
 )
 
 from ..recipes import export_recipe, import_recipe, validate_recipe
+from ..version import get_version
 
 
 class RecipeExportAlgorithm(QgsProcessingAlgorithm):
@@ -125,7 +126,7 @@ class RecipeExportAlgorithm(QgsProcessingAlgorithm):
                 description=description,
                 landscape_type=landscape_type,
                 tags=tags,
-                plugin_version="1.3.5",
+                plugin_version=get_version(),
             )
         except Exception as e:
             raise QgsProcessingException(f"Recipe export failed: {e}")

@@ -5,6 +5,7 @@ used_by: algorithms/*
 
 from qgis.core import (
     QgsProcessingLayerPostProcessorInterface,
+    QgsRasterBandStats,
     QgsRasterLayer,
     QgsSingleBandGrayRenderer,
     QgsContrastEnhancement,
@@ -30,7 +31,7 @@ class ReliefLayerPostProcessor(QgsProcessingLayerPostProcessorInterface):
         # Standard Deviation stretch for single band raster
         if layer.bandCount() == 1:
             provider = layer.dataProvider()
-            stats = provider.bandStatistics(1, QgsRasterLayer.All)
+            stats = provider.bandStatistics(1, QgsRasterBandStats.All)
 
             renderer = QgsSingleBandGrayRenderer(provider, 1)
             contrast_enhancement = QgsContrastEnhancement(provider.dataType(1))

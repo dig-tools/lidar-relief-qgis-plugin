@@ -13,6 +13,7 @@ from qgis.core import (
 )
 
 from ..export.report_generator import generate_report, reportlab_available
+from ..version import get_version
 
 
 class PdfReportAlgorithm(QgsProcessingAlgorithm):
@@ -135,7 +136,7 @@ class PdfReportAlgorithm(QgsProcessingAlgorithm):
                 output_path=output_path,
                 algorithm_name=alg_name,
                 algorithm_params={},
-                plugin_version="1.3.5",  # TODO: read from metadata.txt
+                plugin_version=get_version(),
                 metadata=meta,
                 title=f"LiDAR Relief Visualization — {alg_name}",
                 author=author,
