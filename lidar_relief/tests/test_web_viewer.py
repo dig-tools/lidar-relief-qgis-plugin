@@ -1,6 +1,5 @@
 import os
 import pytest
-from pathlib import Path
 from lidar_relief.export.cog_exporter import validate_cog
 from lidar_relief.export.web_viewer import generate_web_viewer
 import rasterio

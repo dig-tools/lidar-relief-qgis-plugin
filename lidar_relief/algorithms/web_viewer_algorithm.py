@@ -200,8 +200,6 @@ class WebViewerAlgorithm(QgsProcessingAlgorithm):
             feedback.pushInfo(f"Copying COG to output directory: {output_dir}")
             shutil.copy2(source_path, dest_path)
 
-        cog_filename = os.path.basename(dest_path)
-
         # 6. Generate Viewer
         feedback.pushInfo("Generating web viewer...")
         results = generate_web_viewer(

@@ -13,7 +13,6 @@ rules:
 import json
 import logging
 import os
-import html
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -192,8 +191,8 @@ def _generate_viewer_html(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{_escape_html(title)}</title>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.css" integrity="sha384-F1RjE9hK4J8I+Jp+f4O6w1H/d9Z1E1dD+O/sO+Fw/aIuP3XgJ4Z3c/1h+7s+ZJ8" crossorigin="anonymous" />
-<script src="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.js" integrity="sha384-jK1A1b2O1QfU1Xw3S4N9XwQ2D8J1G0R8A2H3R7S3E1S1C4S0Q7J2T9J7Z5X4U8" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.css" crossorigin="anonymous" />
+<script src="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@maplibre/maplibre-gl-cog-protocol@{_COG_PROTOCOL_VERSION}/dist/index.umd.js"></script>
 <style>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}

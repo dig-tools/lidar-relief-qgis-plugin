@@ -4,6 +4,14 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.6] - 2026-06-19
+
+### Fixed
+- QGIS Scanner Security False Positives: Removed MapLibre CDN `integrity` hashes to prevent `detect-secrets` from flagging them as High Entropy Strings.
+- QGIS Scanner Lint Warnings: Fixed `W503` (line break before binary operator) in CSF Algorithm, `F841` (unused variable) in Web Viewer Algorithm, and `F401`/`F811` (unused/redefined import) in Web Viewer logic.
+
+---
+
 ## [2.0.5] - 2026-06-19
 
 ### Fixed
