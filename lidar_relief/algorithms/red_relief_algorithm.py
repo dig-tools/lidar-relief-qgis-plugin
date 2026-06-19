@@ -80,7 +80,7 @@ class RedReliefAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setProgressText("Computing Simple Red Relief in tiles...")
 
-        def red_relief_wrapper(block, cellsize, slrm_radius, feedback):
+        def red_relief_wrapper(block, cellsize, slrm_radius):
             return simple_red_relief(block, cellsize, slrm_radius, feedback)
 
         process_in_tiles(

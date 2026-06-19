@@ -16,7 +16,7 @@ from qgis.core import (
     QgsProcessingParameterRasterLayer,
     QgsProcessingParameterVectorLayer,
     QgsProcessingParameterField,
-    QgsProcessingParameterFileDestination,
+    QgsProcessingParameterFolderDestination,
     QgsProcessingParameterString,
     QgsProcessingParameterBoolean,
     QgsProcessingOutputNumber,
@@ -129,10 +129,9 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
         )
 
         self.addParameter(
-            QgsProcessingParameterFileDestination(
+            QgsProcessingParameterFolderDestination(
                 self.OUTPUT_DIR,
                 "Output directory",
-                fileFilter="Directory (*)",
             )
         )
 
@@ -167,7 +166,9 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
         # Extract anomaly points from vector layer
         anomaly_points = []
         if anomaly_layer is not None:
-            id_field = self.parameterAsString(parameters, self.ANOMALY_ID_FIELD, context)
+            id_field = self.parameterAsString(
+                parameters, self.ANOMALY_ID_FIELD, context
+            )
             conf_field = self.parameterAsString(
                 parameters, self.CONFIDENCE_FIELD, context
             )
@@ -176,9 +177,7 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
             )
 
             features = list(anomaly_layer.getFeatures())
-            feedback.setProgressText(
-                f"Processing {len(features)} anomaly features..."
-            )
+            feedback.setProgressText(f"Processing {len(features)} anomaly features...")
 
             for i, feat in enumerate(features):
                 if feedback.isCanceled():
@@ -197,15 +196,18 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
                     "x": point.x(),
                     "y": point.y(),
                     "anomaly_id": (
-                        str(feat[id_field]) if id_field and id_field in feat.fields().names()
+                        str(feat[id_field])
+                        if id_field and id_field in feat.fields().names()
                         else f"ANOM-{anom_idx:04d}"
                     ),
                     "confidence": (
-                        float(feat[conf_field]) if conf_field and conf_field in feat.fields().names()
+                        float(feat[conf_field])
+                        if conf_field and conf_field in feat.fields().names()
                         else 0.5
                     ),
                     "detection_method": (
-                        str(feat[method_field]) if method_field and method_field in feat.fields().names()
+                        str(feat[method_field])
+                        if method_field and method_field in feat.fields().names()
                         else "manual"
                     ),
                     "feature_type": "unknown",

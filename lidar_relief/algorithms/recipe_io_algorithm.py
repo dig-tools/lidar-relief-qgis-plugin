@@ -66,14 +66,10 @@ class RecipeExportAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
-            QgsProcessingParameterString(
-                self.NAME, "Recipe name", optional=True
-            )
+            QgsProcessingParameterString(self.NAME, "Recipe name", optional=True)
         )
         self.addParameter(
-            QgsProcessingParameterString(
-                self.AUTHOR, "Author", optional=True
-            )
+            QgsProcessingParameterString(self.AUTHOR, "Author", optional=True)
         )
         self.addParameter(
             QgsProcessingParameterString(
@@ -169,7 +165,8 @@ class RecipeImportAlgorithm(QgsProcessingAlgorithm):
     def initAlgorithm(self, config=None):
         self.addParameter(
             QgsProcessingParameterFile(
-                self.INPUT, "Recipe JSON file",
+                self.INPUT,
+                "Recipe JSON file",
                 fileFilter="JSON (*.json)",
             )
         )
@@ -179,9 +176,7 @@ class RecipeImportAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addOutput(
-            QgsProcessingOutputString(
-                self.OUTPUT_METADATA, "Recipe metadata (JSON)"
-            )
+            QgsProcessingOutputString(self.OUTPUT_METADATA, "Recipe metadata (JSON)")
         )
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -201,14 +196,10 @@ class RecipeImportAlgorithm(QgsProcessingAlgorithm):
         errors = validate_recipe(recipe_data)
         if errors:
             warning_lines = "\n".join(f"  - {e}" for e in errors)
-            feedback.pushWarning(
-                "Recipe validation warnings:\n" + warning_lines
-            )
+            feedback.pushWarning("Recipe validation warnings:\n" + warning_lines)
 
         # Output the parameters as JSON
-        params_json = json.dumps(
-            recipe_data.get("algorithms", {}), indent=2
-        )
+        params_json = json.dumps(recipe_data.get("algorithms", {}), indent=2)
         meta = {
             "name": recipe_data.get("name", ""),
             "author": recipe_data.get("author", ""),

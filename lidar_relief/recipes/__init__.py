@@ -16,7 +16,7 @@ rules:
 import json
 import logging
 import re
-from datetime import datetime
+import datetime
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -43,9 +43,7 @@ ALGORITHM_DEFINITIONS = {
         "display_name": "Sky-View Factor",
         "params": {
             "search_radius": {"type": "int", "default": 10, "min": 1, "max": 200},
-            "num_directions": {
-                "type": "int", "default": 16, "min": 4, "max": 64
-            },
+            "num_directions": {"type": "int", "default": 16, "min": 4, "max": 64},
             "noise_level": {"type": "int", "default": 0, "min": 0, "max": 3},
         },
     },
@@ -198,7 +196,7 @@ def export_recipe(
     Returns:
         Pretty-printed JSON string.
     """
-    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     recipe = {
         "recipe_version": RECIPE_VERSION,
@@ -268,8 +266,7 @@ def validate_recipe(data: dict) -> list[str]:
         version = str(data["recipe_version"])
         if not re.match(r"^\d+\.\d+\.\d+$", version):
             errors.append(
-                f"Invalid recipe_version '{version}': "
-                f"expected semver (e.g. '1.0.0')"
+                f"Invalid recipe_version '{version}': expected semver (e.g. '1.0.0')"
             )
 
     # Validate algorithms section
@@ -292,9 +289,7 @@ def validate_recipe(data: dict) -> list[str]:
             for param_name, param_value in alg_params.items():
                 if param_name == "enabled":
                     if not isinstance(param_value, bool):
-                        errors.append(
-                            f"'{alg_name}.enabled' must be boolean"
-                        )
+                        errors.append(f"'{alg_name}.enabled' must be boolean")
                     continue
 
                 param_def = definitions.get(param_name)
@@ -325,10 +320,7 @@ def validate_recipe(data: dict) -> list[str]:
     # Validate landscape_type
     lt = data.get("landscape_type", "")
     if lt and lt not in TERRAIN_CONTEXTS + [""]:
-        errors.append(
-            f"Unknown landscape_type '{lt}'. "
-            f"Valid: {TERRAIN_CONTEXTS}"
-        )
+        errors.append(f"Unknown landscape_type '{lt}'. Valid: {TERRAIN_CONTEXTS}")
 
     return errors
 
@@ -348,7 +340,8 @@ def recipe_to_presets(recipe_data: dict) -> dict:
             continue
         # Convert algorithm params, dropping non-param fields
         params = {
-            k: v for k, v in alg_params.items()
+            k: v
+            for k, v in alg_params.items()
             if k != "enabled" and not k.startswith("_")
         }
         if params:

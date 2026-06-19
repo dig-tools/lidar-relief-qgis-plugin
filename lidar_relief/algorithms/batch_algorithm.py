@@ -67,6 +67,8 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
     E4MSTP_OUTPUT = "E4MSTP_OUTPUT"
     PCA_OUTPUT = "PCA_OUTPUT"
 
+    TILE_SIZE = "TILE_SIZE"
+
     SVF_NUM_DIRECTIONS = "SVF_NUM_DIRECTIONS"
     OPENNESS_NUM_DIRECTIONS = "OPENNESS_NUM_DIRECTIONS"
     LD_OBSERVER_HEIGHT = "LD_OBSERVER_HEIGHT"
@@ -225,6 +227,16 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 "MSTP Broad Radius (px)",
                 type=QgsProcessingParameterNumber.Integer,
                 defaultValue=100,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.TILE_SIZE,
+                "Tile Size (px)",
+                type=QgsProcessingParameterNumber.Integer,
+                defaultValue=1024,
+                minValue=256,
+                maxValue=8192,
             )
         )
 
@@ -402,6 +414,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             "mstp_meso": self.parameterAsInt(parameters, self.MSTP_MESO, context),
             "mstp_broad": self.parameterAsInt(parameters, self.MSTP_BROAD, context),
         }
+        tile_size = self.parameterAsInt(parameters, self.TILE_SIZE, context)
 
         # Override with preset if not manual
         if preset_key is not None:
@@ -550,9 +563,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 parameters, self.MSTP_OUTPUT, context
             )
 
-            def mstp_wrapper(
-                block, cellsize, local_r, meso_r, broad_r, lightness
-            ):
+            def mstp_wrapper(block, cellsize, local_r, meso_r, broad_r, lightness):
                 return multi_scale_topographic_position(
                     block, local_r, meso_r, broad_r, lightness, feedback
                 )
@@ -575,7 +586,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             feedback.setProgressText("Batch: Computing VAT Composite...")
             out_path = self.parameterAsOutputLayer(parameters, self.VAT_OUTPUT, context)
 
-            def vat_wrapper(block, cellsize, svf_radius, openness_radius, feedback):
+            def vat_wrapper(block, cellsize, svf_radius, openness_radius):
                 return compute_vat(
                     block, cellsize, svf_radius, openness_radius, feedback
                 )
@@ -598,7 +609,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 parameters, self.RED_RELIEF_OUTPUT, context
             )
 
-            def red_relief_wrapper(block, cellsize, slrm_radius, feedback):
+            def red_relief_wrapper(block, cellsize, slrm_radius):
                 return simple_red_relief(block, cellsize, slrm_radius, feedback)
 
             process_in_tiles(
@@ -618,7 +629,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 parameters, self.LOCAL_DOMINANCE_OUTPUT, context
             )
 
-            def ld_wrapper(block, cellsize, feedback):
+            def ld_wrapper(block, cellsize):
                 return compute_local_dominance(
                     block,
                     cellsize,
@@ -644,7 +655,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 parameters, self.ASVF_OUTPUT, context
             )
 
-            def asvf_wrapper(block, cellsize, radius, feedback):
+            def asvf_wrapper(block, cellsize, radius):
                 return anisotropic_sky_view_factor(
                     block,
                     cellsize,
@@ -673,7 +684,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 parameters, self.E4MSTP_OUTPUT, context
             )
 
-            def e4mstp_wrapper(block, cellsize, feedback):
+            def e4mstp_wrapper(block, cellsize):
                 open_pos_raw = topographic_openness(
                     block,
                     cellsize,
@@ -711,7 +722,9 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                     broad_r=p_cfg["mstp_broad"],
                     feedback=feedback,
                 )
-                mstp_norm = mstp.astype(np.float32) / 255.0
+                mstp_norm = mstp.astype(np.float32)
+                if mstp_norm.max() > 1.0:
+                    mstp_norm /= 255.0
                 return compute_e4mstp(
                     open_pos,
                     open_neg,
@@ -728,7 +741,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=e4mstp_wrapper,
                 halo_size=min(p_cfg["mstp_broad"], 50),
-                tile_size=1024,
+                tile_size=tile_size,
                 feedback=feedback,
             )
             dict_results[self.E4MSTP_OUTPUT] = out_path
@@ -738,7 +751,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             feedback.setProgressText("Batch: Computing PCA...")
             out_path = self.parameterAsOutputLayer(parameters, self.PCA_OUTPUT, context)
 
-            def pca_wrapper(block, cellsize, feedback):
+            def pca_wrapper(block, cellsize):
                 svf = sky_view_factor(
                     block,
                     cellsize,
@@ -773,7 +786,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=pca_wrapper,
                 halo_size=p_cfg["ld_max_rad"],
-                tile_size=1024,
+                tile_size=tile_size,
                 feedback=feedback,
             )
             dict_results[self.PCA_OUTPUT] = out_path

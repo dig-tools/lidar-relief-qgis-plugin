@@ -51,12 +51,10 @@ def compute_vat(
     )
     base = _normalize(hillshade)
 
-
     if feedback:
         feedback.setProgressText("VAT: Computing Slope...")
     slope = compute_slope(array, cellsize, units="degrees")
     slope_norm = _normalize(slope, invert=True)
-
 
     if feedback:
         feedback.setProgressText("VAT: Computing Positive Openness...")
@@ -69,14 +67,12 @@ def compute_vat(
     )
     openness_norm = _normalize(openness)
 
-
     if feedback:
         feedback.setProgressText("VAT: Computing Sky-View Factor...")
     svf = sky_view_factor(
         array, cellsize, num_directions=16, search_radius=svf_radius, noise_level=0
     )
     svf_norm = _normalize(svf)
-
 
     if feedback:
         feedback.setProgressText("VAT: Blending layers...")

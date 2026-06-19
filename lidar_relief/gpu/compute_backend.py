@@ -109,8 +109,8 @@ def _shift_array_gpu(
     h = src_y_end - src_y_start
     w = src_x_end - src_x_start
     if h > 0 and w > 0:
-        result[dst_y_start:dst_y_start + h, dst_x_start:dst_x_start + w] = (  # noqa: E203
-            arr[src_y_start:src_y_start + h, src_x_start:src_x_start + w]  # noqa: E203
+        result[dst_y_start : dst_y_start + h, dst_x_start : dst_x_start + w] = (  # noqa: E203
+            arr[src_y_start : src_y_start + h, src_x_start : src_x_start + w]  # noqa: E203
         )
 
     return result
@@ -131,9 +131,7 @@ def _compute_horizon_gpu(
     rows, cols = dem.shape
     horizon = cp.full((rows, cols), init_val, dtype=cp.float64)
 
-    distance = cp.sqrt(
-        cp.float64(dx * cellsize) ** 2 + cp.float64(dy * cellsize) ** 2
-    )
+    distance = cp.sqrt(cp.float64(dx * cellsize) ** 2 + cp.float64(dy * cellsize) ** 2)
 
     for step in range(1, max_steps + 1):
         shifted = _shift_array_gpu(dem, dy * step, dx * step, fill_value=cp.nan)
@@ -141,7 +139,7 @@ def _compute_horizon_gpu(
 
         sin_angle = cp.where(
             ~cp.isnan(shifted) & ~cp.isnan(dem),
-            dz / cp.sqrt(dz ** 2 + distance ** 2 * step ** 2),
+            dz / cp.sqrt(dz**2 + distance**2 * step**2),
             init_val,
         )
 
@@ -170,13 +168,14 @@ def compute_svf_gpu(
     if not _CUDA_AVAILABLE:
         logger.warning("CUDA not available, falling back to NumPy SVF")
         from ..core.svf import sky_view_factor
+
         return sky_view_factor(dem, cellsize, num_directions, search_radius)
 
     # Transfer to GPU
     d_dem = cp.asarray(dem, dtype=cp.float32)
     nan_mask = cp.isnan(d_dem)
     d_dem[nan_mask] = cp.nanmean(d_dem)
-    
+
     rows, cols = d_dem.shape
     svf_accum = cp.zeros((rows, cols), dtype=cp.float64)
 
@@ -221,6 +220,7 @@ def compute_openness_gpu(
     if not _CUDA_AVAILABLE:
         logger.warning("CUDA not available, falling back to NumPy Openness")
         from ..core.openness import topographic_openness
+
         return topographic_openness(
             dem, cellsize, num_directions, search_radius, is_negative
         )

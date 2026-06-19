@@ -115,7 +115,9 @@ class PdfReportAlgorithm(QgsProcessingAlgorithm):
         alg_name = self.parameterAsString(parameters, self.ALGORITHM_NAME, context)
         author = self.parameterAsString(parameters, self.AUTHOR, context)
         site_name = self.parameterAsString(parameters, self.SITE_NAME, context)
-        include_histogram = self.parameterAsBoolean(parameters, self.INCLUDE_HISTOGRAM, context)
+        include_histogram = self.parameterAsBoolean(
+            parameters, self.INCLUDE_HISTOGRAM, context
+        )
         output_path = self.parameterAsFileOutput(parameters, self.OUTPUT_PDF, context)
 
         if not alg_name:
@@ -131,8 +133,10 @@ class PdfReportAlgorithm(QgsProcessingAlgorithm):
                 f"{raster.rasterUnitsPerPixelY():.4f} map units"
             ),
             "extent": (
-                extent.xMinimum(), extent.yMinimum(),
-                extent.xMaximum(), extent.yMaximum(),
+                extent.xMinimum(),
+                extent.yMinimum(),
+                extent.xMaximum(),
+                extent.yMaximum(),
             ),
             "source_dem": raster.source(),
         }

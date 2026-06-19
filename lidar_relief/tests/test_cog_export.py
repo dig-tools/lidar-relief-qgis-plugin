@@ -34,10 +34,11 @@ def synthetic_dem_path():
     tmpdir = tempfile.mkdtemp(prefix="cog_test_")
     path = os.path.join(tmpdir, "dem.tif")
     driver = gdal.GetDriverByName("GTiff")
-    ds = driver.Create(path, cols, rows, 1, gdal.GDT_Float32,
-                       options=["COMPRESS=LZW", "TILED=YES"])
+    ds = driver.Create(
+        path, cols, rows, 1, gdal.GDT_Float32, options=["COMPRESS=LZW", "TILED=YES"]
+    )
     ds.SetGeoTransform((500000, 1.0, 0, 6000000, 0, -1.0))
-    ds.SetProjection('EPSG:32630')
+    ds.SetProjection("EPSG:32630")
     band = ds.GetRasterBand(1)
     band.SetNoDataValue(-9999.0)
     band.WriteArray(dem)
@@ -46,6 +47,7 @@ def synthetic_dem_path():
     yield path
     # Cleanup
     import shutil
+
     shutil.rmtree(tmpdir)
 
 
@@ -55,15 +57,16 @@ def large_dem_path():
     rows, cols = 2000, 2000
     cy, cx = rows // 2, cols // 2
     y, x = np.mgrid[0:rows, 0:cols]
-    distance = np.sqrt((x - cx)**2 + (y - cy)**2)
+    distance = np.sqrt((x - cx) ** 2 + (y - cy) ** 2)
     dem = np.maximum(50.0 - distance * 0.15, 0.0).astype(np.float32)
     tmpdir = tempfile.mkdtemp(prefix="cog_large_")
     path = os.path.join(tmpdir, "dem.tif")
     driver = gdal.GetDriverByName("GTiff")
-    ds = driver.Create(path, cols, rows, 1, gdal.GDT_Float32,
-                       options=["COMPRESS=LZW", "TILED=YES"])
+    ds = driver.Create(
+        path, cols, rows, 1, gdal.GDT_Float32, options=["COMPRESS=LZW", "TILED=YES"]
+    )
     ds.SetGeoTransform((500000, 1.0, 0, 6000000, 0, -1.0))
-    ds.SetProjection('EPSG:32630')
+    ds.SetProjection("EPSG:32630")
     band = ds.GetRasterBand(1)
     band.SetNoDataValue(-9999.0)
     band.WriteArray(dem)
@@ -71,6 +74,7 @@ def large_dem_path():
     ds = None
     yield path
     import shutil
+
     shutil.rmtree(tmpdir)
 
 

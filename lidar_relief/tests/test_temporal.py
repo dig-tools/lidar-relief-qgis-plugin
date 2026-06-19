@@ -23,6 +23,7 @@ def setup():
     tmpdir = tempfile.mkdtemp(prefix="temporal_test_")
     yield tmpdir
     import shutil
+
     shutil.rmtree(tmpdir)
 
 
@@ -30,11 +31,15 @@ def _create_dem(path: str, values: np.ndarray, gt=(500000, 1.0, 0, 6000000, 0, -
     """Write a DEM GeoTIFF from a numpy array."""
     rows, cols = values.shape
     ds = gdal.GetDriverByName("GTiff").Create(
-        path, cols, rows, 1, gdal.GDT_Float32,
+        path,
+        cols,
+        rows,
+        1,
+        gdal.GDT_Float32,
         options=["COMPRESS=LZW", "TILED=YES"],
     )
     ds.SetGeoTransform(gt)
-    ds.SetProjection('EPSG:32630')
+    ds.SetProjection("EPSG:32630")
     band = ds.GetRasterBand(1)
     band.SetNoDataValue(-9999.0)
     band.WriteArray(values)
@@ -48,6 +53,7 @@ class TestTemporalDifference:
     def test_xarray_available(self):
         """xarray should be available."""
         from lidar_relief.temporal.dem_difference import xarray_available
+
         assert xarray_available()
 
     def test_identical_dems_no_change(self, setup):
@@ -60,9 +66,13 @@ class TestTemporalDifference:
         _create_dem(new_path, dem)
 
         from lidar_relief.temporal.dem_difference import compute_dod
+
         result = compute_dod(
-            old_path, new_path, tmpdir,
-            rmse_old=0.1, rmse_new=0.1,
+            old_path,
+            new_path,
+            tmpdir,
+            rmse_old=0.1,
+            rmse_new=0.1,
         )
 
         assert result["significant_pixels"] < result["total_pixels"] * 0.05
@@ -87,9 +97,13 @@ class TestTemporalDifference:
         _create_dem(new_path, new_dem)
 
         from lidar_relief.temporal.dem_difference import compute_dod
+
         result = compute_dod(
-            old_path, new_path, tmpdir,
-            rmse_old=0.05, rmse_new=0.05,  # Low noise — mound should be significant
+            old_path,
+            new_path,
+            tmpdir,
+            rmse_old=0.05,
+            rmse_new=0.05,  # Low noise — mound should be significant
         )
 
         assert result["positive_change_pixels"] > 0
@@ -114,9 +128,13 @@ class TestTemporalDifference:
         _create_dem(new_path, new_dem)
 
         from lidar_relief.temporal.dem_difference import compute_dod
+
         result = compute_dod(
-            old_path, new_path, tmpdir,
-            rmse_old=0.05, rmse_new=0.05,
+            old_path,
+            new_path,
+            tmpdir,
+            rmse_old=0.05,
+            rmse_new=0.05,
         )
 
         assert result["negative_change_pixels"] > 0
@@ -129,9 +147,12 @@ class TestTemporalDifference:
         old_path = os.path.join(tmpdir, "old.tif")
         new_path = os.path.join(tmpdir, "new.tif")
         _create_dem(old_path, dem)
-        _create_dem(new_path, dem + np.random.normal(0, 0.01, (50, 50)).astype(np.float32))
+        _create_dem(
+            new_path, dem + np.random.normal(0, 0.01, (50, 50)).astype(np.float32)
+        )
 
         from lidar_relief.temporal.dem_difference import compute_dod
+
         result = compute_dod(old_path, new_path, tmpdir, rmse_old=0.1, rmse_new=0.1)
 
         assert os.path.exists(result["dod_path"]), "DoD raster missing"
@@ -147,11 +168,15 @@ class TestTemporalDifference:
         _create_dem(new_path, dem)
 
         from lidar_relief.temporal.dem_difference import compute_dod
+
         result = compute_dod(old_path, new_path, tmpdir)
         vr = result["volume_report"]
 
         for key in [
-            "cut_volume_m3", "fill_volume_m3", "net_volume_m3",
-            "propagated_error_m", "lod_threshold_m",
+            "cut_volume_m3",
+            "fill_volume_m3",
+            "net_volume_m3",
+            "propagated_error_m",
+            "lod_threshold_m",
         ]:
             assert key in vr, f"Missing key: {key}"

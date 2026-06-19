@@ -21,7 +21,7 @@ def compute_local_dominance(
     """Compute Local Dominance using horizon-scanning ray trace."""
     if cellsize <= 0:
         raise ValueError("cellsize must be greater than 0")
-    
+
     rows, cols = dem.shape
 
     z_obs = dem + observer_h

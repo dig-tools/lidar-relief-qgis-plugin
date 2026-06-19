@@ -4,6 +4,17 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.5] - 2026-06-19
+
+### Fixed
+- MapLibre Web Viewer: Fixed COG protocol registration (`maplibregl.addProtocol`) failing to load 3D terrain viewer.
+- MapLibre Web Viewer: Fixed issue where `generate_web_viewer` returned a boolean instead of the required config dictionary, causing test failures and crashes during HTML generation.
+- MapLibre Web Viewer: Resolved double-escaped HTML tags in the description block when empty.
+- Test Suite: Fully updated Pytest coverage for web viewer and web viewer algorithm.
+- Removed multi-gigabyte leftover test directories to recover workspace space.
+
+---
+
 ## [2.0.3] - 2026-06-12
 
 ### Fixed

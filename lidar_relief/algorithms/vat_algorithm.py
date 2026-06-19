@@ -94,7 +94,7 @@ class VatAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setProgressText("Computing VAT Composite in tiles...")
 
-        def vat_wrapper(block, cellsize, svf_radius, openness_radius, feedback):
+        def vat_wrapper(block, cellsize, svf_radius, openness_radius):
             return compute_vat(block, cellsize, svf_radius, openness_radius, feedback)
 
         process_in_tiles(

@@ -32,8 +32,12 @@ class TestPDALPipeline:
 
     def test_pipelines_defined(self):
         """All expected pipeline presets should exist."""
-        expected = {"pmf_archaeology_fine", "pmf_archaeology_standard",
-                    "pmf_forested", "outlier_removal"}
+        expected = {
+            "pmf_archaeology_fine",
+            "pmf_archaeology_standard",
+            "pmf_forested",
+            "outlier_removal",
+        }
         assert expected.issubset(ARCHAEOLOGY_PIPELINES.keys())
 
     def test_pipeline_has_required_keys(self):
@@ -42,8 +46,9 @@ class TestPDALPipeline:
             assert "name" in preset, f"Pipeline '{name}' missing 'name'"
             assert "description" in preset, f"Pipeline '{name}' missing 'description'"
             assert "pipeline" in preset, f"Pipeline '{name}' missing 'pipeline'"
-            assert len(preset["pipeline"]) >= 2, \
+            assert len(preset["pipeline"]) >= 2, (
                 f"Pipeline '{name}' needs at least 2 stages"
+            )
 
     def test_build_pipeline_json(self):
         """build_pipeline should produce valid JSON with correct stages."""
@@ -90,11 +95,11 @@ class TestPDALPipeline:
         """Each pipeline stage should have a valid type."""
         for name, preset in ARCHAEOLOGY_PIPELINES.items():
             for i, stage in enumerate(preset["pipeline"]):
-                assert "type" in stage, \
-                    f"Pipeline '{name}' stage {i} missing 'type'"
+                assert "type" in stage, f"Pipeline '{name}' stage {i} missing 'type'"
                 type_str = stage["type"]
-                assert type_str.startswith(("readers.", "filters.", "writers.")), \
+                assert type_str.startswith(("readers.", "filters.", "writers.")), (
                     f"Pipeline '{name}' stage {i}: invalid type '{type_str}'"
+                )
 
     def test_outlier_removal_structure(self):
         """Outlier removal pipeline should have correct structure."""

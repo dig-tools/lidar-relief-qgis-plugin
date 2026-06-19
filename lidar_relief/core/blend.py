@@ -31,7 +31,6 @@ def blend_rasters(
     if array_a.shape != array_b.shape:
         raise ValueError("Arrays must have the same shape to blend.")
 
-
     # Normalize inputs to [0, 1] for blending maths
     # We assume standard 8-bit inputs scaled 0-255.
     # If inputs have negative values (like SLRM), we should ideally normalize them,
@@ -88,11 +87,9 @@ def simple_red_relief(
         feedback.setProgressText("Simple Red Relief: Computing SLRM...")
     slrm = simple_local_relief_model(array, slrm_radius)
 
-
     if feedback:
         feedback.setProgressText("Simple Red Relief: Computing Slope...")
     slope = compute_slope(array, cellsize, units="degrees")
-
 
     if feedback:
         feedback.setProgressText("Simple Red Relief: Blending layers...")

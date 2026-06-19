@@ -23,17 +23,25 @@ def setup():
     tmpdir = tempfile.mkdtemp(prefix="fusion_test_")
     yield tmpdir
     import shutil
+
     shutil.rmtree(tmpdir)
 
 
 def _create_raster(
-    path: str, data: np.ndarray, gt=(500000, 1.0, 0, 6000000, 0, -1.0),
-    crs='EPSG:32630', dtype=gdal.GDT_Float32,
+    path: str,
+    data: np.ndarray,
+    gt=(500000, 1.0, 0, 6000000, 0, -1.0),
+    crs="EPSG:32630",
+    dtype=gdal.GDT_Float32,
 ):
     """Write a single-band raster from a numpy array."""
     rows, cols = data.shape
     ds = gdal.GetDriverByName("GTiff").Create(
-        path, cols, rows, 1, dtype,
+        path,
+        cols,
+        rows,
+        1,
+        dtype,
         options=["COMPRESS=LZW", "TILED=YES"],
     )
     ds.SetGeoTransform(gt)
@@ -50,6 +58,7 @@ class TestFusion:
     def test_fusion_available(self):
         """Fusion libraries should be available."""
         from lidar_relief.fusion.sentinel_fusion import fusion_available
+
         assert fusion_available()
 
     def test_co_register(self, setup):
@@ -76,6 +85,7 @@ class TestFusion:
     def test_fusion_recipe_exists(self, setup):
         """Fusion recipes should be importable."""
         from lidar_relief.fusion.sentinel_fusion import FUSION_RECIPES
+
         assert len(FUSION_RECIPES) >= 3
         assert "terrain_cir" in FUSION_RECIPES
         assert "crop_marks" in FUSION_RECIPES
@@ -96,15 +106,17 @@ class TestFusion:
         # Create simulated S2 bands
         s2_paths = {}
         for band in FUSION_RECIPES["terrain_cir"]["s2_bands"]:
-            data = np.random.default_rng(abs(hash(band)) + 1).random((rows, cols)).astype(np.float32)
+            data = (
+                np.random.default_rng(abs(hash(band)) + 1)
+                .random((rows, cols))
+                .astype(np.float32)
+            )
             path = os.path.join(setup, f"s2_{band}.tif")
             _create_raster(path, data)
             s2_paths[band] = path
 
         output_path = os.path.join(setup, "fusion.tif")
-        result = apply_fusion_recipe(
-            lidar_path, s2_paths, "terrain_cir", output_path
-        )
+        result = apply_fusion_recipe(lidar_path, s2_paths, "terrain_cir", output_path)
 
         assert os.path.exists(output_path)
         assert result["recipe"] == "terrain_cir"
@@ -120,6 +132,7 @@ class TestFusion:
     def test_unknown_recipe(self, setup):
         """Unknown recipe should raise ValueError."""
         from lidar_relief.fusion.sentinel_fusion import apply_fusion_recipe
+
         with pytest.raises(ValueError, match="Unknown fusion recipe"):
             out_path = os.path.join(self.tmpdir, "out.tif")
             apply_fusion_recipe("nonexistent.tif", {}, "fake_recipe", out_path)

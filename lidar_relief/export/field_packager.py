@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # ── Anomaly data model ──────────────────────────────────────────────
 
+
 @dataclass
 class AnomalyRecord:
     """A single anomaly record for field survey validation.
@@ -99,6 +100,7 @@ ANOMALY_SCHEMA = {
 
 # ── Core functions ──────────────────────────────────────────────────
 
+
 def create_anomaly_template(output_path: str) -> str:
     """Create an empty GeoPackage with the standard anomaly schema.
 
@@ -132,9 +134,9 @@ def create_anomaly_template(output_path: str) -> str:
             "REAL": ogr.OFTReal,
             "INTEGER": ogr.OFTInteger,
         }
-        field_defn = ogr.FieldDefn(field_name, field_type_map.get(
-            field_info["type"], ogr.OFTString
-        ))
+        field_defn = ogr.FieldDefn(
+            field_name, field_type_map.get(field_info["type"], ogr.OFTString)
+        )
         layer.CreateField(field_defn)
 
     ds.FlushCache()
@@ -175,7 +177,9 @@ def package_for_qfield(
 
     os.makedirs(output_dir, exist_ok=True)
 
-    gpkg_path = os.path.join(output_dir, f"{project_name.lower().replace(' ', '_')}.gpkg")
+    gpkg_path = os.path.join(
+        output_dir, f"{project_name.lower().replace(' ', '_')}.gpkg"
+    )
     qgs_path = os.path.join(output_dir, f"{project_name.lower().replace(' ', '_')}.qgs")
 
     # Copy raster if requested
@@ -208,9 +212,9 @@ def package_for_qfield(
             "REAL": ogr.OFTReal,
             "INTEGER": ogr.OFTInteger,
         }
-        field_defn = ogr.FieldDefn(field_name, field_type_map.get(
-            field_info["type"], ogr.OFTString
-        ))
+        field_defn = ogr.FieldDefn(
+            field_name, field_type_map.get(field_info["type"], ogr.OFTString)
+        )
         layer.CreateField(field_defn)
 
     # Add features
@@ -236,13 +240,15 @@ def package_for_qfield(
     ds.FlushCache()
     ds = None
 
-    rel_raster_ref = os.path.basename(raster_ref) if include_raster_copy else os.path.relpath(raster_ref, output_dir)
+    rel_raster_ref = (
+        os.path.basename(raster_ref)
+        if include_raster_copy
+        else os.path.relpath(raster_ref, output_dir)
+    )
     rel_gpkg_path = os.path.basename(gpkg_path)
 
     # Create QGIS project file
-    _create_qgis_project(
-        qgs_path, rel_raster_ref, rel_gpkg_path, project_name, crs
-    )
+    _create_qgis_project(qgs_path, rel_raster_ref, rel_gpkg_path, project_name, crs)
 
     return {
         "gpkg": gpkg_path,
@@ -276,8 +282,7 @@ def _create_qgis_project(
     # Map canvas settings
     canvas = ET.SubElement(doc, "mapcanvas")
     ET.SubElement(canvas, "units").text = "degrees"
-    ET.SubElement(canvas, "extent", xmin="-180", ymin="-90",
-                  xmax="180", ymax="90")
+    ET.SubElement(canvas, "extent", xmin="-180", ymin="-90", xmax="180", ymax="90")
 
     # Project CRS
     map_crs = ET.SubElement(doc, "mapcrs")
@@ -286,27 +291,25 @@ def _create_qgis_project(
     ET.SubElement(map_crs.find("spatialrefsys"), "authid").text = crs_authid
 
     # Raster layer
-    raster_maplayer = ET.SubElement(doc, "maplayer",
-                                    type="raster",
-                                    minimumScale="-1",
-                                    maximumScale="-1")
+    raster_maplayer = ET.SubElement(
+        doc, "maplayer", type="raster", minimumScale="-1", maximumScale="-1"
+    )
     ET.SubElement(raster_maplayer, "id").text = "relief_visualization"
     ET.SubElement(raster_maplayer, "name").text = "Relief Visualization"
     ET.SubElement(raster_maplayer, "type").text = "raster"
     ET.SubElement(raster_maplayer, "datasource").text = raster_path
 
     # Vector layer with field form
-    vector_maplayer = ET.SubElement(doc, "maplayer",
-                                    type="vector",
-                                    minimumScale="-1",
-                                    maximumScale="-1")
+    vector_maplayer = ET.SubElement(
+        doc, "maplayer", type="vector", minimumScale="-1", maximumScale="-1"
+    )
     ET.SubElement(vector_maplayer, "id").text = "anomalies"
     ET.SubElement(vector_maplayer, "name").text = "Anomalies"
     ET.SubElement(vector_maplayer, "type").text = "vector"
     escaped_gpkg_path = gpkg_path.replace("'", "''")
-    ET.SubElement(vector_maplayer, "datasource").text = (
-        f"dbname='{escaped_gpkg_path}' table=\"anomalies\" (geometry)"
-    )
+    ET.SubElement(
+        vector_maplayer, "datasource"
+    ).text = f"dbname='{escaped_gpkg_path}' table=\"anomalies\" (geometry)"
 
     # Field configuration (for QField digitising form)
     edit_types = ET.SubElement(vector_maplayer, "fieldConfiguration")
@@ -321,9 +324,17 @@ def _create_qgis_project(
         elif field_name == "feature_type":
             ET.SubElement(fld, "editType").text = "ValueMap"
             value_map = ET.SubElement(fld, "valueMap")
-            for val in ["barrow", "ditch", "platform", "enclosure",
-                        "ridge_and_furrow", "kiln", "wall",
-                        "hollow_way", "unknown"]:
+            for val in [
+                "barrow",
+                "ditch",
+                "platform",
+                "enclosure",
+                "ridge_and_furrow",
+                "kiln",
+                "wall",
+                "hollow_way",
+                "unknown",
+            ]:
                 ET.SubElement(value_map, "value", key=val).text = val
         elif field_name == "confidence":
             ET.SubElement(fld, "editType").text = "Range"

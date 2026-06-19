@@ -135,9 +135,7 @@ class CogExportAlgorithm(QgsProcessingAlgorithm):
         )
 
         self.addOutput(
-            QgsProcessingOutputString(
-                self.OUTPUT_VALIDATION, "COG validation result"
-            )
+            QgsProcessingOutputString(self.OUTPUT_VALIDATION, "COG validation result")
         )
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -153,6 +151,10 @@ class CogExportAlgorithm(QgsProcessingAlgorithm):
         source = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         if source is None:
             raise QgsProcessingException("No input raster layer specified.")
+        if source.width() * source.height() > 50000 * 50000:
+            raise QgsProcessingException(
+                "Raster is too large (> 2.5 billion pixels). Please clip the raster first."
+            )
 
         cog_profile_idx = self.parameterAsEnum(parameters, self.COG_PROFILE, context)
         resampling_idx = self.parameterAsEnum(
@@ -195,8 +197,7 @@ class CogExportAlgorithm(QgsProcessingAlgorithm):
         # Validate
         if not cog_result.get("valid", False):
             feedback.pushWarning(
-                "COG validation produced warnings — file may not be "
-                "fully optimized."
+                "COG validation produced warnings — file may not be fully optimized."
             )
 
         feedback.pushInfo(

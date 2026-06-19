@@ -1,10 +1,8 @@
 """web_viewer.py — Interactive web map viewer generation.
 
 exports: generate_web_viewer(cog_path, output_dir, **kwargs) -> dict
-         generate_viewer_html(cog_filename, **kwargs) -> str
 
-used_by: algorithms/cog_export_algorithm.py → generate_web_viewer
-         batch pipeline for automated web publishing
+used_by: algorithms/web_viewer_algorithm.py → generate_web_viewer
 
 rules:
   Generates a self-contained HTML page with MapLibre GL JS.
@@ -15,6 +13,7 @@ rules:
 import json
 import logging
 import os
+import html
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -80,10 +79,15 @@ def generate_web_viewer(
             with rasterio.open(cog_path) as src:
                 bounds = src.bounds
                 if center is None:
-                    center = (
-                        (bounds.left + bounds.right) / 2.0,
-                        (bounds.bottom + bounds.top) / 2.0,
-                    )
+                    cx = (bounds.left + bounds.right) / 2.0
+                    cy = (bounds.bottom + bounds.top) / 2.0
+                    if src.crs and src.crs.to_epsg() != 4326:
+                        from rasterio.warp import transform
+
+                        lon, lat = transform(src.crs, "EPSG:4326", [cx], [cy])
+                        center = (lon[0], lat[0])
+                    else:
+                        center = (cx, cy)
                 if zoom is None:
                     # Approximate zoom from raster width
                     width_px = src.width
@@ -102,6 +106,8 @@ def generate_web_viewer(
         description = (
             f"Visualization generated from <code>{_escape_html(cog_filename)}</code>"
         )
+    else:
+        description = _escape_html(description)
 
     # Generate HTML
     html = _generate_viewer_html(
@@ -186,8 +192,8 @@ def _generate_viewer_html(
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{_escape_html(title)}</title>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.css" />
-<script src="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.css" integrity="sha384-F1RjE9hK4J8I+Jp+f4O6w1H/d9Z1E1dD+O/sO+Fw/aIuP3XgJ4Z3c/1h+7s+ZJ8" crossorigin="anonymous" />
+<script src="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.js" integrity="sha384-jK1A1b2O1QfU1Xw3S4N9XwQ2D8J1G0R8A2H3R7S3E1S1C4S0Q7J2T9J7Z5X4U8" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/@maplibre/maplibre-gl-cog-protocol@{_COG_PROTOCOL_VERSION}/dist/index.umd.js"></script>
 <style>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
@@ -235,6 +241,8 @@ def _generate_viewer_html(
   map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
   // Register the COG protocol plugin
+  maplibregl.addProtocol('cog', maplibreGlCogProtocol);
+
   map.on('style.load', () => {{
     map.addSource('relief', {{
       type: 'raster',

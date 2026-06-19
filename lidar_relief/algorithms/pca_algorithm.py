@@ -68,7 +68,7 @@ class PcaAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setProgressText("Computing PCA Composite in tiles...")
 
-        def pca_wrapper(block, cellsize, feedback):
+        def pca_wrapper(block, cellsize):
             # Compute the 4 metrics with default/standard parameters
             svf = sky_view_factor(
                 block,
@@ -90,7 +90,9 @@ class PcaAlgorithm(QgsProcessingAlgorithm):
 
             slope = compute_slope(block, cellsize, units="degrees")
 
-            ld = compute_local_dominance(block, cellsize, min_rad=10, max_rad=20, feedback=feedback)
+            ld = compute_local_dominance(
+                block, cellsize, min_rad=10, max_rad=20, feedback=feedback
+            )
 
             return compute_pca_composite(svf, openness, slope, ld, feedback=feedback)
 

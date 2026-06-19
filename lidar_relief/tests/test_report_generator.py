@@ -28,6 +28,7 @@ class TestReportGenerator:
         self.tmpdir = tempfile.mkdtemp(prefix="report_test_")
         yield
         import shutil
+
         shutil.rmtree(self.tmpdir)
 
     def _create_test_raster(self, filename: str = "output.tif") -> str:
@@ -40,10 +41,11 @@ class TestReportGenerator:
 
         path = os.path.join(self.tmpdir, filename)
         driver = gdal.GetDriverByName("GTiff")
-        ds = driver.Create(path, cols, rows, 1, gdal.GDT_Float32,
-                           options=["COMPRESS=LZW"])
+        ds = driver.Create(
+            path, cols, rows, 1, gdal.GDT_Float32, options=["COMPRESS=LZW"]
+        )
         ds.SetGeoTransform((500000, 1.0, 0, 6000000, 0, -1.0))
-        ds.SetProjection('EPSG:32630')
+        ds.SetProjection("EPSG:32630")
         band = ds.GetRasterBand(1)
         band.SetNoDataValue(-9999.0)
         band.WriteArray(dem)
@@ -54,6 +56,7 @@ class TestReportGenerator:
     def test_reportlab_available(self):
         """reportlab_available() should return True."""
         from lidar_relief.export.report_generator import reportlab_available
+
         assert reportlab_available()
 
     def test_generate_basic_report(self):

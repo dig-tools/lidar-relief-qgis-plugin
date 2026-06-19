@@ -70,14 +70,16 @@ class TestRecipeImport:
 
     def test_import_valid(self):
         """Valid JSON should be imported successfully."""
-        json_str = json.dumps({
-            "recipe_version": "1.0.0",
-            "plugin_version": get_version(),
-            "name": "Test Recipe",
-            "algorithms": {
-                "svf": {"search_radius": 10, "num_directions": 16},
-            },
-        })
+        json_str = json.dumps(
+            {
+                "recipe_version": "1.0.0",
+                "plugin_version": get_version(),
+                "name": "Test Recipe",
+                "algorithms": {
+                    "svf": {"search_radius": 10, "num_directions": 16},
+                },
+            }
+        )
         data = import_recipe(json_str)
         assert data["name"] == "Test Recipe"
         assert data["algorithms"]["svf"]["search_radius"] == 10
@@ -95,25 +97,28 @@ class TestRecipeImport:
 
     def test_import_bad_version_format(self):
         """Invalid version format should raise ValueError."""
-        json_str = json.dumps({
-            "recipe_version": "bad",
-            "plugin_version": "1.0.0",
-            "algorithms": {"svf": {"radius": 10}},
-        })
+        json_str = json.dumps(
+            {
+                "recipe_version": "bad",
+                "plugin_version": "1.0.0",
+                "algorithms": {"svf": {"radius": 10}},
+            }
+        )
         with pytest.raises(ValueError, match="Invalid recipe"):
-
             import_recipe(json_str)
 
     def test_import_unknown_algorithm(self):
         """Unknown algorithms should not cause validation errors."""
-        json_str = json.dumps({
-            "recipe_version": "1.0.0",
-            "plugin_version": "1.0.0",
-            "algorithms": {
-                "future_algo": {"param": 42},
-                "svf": {"search_radius": 10},
-            },
-        })
+        json_str = json.dumps(
+            {
+                "recipe_version": "1.0.0",
+                "plugin_version": "1.0.0",
+                "algorithms": {
+                    "future_algo": {"param": 42},
+                    "svf": {"search_radius": 10},
+                },
+            }
+        )
         # Should succeed with just a warning
         data = import_recipe(json_str)
         assert "svf" in data["algorithms"]

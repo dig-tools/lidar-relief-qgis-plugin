@@ -106,7 +106,8 @@ def load_model(
 
     providers = ort.get_available_providers()
     session = ort.InferenceSession(
-        model_path, sess_options,
+        model_path,
+        sess_options,
         providers=providers,
     )
 
@@ -179,6 +180,7 @@ def preprocess_tile(
     # Create coordinate grids
     try:
         import cv2
+
         tile_resized = cv2.resize(tile, (w, h), interpolation=cv2.INTER_LINEAR)
     except ImportError:
         y_ratio = src_h / h
@@ -189,7 +191,7 @@ def preprocess_tile(
         x_coords = np.clip(
             np.floor(np.arange(w) * x_ratio).astype(np.int32), 0, src_w - 1
         )
-    
+
         tile_resized = tile[y_coords[:, np.newaxis], x_coords[np.newaxis, :]]
 
     # Normalize to [0, 1]
@@ -199,7 +201,7 @@ def preprocess_tile(
 
     # Convert to (C, H, W) format and add batch dimension
     tile_nhwc = np.transpose(tile_float, (2, 0, 1))  # (C, H, W)
-    tile_batch = np.expand_dims(tile_nhwc, axis=0)   # (1, C, H, W)
+    tile_batch = np.expand_dims(tile_nhwc, axis=0)  # (1, C, H, W)
 
     return tile_batch
 
@@ -253,7 +255,12 @@ def detect_features(
     if isinstance(model_h, int) and isinstance(model_w, int):
         model_input_size = (model_h, model_w)
     else:
-        logger.info("Dynamic input shape %s, using tile_size %sx%s", input_shape, tile_size, tile_size)
+        logger.info(
+            "Dynamic input shape %s, using tile_size %sx%s",
+            input_shape,
+            tile_size,
+            tile_size,
+        )
         model_input_size = (tile_size, tile_size)
 
     # Open raster
@@ -276,9 +283,11 @@ def detect_features(
         for tx in range(n_tiles_x):
             if feedback and feedback.isCanceled():
                 ds = None
-                return {"detections": all_detections,
-                        "detection_count": len(all_detections),
-                        "total_tiles": tiles_processed}
+                return {
+                    "detections": all_detections,
+                    "detection_count": len(all_detections),
+                    "total_tiles": tiles_processed,
+                }
 
             # Compute tile window
             x_off = tx * stride
@@ -305,8 +314,14 @@ def detect_features(
                 # Run inference
                 outputs = session.run(output_names, {input_name: input_tensor})
                 detections = _postprocess_yolo(
-                    outputs, confidence_threshold, iou_threshold,
-                    labels, x_off, y_off, tile_size, tile_array.shape,
+                    outputs,
+                    confidence_threshold,
+                    iou_threshold,
+                    labels,
+                    x_off,
+                    y_off,
+                    tile_size,
+                    tile_array.shape,
                     model_input_size,
                 )
                 all_detections.extend(detections)
@@ -361,11 +376,22 @@ def _postprocess_yolo(
             for det in out:
                 x1, y1, x2, y2, conf, cls_id = det
                 if conf >= confidence_threshold:
-                    detections.append(_make_detection(
-                        x1, y1, x2, y2, float(conf), int(cls_id),
-                        labels, x_off, y_off, tile_size, tile_shape,
-                        model_input_size,
-                    ))
+                    detections.append(
+                        _make_detection(
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            float(conf),
+                            int(cls_id),
+                            labels,
+                            x_off,
+                            y_off,
+                            tile_size,
+                            tile_shape,
+                            model_input_size,
+                        )
+                    )
 
         # YOLOv5: (1, N, 85) — [x_center, y_center, w, h, obj_conf, ...class_scores]
         elif len(outputs) == 1 and outputs[0].shape[-1] == 85:
@@ -380,11 +406,22 @@ def _postprocess_yolo(
                     y1 = cy - h / 2
                     x2 = cx + w / 2
                     y2 = cy + h / 2
-                    detections.append(_make_detection(
-                        x1, y1, x2, y2, conf, cls_id,
-                        labels, x_off, y_off, tile_size, tile_shape,
-                        model_input_size,
-                    ))
+                    detections.append(
+                        _make_detection(
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            conf,
+                            cls_id,
+                            labels,
+                            x_off,
+                            y_off,
+                            tile_size,
+                            tile_shape,
+                            model_input_size,
+                        )
+                    )
 
         # Multi-output: num_dets + boxes + scores + classes
         elif len(outputs) >= 4:
@@ -398,11 +435,22 @@ def _postprocess_yolo(
                 if conf >= confidence_threshold:
                     x1, y1, x2, y2 = boxes[i]
                     cls_id = int(classes[i])
-                    detections.append(_make_detection(
-                        x1, y1, x2, y2, conf, cls_id,
-                        labels, x_off, y_off, tile_size, tile_shape,
-                        model_input_size,
-                    ))
+                    detections.append(
+                        _make_detection(
+                            x1,
+                            y1,
+                            x2,
+                            y2,
+                            conf,
+                            cls_id,
+                            labels,
+                            x_off,
+                            y_off,
+                            tile_size,
+                            tile_shape,
+                            model_input_size,
+                        )
+                    )
 
     except Exception as e:
         logger.warning("Postprocessing error: %s", e)
@@ -417,8 +465,18 @@ def _postprocess_yolo(
 
 
 def _make_detection(
-    x1, y1, x2, y2, confidence, class_id, labels,
-    x_off, y_off, tile_size, tile_shape, model_input_size,
+    x1,
+    y1,
+    x2,
+    y2,
+    confidence,
+    class_id,
+    labels,
+    x_off,
+    y_off,
+    tile_size,
+    tile_shape,
+    model_input_size,
 ) -> dict:
     """Create a detection dict with proper coordinate scaling."""
     # Scale from model input size back to tile size
@@ -439,7 +497,9 @@ def _make_detection(
     tx2 = max(x_off, min(tx2, x_off + tw))
     ty2 = max(y_off, min(ty2, y_off + th))
 
-    class_name = str(labels[class_id]) if 0 <= class_id < len(labels) else f"class_{class_id}"
+    class_name = (
+        str(labels[class_id]) if 0 <= class_id < len(labels) else f"class_{class_id}"
+    )
 
     return {
         "bbox": [round(tx1, 2), round(ty1, 2), round(tx2, 2), round(ty2, 2)],
@@ -483,8 +543,7 @@ def _apply_nms(detections: list, iou_threshold: float) -> list:
             # Remove overlapping
             bbox = best["bbox"]
             class_dets = [
-                d for d in class_dets
-                if _compute_iou(bbox, d["bbox"]) < iou_threshold
+                d for d in class_dets if _compute_iou(bbox, d["bbox"]) < iou_threshold
             ]
         result.extend(keep)
 

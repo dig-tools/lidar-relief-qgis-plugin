@@ -70,7 +70,7 @@ class E4MstpAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setProgressText("Computing true e4MSTP (7 sub-metrics) in tiles...")
 
-        def e4mstp_wrapper(block, cellsize, feedback):
+        def e4mstp_wrapper(block, cellsize):
             # 1. Openness Pos (0 to ~100+ -> normalized roughly to [0,1])
             # But the Openness core function returns float32, we should normalize it.
             # Usually openness is normalized dynamically per tile or using a fixed stretch.
@@ -120,7 +120,6 @@ class E4MstpAlgorithm(QgsProcessingAlgorithm):
                 local_r=3,
                 meso_r=20,
                 broad_r=100,
-                lightness=1.0,
                 feedback=feedback,
             )
             mstp_norm = mstp.astype(np.float32) / 255.0
