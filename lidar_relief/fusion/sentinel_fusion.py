@@ -147,7 +147,11 @@ def co_register_bands(
                 dtype=aligned.dtype,
             )
 
-            crs_wkt = aligned.rio.crs.to_wkt() if hasattr(aligned.rio, "crs") and aligned.rio.crs else None
+            crs_wkt = (
+                aligned.rio.crs.to_wkt()
+                if hasattr(aligned.rio, "crs") and aligned.rio.crs
+                else None
+            )
 
             return {
                 "output_path": output_path,
@@ -283,8 +287,12 @@ def apply_fusion_recipe(
             lidar_da_sq = lidar_da
 
         lidar_array = lidar_da_sq.values.astype(np.float64)
-        lidar_crs = lidar_da.rio.crs.to_wkt() if hasattr(lidar_da.rio, "crs") and lidar_da.rio.crs else None
-        lidar_transform = lidar_da.rio.transform() if hasattr(lidar_da, 'rio') else None
+        lidar_crs = (
+            lidar_da.rio.crs.to_wkt()
+            if hasattr(lidar_da.rio, "crs") and lidar_da.rio.crs
+            else None
+        )
+        lidar_transform = lidar_da.rio.transform() if hasattr(lidar_da, "rio") else None
 
         # Load and co-register S2 bands
         s2_arrays = []
@@ -305,7 +313,9 @@ def apply_fusion_recipe(
                 )
                 s2_arrays.append(band_aligned.values.astype(np.float64))
 
-    s2_stack = np.dstack(s2_arrays) if len(s2_arrays) > 1 else s2_arrays[0][:, :, np.newaxis]
+    s2_stack = (
+        np.dstack(s2_arrays) if len(s2_arrays) > 1 else s2_arrays[0][:, :, np.newaxis]
+    )
 
     # Apply blend
     blend_fn = BLEND_FUNCTIONS.get(blend_mode)
@@ -345,7 +355,11 @@ def _write_rgb_raster(
 
     rows, cols, bands = rgb.shape
     ds = gdal.GetDriverByName("GTiff").Create(
-        path, cols, rows, bands, gdal.GDT_Byte,
+        path,
+        cols,
+        rows,
+        bands,
+        gdal.GDT_Byte,
         options=["COMPRESS=LZW", "TILED=YES", "PHOTOMETRIC=RGB"],
     )
 

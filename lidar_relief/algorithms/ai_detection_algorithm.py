@@ -69,9 +69,7 @@ class AiDetectionAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None):
         self.addParameter(
-            QgsProcessingParameterRasterLayer(
-                self.INPUT, "Input raster layer"
-            )
+            QgsProcessingParameterRasterLayer(self.INPUT, "Input raster layer")
         )
         self.addParameter(
             QgsProcessingParameterFile(
@@ -126,9 +124,7 @@ class AiDetectionAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addOutput(
-            QgsProcessingOutputNumber(
-                self.OUTPUT_COUNT, "Number of detections"
-            )
+            QgsProcessingOutputNumber(self.OUTPUT_COUNT, "Number of detections")
         )
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -140,6 +136,10 @@ class AiDetectionAlgorithm(QgsProcessingAlgorithm):
             )
 
         raster = self.parameterAsRasterLayer(parameters, self.INPUT, context)
+        if raster and raster.width() * raster.height() > 50000 * 50000:
+            raise QgsProcessingException(
+                "Raster is too large (> 2.5 billion pixels). Please clip the raster first."
+            )
         model_path = self.parameterAsFile(parameters, self.MODEL_FILE, context)
         label_path = self.parameterAsFile(parameters, self.LABEL_FILE, context)
         confidence = self.parameterAsDouble(parameters, self.CONFIDENCE, context)
@@ -183,8 +183,7 @@ class AiDetectionAlgorithm(QgsProcessingAlgorithm):
         count = result["detection_count"]
 
         feedback.pushInfo(
-            f"Detections: {count}\n"
-            f"Tiles processed: {result['total_tiles']}"
+            f"Detections: {count}\nTiles processed: {result['total_tiles']}"
         )
 
         # Write detections to GeoPackage if any found
@@ -211,7 +210,7 @@ def _write_detections_gpkg(
         driver.DeleteDataSource(output_path)
 
     ds = driver.CreateDataSource(output_path)
-    
+
     srs = osr.SpatialReference()
     raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
     if raster_ds and raster_ds.GetProjection():

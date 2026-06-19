@@ -171,25 +171,24 @@ def compute_dod_xarray(
     if dem_old.rio.crs != dem_new.rio.crs:
         logger.info(
             "CRS mismatch: %s → %s. Step 1: reprojecting CRS...",
-            dem_new.rio.crs, dem_old.rio.crs,
+            dem_new.rio.crs,
+            dem_old.rio.crs,
         )
         dem_new = dem_new.rio.reproject(dem_old.rio.crs)
 
     # Step 2: align grid extent and resolution
     logger.info("Aligning grid extent and resolution...")
-    dem_new_aligned = dem_new.rio.reproject_match(
-        dem_old, resampling=align_method
-    )
+    dem_new_aligned = dem_new.rio.reproject_match(dem_old, resampling=align_method)
 
     # Fill nodata with NaN for safe arithmetic
     dem_old_filled = dem_old.copy()
     dem_new_filled = dem_new_aligned.copy()
 
-    if hasattr(dem_old_filled, 'rio') and dem_old_filled.rio.nodata is not None:
+    if hasattr(dem_old_filled, "rio") and dem_old_filled.rio.nodata is not None:
         dem_old_filled = dem_old_filled.where(
             dem_old_filled != dem_old_filled.rio.nodata
         )
-    if hasattr(dem_new_filled, 'rio') and dem_new_filled.rio.nodata is not None:
+    if hasattr(dem_new_filled, "rio") and dem_new_filled.rio.nodata is not None:
         dem_new_filled = dem_new_filled.where(
             dem_new_filled != dem_new_filled.rio.nodata
         )
@@ -198,7 +197,7 @@ def compute_dod_xarray(
     dod = dem_new_filled - dem_old_filled
 
     # Propagated error
-    propagated_error = np.sqrt(rmse_old ** 2 + rmse_new ** 2)
+    propagated_error = np.sqrt(rmse_old**2 + rmse_new**2)
     threshold = confidence_level * propagated_error
 
     # Significance mask
@@ -216,7 +215,7 @@ def compute_dod_xarray(
 
     # Volume estimates (metres³ assuming CRS units are metres)
     # Cell area from geotransform
-    if hasattr(dod, 'rio'):
+    if hasattr(dod, "rio"):
         transform = dod.rio.transform()
         cell_area = abs(transform[0] * transform[4])  # pixel_width × pixel_height
     else:
@@ -241,15 +240,21 @@ def compute_dod_xarray(
             if hasattr(ds, "rio"):
                 try:
                     ds.rio.set_crs(dem_old.rio.crs)
-                except Exception:
-                    pass
+                except Exception as e:
+                    import logging
+
+                    logging.getLogger(__name__).warning(
+                        "Failed to set CRS on DoD output: %s", e
+                    )
 
     # Write using rioxarray
     try:
-        dod_out.rio.to_raster(dod_path, dtype="float32", nodata=np.nan,
-                              compress="LZW", tiled=True)
-        mask_out.rio.to_raster(mask_path, dtype="int8", nodata=0,
-                               compress="LZW", tiled=True)
+        dod_out.rio.to_raster(
+            dod_path, dtype="float32", nodata=np.nan, compress="LZW", tiled=True
+        )
+        mask_out.rio.to_raster(
+            mask_path, dtype="int8", nodata=0, compress="LZW", tiled=True
+        )
     except Exception as e:
         logger.warning("rioxarray write failed, trying GDAL: %s", e)
         # Fallback: write via GDAL
@@ -292,7 +297,11 @@ def _write_array_via_gdal(
 
     driver = gdal.GetDriverByName("GTiff")
     ds = driver.Create(
-        path, cols, rows, 1, gdal_dtype,
+        path,
+        cols,
+        rows,
+        1,
+        gdal_dtype,
         options=["COMPRESS=LZW", "TILED=YES"],
     )
 

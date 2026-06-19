@@ -127,9 +127,7 @@ class AsvfAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setProgressText("Computing ASVF in tiles...")
 
-        def asvf_wrapper(
-            block, cellsize, dirs, radius, a_dir, a_weight, noise, feedback
-        ):
+        def asvf_wrapper(block, cellsize, dirs, radius, a_dir, a_weight, noise):
             return anisotropic_sky_view_factor(
                 block, cellsize, dirs, radius, a_dir, a_weight, noise, feedback
             )

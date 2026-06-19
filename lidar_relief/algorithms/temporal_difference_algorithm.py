@@ -60,14 +60,10 @@ class TemporalDifferenceAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None):
         self.addParameter(
-            QgsProcessingParameterRasterLayer(
-                self.DEM_OLD, "Older DEM (baseline)"
-            )
+            QgsProcessingParameterRasterLayer(self.DEM_OLD, "Older DEM (baseline)")
         )
         self.addParameter(
-            QgsProcessingParameterRasterLayer(
-                self.DEM_NEW, "Newer DEM (repeat survey)"
-            )
+            QgsProcessingParameterRasterLayer(self.DEM_NEW, "Newer DEM (repeat survey)")
         )
         self.addParameter(
             QgsProcessingParameterNumber(
@@ -116,19 +112,13 @@ class TemporalDifferenceAlgorithm(QgsProcessingAlgorithm):
                 "  pip install xarray rioxarray"
             )
 
-        old_raster = self.parameterAsRasterLayer(
-            parameters, self.DEM_OLD, context
-        )
-        new_raster = self.parameterAsRasterLayer(
-            parameters, self.DEM_NEW, context
-        )
+        old_raster = self.parameterAsRasterLayer(parameters, self.DEM_OLD, context)
+        new_raster = self.parameterAsRasterLayer(parameters, self.DEM_NEW, context)
 
         rmse_old = self.parameterAsDouble(parameters, self.RMSE_OLD, context)
         rmse_new = self.parameterAsDouble(parameters, self.RMSE_NEW, context)
         confidence = self.parameterAsDouble(parameters, self.CONFIDENCE, context)
-        output_dir = self.parameterAsFileOutput(
-            parameters, self.OUTPUT_DIR, context
-        )
+        output_dir = self.parameterAsFileOutput(parameters, self.OUTPUT_DIR, context)
 
         if not output_dir:
             output_dir = os.path.join(

@@ -155,8 +155,15 @@ def filter_point_cloud(
     csf.params.class_threshold = float(class_threshold)
     csf.params.rigidness = int(rigidness)
     csf.params.time_step = float(time_step)
-    csf.params.bSloopSmooth = bool(b_slope_smooth)
-    csf.params.interations = int(iterations)
+    if hasattr(csf.params, "bSloopSmooth"):
+        csf.params.bSloopSmooth = bool(b_slope_smooth)
+    else:
+        csf.params.bSlopeSmooth = bool(b_slope_smooth)
+
+    if hasattr(csf.params, "interations"):
+        csf.params.interations = int(iterations)
+    else:
+        csf.params.iterations = int(iterations)
 
     # Run
     csf.setPointCloud(pts)
@@ -231,9 +238,7 @@ def filter_las_file(
     if crs is None and detected_crs is not None:
         logger.info("Using CRS detected from LAS file: %s", resolved_crs)
         if feedback:
-            feedback.setProgressText(
-                f"Using CRS from LAS file: {resolved_crs}"
-            )
+            feedback.setProgressText(f"Using CRS from LAS file: {resolved_crs}")
 
     if feedback:
         feedback.setProgressText(
@@ -259,8 +264,7 @@ def filter_las_file(
 
     if feedback:
         feedback.setProgressText(
-            f"Classified: {len(ground_xyz)} ground, "
-            f"{len(offground_xyz)} non-ground"
+            f"Classified: {len(ground_xyz)} ground, {len(offground_xyz)} non-ground"
         )
 
     if len(ground_xyz) < 10:
@@ -271,7 +275,10 @@ def filter_las_file(
 
     # Generate DEM from ground points
     dem_path = _points_to_dem(
-        ground_xyz, output_dem_path, cellsize=cellsize, crs=resolved_crs,
+        ground_xyz,
+        output_dem_path,
+        cellsize=cellsize,
+        crs=resolved_crs,
         feedback=feedback,
     )
 
@@ -307,11 +314,13 @@ def _read_las_points(las_path: str, feedback=None):
         import laspy
 
         las = laspy.read(las_path)
-        xyz = np.column_stack([
-            las.x,
-            las.y,
-            las.z,
-        ]).astype(np.float64)
+        xyz = np.column_stack(
+            [
+                las.x,
+                las.y,
+                las.z,
+            ]
+        ).astype(np.float64)
         crs = _crs_to_authid(las.header.parse_crs(prefer_wkt=True))
         logger.info("Read %d points via laspy (crs=%s)", len(xyz), crs)
         return xyz, crs
@@ -422,9 +431,7 @@ def _points_to_dem(
     try:
         from osgeo import gdal
     except ImportError:
-        raise RuntimeError(
-            "GDAL is required for DEM generation but not available."
-        )
+        raise RuntimeError("GDAL is required for DEM generation but not available.")
 
     if feedback:
         feedback.setProgressText("Generating DEM from ground points...")

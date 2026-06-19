@@ -35,6 +35,9 @@ from .algorithms.fusion_algorithm import FusionAlgorithm
 from .algorithms.ai_detection_algorithm import AiDetectionAlgorithm
 
 
+from .algorithms.web_viewer_algorithm import WebViewerAlgorithm
+
+
 class LidarReliefProvider(QgsProcessingProvider):
     """Processing provider that groups all LiDAR Relief algorithms."""
 
@@ -83,3 +86,4 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(TemporalDifferenceAlgorithm())
         self.addAlgorithm(FusionAlgorithm())
         self.addAlgorithm(AiDetectionAlgorithm())
+        self.addAlgorithm(WebViewerAlgorithm())

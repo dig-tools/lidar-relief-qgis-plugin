@@ -93,15 +93,11 @@ def convert_to_cog(
     check_dependencies()
 
     # Resolve the profile
-    try:
-        available_profiles = cog_profiles.get(profile)
-    except KeyError:
-        available_profiles = None
+    available_profiles = cog_profiles.get(profile)
 
     if available_profiles is None:
         logger.warning(
-            "Unknown COG profile '%s', falling back to 'deflate'. "
-            "Available: %s",
+            "Unknown COG profile '%s', falling back to 'deflate'. Available: %s",
             profile,
             list(cog_profiles.keys()),
         )
@@ -198,9 +194,7 @@ def _validate_cog_structure(path: str) -> bool:
             # Block size should be reasonable (256 or 512 typical)
             block_size = src.block_shapes[0]
             if block_size[0] < 64 or block_size[1] < 64:
-                logger.warning(
-                    "COG validation: block size too small %s", block_size
-                )
+                logger.warning("COG validation: block size too small %s", block_size)
                 return False
 
             # Overviews only required for larger rasters

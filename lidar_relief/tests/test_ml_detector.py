@@ -23,6 +23,7 @@ def setup():
     tmpdir = tempfile.mkdtemp(prefix="ml_test_")
     yield tmpdir
     import shutil
+
     shutil.rmtree(tmpdir)
 
 
@@ -30,11 +31,15 @@ def _create_test_raster(path, width=200, height=200):
     """Create a single-band test raster."""
     data = np.random.default_rng(42).random((height, width)).astype(np.float32)
     ds = gdal.GetDriverByName("GTiff").Create(
-        path, width, height, 1, gdal.GDT_Float32,
+        path,
+        width,
+        height,
+        1,
+        gdal.GDT_Float32,
         options=["COMPRESS=LZW"],
     )
     ds.SetGeoTransform((500000, 1.0, 0, 6000000, 0, -1.0))
-    ds.SetProjection('EPSG:32630')
+    ds.SetProjection("EPSG:32630")
     ds.GetRasterBand(1).WriteArray(data)
     ds.FlushCache()
     ds = None
@@ -50,27 +55,31 @@ def _create_minimal_onnx_model(path):
     from onnx import helper, TensorProto, numpy_helper
 
     # Input: (1, 3, 64, 64)
-    X = helper.make_tensor_value_info(
-        "input", TensorProto.FLOAT, [1, 3, 64, 64]
-    )
+    X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [1, 3, 64, 64])
 
     # Weight initializer: 3 filters, 3 input channels, 1x1 kernel
     W_data = np.ones((3, 3, 1, 1), dtype=np.float32)
     W_init = numpy_helper.from_array(W_data, name="W")
 
     conv = helper.make_node(
-        "Conv", ["input", "W"], ["conv_out"],
+        "Conv",
+        ["input", "W"],
+        ["conv_out"],
         kernel_shape=[1, 1],
     )
 
     # Global average pool to (3, 1, 1)
     pool = helper.make_node(
-        "GlobalAveragePool", ["conv_out"], ["pool_out"],
+        "GlobalAveragePool",
+        ["conv_out"],
+        ["pool_out"],
     )
 
     # Flatten to (1, 3)
     flatten = helper.make_node(
-        "Flatten", ["pool_out"], ["output"],
+        "Flatten",
+        ["pool_out"],
+        ["output"],
     )
 
     # Output: (1, 3)
@@ -94,6 +103,7 @@ class TestMLDetector:
     def test_onnx_available(self):
         """onnxruntime should be available."""
         from lidar_relief.ml.detector import onnx_available
+
         assert onnx_available()
 
     def test_load_model(self, setup):
@@ -154,9 +164,7 @@ class TestMLDetector:
 
     def test_inference_pipeline(self, setup):
         """End-to-end inference should produce detection results."""
-        from lidar_relief.ml.detector import (
-            load_model, detect_features, onnx_available
-        )
+        from lidar_relief.ml.detector import load_model, detect_features, onnx_available
 
         if not onnx_available():
             pytest.skip("onnxruntime not installed")
@@ -169,7 +177,8 @@ class TestMLDetector:
 
         model = load_model(model_path)
         result = detect_features(
-            raster_path, model,
+            raster_path,
+            model,
             confidence_threshold=0.1,
             tile_size=64,
         )

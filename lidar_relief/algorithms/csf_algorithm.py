@@ -24,8 +24,7 @@ from ..point_cloud.csf_filter import (
 
 PRESET_NAMES = list(ARCHAEOLOGY_PRESETS.keys())
 PRESET_LABELS = [
-    f"{name} — {ARCHAEOLOGY_PRESETS[name]['description']}"
-    for name in PRESET_NAMES
+    f"{name} — {ARCHAEOLOGY_PRESETS[name]['description']}" for name in PRESET_NAMES
 ]
 
 
@@ -100,9 +99,7 @@ class CsfAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addOutput(
-            QgsProcessingOutputString(
-                self.OUTPUT_STATS, "Processing statistics"
-            )
+            QgsProcessingOutputString(self.OUTPUT_STATS, "Processing statistics")
         )
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -116,6 +113,21 @@ class CsfAlgorithm(QgsProcessingAlgorithm):
         las_path = self.parameterAsFile(parameters, self.INPUT, context)
         if not las_path or not os.path.exists(las_path):
             raise QgsProcessingException(f"LAS file not found: {las_path}")
+
+        from qgis.core import QgsVectorLayer
+
+        vlayer = QgsVectorLayer(las_path, "las", "ogr")
+        if vlayer.isValid() and vlayer.featureCount() > 50000000:
+            raise QgsProcessingException(
+                "Point cloud is too large (> 50 million points). Please clip the data first."
+            )
+        elif (
+            not vlayer.isValid()
+            and os.path.getsize(las_path) > 1.5 * 1024 * 1024 * 1024
+        ):
+            raise QgsProcessingException(
+                "Point cloud file is too large (> 1.5 GB). Please clip the data first."
+            )
 
         preset_idx = self.parameterAsEnum(parameters, self.PRESET, context)
         preset = PRESET_NAMES[preset_idx]

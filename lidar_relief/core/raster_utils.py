@@ -23,7 +23,6 @@ from osgeo import gdal
 # Suppress GDAL printing errors to stderr; we handle them ourselves.
 
 
-
 @dataclass
 class DemData:
     """Container for DEM raster data and metadata.
@@ -311,6 +310,7 @@ def process_in_tiles(
                 out_dataset = None
                 dataset = None
                 import os
+
                 if os.path.exists(output_path):
                     try:
                         os.remove(output_path)
@@ -359,7 +359,9 @@ def process_in_tiles(
                 interior = result_block[crop_top:crop_bottom, crop_left:crop_right]
 
             # Reapply nodata mask to interior ONLY
-            interior_nodata_mask = block_nodata_mask[crop_top:crop_bottom, crop_left:crop_right]
+            interior_nodata_mask = block_nodata_mask[
+                crop_top:crop_bottom, crop_left:crop_right
+            ]
             if interior.ndim == 3:
                 for b in range(out_bands):
                     band_slice = interior[:, :, b]

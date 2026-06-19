@@ -108,9 +108,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setProgressText("Computing MSTP in tiles...")
 
-        def mstp_wrapper(
-            block, cellsize, local_r, meso_r, broad_r, lightness, feedback
-        ):
+        def mstp_wrapper(block, cellsize, local_r, meso_r, broad_r, lightness):
             return multi_scale_topographic_position(
                 block, local_r, meso_r, broad_r, lightness, feedback
             )

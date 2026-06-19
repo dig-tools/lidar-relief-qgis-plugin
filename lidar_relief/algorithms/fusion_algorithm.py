@@ -20,9 +20,7 @@ from ..fusion.sentinel_fusion import (
 )
 
 RECIPE_NAMES = list(FUSION_RECIPES.keys())
-RECIPE_LABELS = [
-    f"{r['name']} — {r['description']}" for r in FUSION_RECIPES.values()
-]
+RECIPE_LABELS = [f"{r['name']} — {r['description']}" for r in FUSION_RECIPES.values()]
 
 
 class FusionAlgorithm(QgsProcessingAlgorithm):
@@ -51,8 +49,7 @@ class FusionAlgorithm(QgsProcessingAlgorithm):
 
     def shortHelpString(self):
         recipe_list = "\n".join(
-            f"  - {r['name']}: {r['description']}"
-            for r in FUSION_RECIPES.values()
+            f"  - {r['name']}: {r['description']}" for r in FUSION_RECIPES.values()
         )
         return (
             "Fuse LiDAR relief visualizations with Sentinel-2 multispectral "
@@ -69,9 +66,7 @@ class FusionAlgorithm(QgsProcessingAlgorithm):
 
     def initAlgorithm(self, config=None):
         self.addParameter(
-            QgsProcessingParameterRasterLayer(
-                self.LIDAR_LAYER, "LiDAR relief layer"
-            )
+            QgsProcessingParameterRasterLayer(self.LIDAR_LAYER, "LiDAR relief layer")
         )
         self.addParameter(
             QgsProcessingParameterFile(
@@ -122,9 +117,7 @@ class FusionAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
-            QgsProcessingParameterRasterDestination(
-                self.OUTPUT, "Fused output"
-            )
+            QgsProcessingParameterRasterDestination(self.OUTPUT, "Fused output")
         )
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -133,9 +126,7 @@ class FusionAlgorithm(QgsProcessingAlgorithm):
                 "Multi-sensor fusion requires 'rasterio' and 'rioxarray'."
             )
 
-        lidar = self.parameterAsRasterLayer(
-            parameters, self.LIDAR_LAYER, context
-        )
+        lidar = self.parameterAsRasterLayer(parameters, self.LIDAR_LAYER, context)
         recipe_idx = self.parameterAsEnum(parameters, self.RECIPE, context)
         recipe_name = RECIPE_NAMES[recipe_idx]
 
@@ -152,9 +143,7 @@ class FusionAlgorithm(QgsProcessingAlgorithm):
             if path:
                 s2_paths[band_name] = path
 
-        output_path = self.parameterAsOutputLayer(
-            parameters, self.OUTPUT, context
-        )
+        output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         feedback.setProgressText(f"Applying fusion recipe: {recipe_name}...")
 

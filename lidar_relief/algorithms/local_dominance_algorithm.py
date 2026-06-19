@@ -111,7 +111,7 @@ class LocalDominanceAlgorithm(QgsProcessingAlgorithm):
 
         feedback.setProgressText("Computing Local Dominance in tiles...")
 
-        def ld_wrapper(block, cellsize, feedback):
+        def ld_wrapper(block, cellsize):
             return compute_local_dominance(
                 block,
                 cellsize,

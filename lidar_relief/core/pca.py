@@ -30,7 +30,9 @@ def compute_pca_composite(
     try:
         from scipy import linalg
     except ImportError:
-        raise ImportError("PCA composite requires scipy. Install with: pip install scipy")
+        raise ImportError(
+            "PCA composite requires scipy. Install with: pip install scipy"
+        )
 
     rows, cols = svf.shape
 
@@ -48,7 +50,6 @@ def compute_pca_composite(
     if len(v_svf) == 0:
         return np.zeros((rows, cols, 3), dtype=np.float32)
 
-
     # Standardize data (0 mean, 1 variance)
     data = np.stack([v_svf, v_open, v_slope, v_ld], axis=1)  # (N, 4)
     mean = np.mean(data, axis=0)
@@ -57,7 +58,6 @@ def compute_pca_composite(
     # Avoid division by zero
     std[std == 0] = 1.0
     data_std = (data - mean) / std
-
 
     # Covariance matrix (4x4)
     cov = np.cov(data_std, rowvar=False)
@@ -71,7 +71,6 @@ def compute_pca_composite(
 
     # Take first 3 principal components (N, 3)
     pc = np.dot(data_std, evecs[:, :3])
-
 
     # Normalize PCs to [0, 255]
     # Use 2-98 percentile for robust contrast stretch

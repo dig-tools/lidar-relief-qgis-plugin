@@ -38,7 +38,6 @@ def compute_e4mstp(
     B = texture * (1.0 - S)
     base = np.stack([R, G, B], axis=-1)
 
-
     # Step 2 — Dual SVF:
     # SVF_S uses radius ~10px, SVF_L uses radius ~50px. Both computed internally.
     SVF_S = sky_view_factor(dem, cellsize, search_radius=10, feedback=feedback)
@@ -49,11 +48,9 @@ def compute_e4mstp(
     svf_l_stretched = np.clip((SVF_L - 0.9) / (1.0 - 0.9), 0.0, 1.0)
     combined_svf = (svf_l_stretched * 1.0 + svf_s_stretched * 0.5) / 1.5
 
-
     # Step 3 — Multiply blend at 25% opacity:
     multiplied = base * combined_svf[..., np.newaxis]
     step3 = 0.25 * multiplied + 0.75 * base
-
 
     # Step 4 — Overlay MSTP at 90% opacity:
 

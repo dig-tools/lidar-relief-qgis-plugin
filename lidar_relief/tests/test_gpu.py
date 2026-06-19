@@ -63,7 +63,7 @@ class TestGPUCompute:
         # Add a cone feature for meaningful SVF variation
         cy, cx = 25, 25
         y, x = np.mgrid[0:50, 0:50]
-        cone = np.maximum(10.0 - np.sqrt((x - cx)**2 + (y - cy)**2) * 0.5, 0)
+        cone = np.maximum(10.0 - np.sqrt((x - cx) ** 2 + (y - cy) ** 2) * 0.5, 0)
         dem += cone
 
         # Compute on both backends
@@ -86,12 +86,8 @@ class TestGPUCompute:
         dem = np.random.random((30, 30)).astype(np.float32) * 50.0
 
         # Compute on both backends
-        open_numpy = topographic_openness(
-            dem, 1.0, num_directions=8, search_radius=5
-        )
-        open_gpu = compute_openness_gpu(
-            dem, 1.0, num_directions=8, search_radius=5
-        )
+        open_numpy = topographic_openness(dem, 1.0, num_directions=8, search_radius=5)
+        open_gpu = compute_openness_gpu(dem, 1.0, num_directions=8, search_radius=5)
 
         valid = ~np.isnan(open_numpy) & ~np.isnan(open_gpu)
         if valid.any():

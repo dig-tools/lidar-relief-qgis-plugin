@@ -25,6 +25,7 @@ class TestFieldPackager:
         self.tmpdir = tempfile.mkdtemp(prefix="field_test_")
         yield
         import shutil
+
         shutil.rmtree(self.tmpdir)
 
     def _geopackage_has_layer(self, path: str, layer_name: str) -> bool:
@@ -37,8 +38,9 @@ class TestFieldPackager:
         ds = None
         return exists
 
-    def _geopackage_has_fields(self, path: str, layer_name: str,
-                               expected_fields: list) -> dict:
+    def _geopackage_has_fields(
+        self, path: str, layer_name: str, expected_fields: list
+    ) -> dict:
         """Check if a GeoPackage layer has the expected fields."""
         ds = ogr.Open(path)
         layer = ds.GetLayerByName(layer_name)
@@ -69,7 +71,8 @@ class TestFieldPackager:
     def test_template_has_all_schema_fields(self):
         """The anomaly template should have all expected schema fields."""
         from lidar_relief.export.field_packager import (
-            create_anomaly_template, ANOMALY_SCHEMA
+            create_anomaly_template,
+            ANOMALY_SCHEMA,
         )
 
         gpkg_path = os.path.join(self.tmpdir, "template.gpkg")
@@ -91,12 +94,22 @@ class TestFieldPackager:
             f.write("dummy")
 
         anomaly_points = [
-            {"x": -1.5, "y": 52.0, "anomaly_id": "ANOM-001",
-             "detection_method": "svf", "confidence": 0.85,
-             "feature_type": "barrow"},
-            {"x": -1.51, "y": 52.01, "anomaly_id": "ANOM-002",
-             "detection_method": "hillshade", "confidence": 0.7,
-             "feature_type": "ditch"},
+            {
+                "x": -1.5,
+                "y": 52.0,
+                "anomaly_id": "ANOM-001",
+                "detection_method": "svf",
+                "confidence": 0.85,
+                "feature_type": "barrow",
+            },
+            {
+                "x": -1.51,
+                "y": 52.01,
+                "anomaly_id": "ANOM-002",
+                "detection_method": "hillshade",
+                "confidence": 0.7,
+                "feature_type": "ditch",
+            },
         ]
 
         output_dir = os.path.join(self.tmpdir, "survey_package")
