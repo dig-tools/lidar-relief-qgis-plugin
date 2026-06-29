@@ -50,3 +50,7 @@ AGENTS.md
 CLAUDE.md
 TODO.md
 cloth_nodes.txt
+
+# Date-stamped agent backups (accidentally left behind by tooling)
+*.bak
+*.bak-*
