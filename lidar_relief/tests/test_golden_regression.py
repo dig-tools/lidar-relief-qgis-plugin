@@ -69,13 +69,13 @@ _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")
 if _PROJECT_ROOT not in sys.path:
     sys.path.insert(0, _PROJECT_ROOT)
 
-from lidar_relief.core.svf import sky_view_factor
-from lidar_relief.core.openness import topographic_openness
-from lidar_relief.core.slrm import simple_local_relief_model
-from lidar_relief.core.slope import compute_slope
-from lidar_relief.core.hillshade import multidirectional_hillshade
+from lidar_relief.core.svf import sky_view_factor  # noqa: E402
+from lidar_relief.core.openness import topographic_openness  # noqa: E402
+from lidar_relief.core.slrm import simple_local_relief_model  # noqa: E402
+from lidar_relief.core.slope import compute_slope  # noqa: E402
+from lidar_relief.core.hillshade import multidirectional_hillshade  # noqa: E402
 
-from rvt import vis
+from rvt import vis  # noqa: E402
 
 
 # ── Fixtures ─────────────────────────────────────────────────────────
@@ -98,7 +98,9 @@ def synthetic_dem():
     yy, xx = np.ogrid[:size, :size]
     # Cone (hill) upper-left
     cy, cx = 25, 25
-    dem += np.maximum(0, 15 - np.sqrt((yy - cy) ** 2 + (xx - cx) ** 2)).astype(np.float32)
+    dem += np.maximum(0, 15 - np.sqrt((yy - cy) ** 2 + (xx - cx) ** 2)).astype(
+        np.float32
+    )
     # Pit (depression) lower-right
     cy, cx = 75, 75
     dist = np.sqrt((yy - cy) ** 2 + (xx - cx) ** 2)
@@ -157,7 +159,7 @@ class TestSlopeGolden:
         dem = synthetic_dem
         # Manual Horn's at pixel (50, 50)
         y, x = 50, 50
-        window = dem[y - 1:y + 2, x - 1:x + 2]
+        window = dem[y - 1 : y + 2, x - 1 : x + 2]
         dz_dx = (
             (window[0, 0] + 2 * window[1, 0] + window[2, 0])
             - (window[0, 2] + 2 * window[1, 2] + window[2, 2])
@@ -166,7 +168,7 @@ class TestSlopeGolden:
             (window[0, 0] + 2 * window[0, 1] + window[0, 2])
             - (window[2, 0] + 2 * window[2, 1] + window[2, 2])
         ) / 8.0
-        expected = np.degrees(np.arctan(np.sqrt(dz_dx ** 2 + dz_dy ** 2)))
+        expected = np.degrees(np.arctan(np.sqrt(dz_dx**2 + dz_dy**2)))
 
         result = compute_slope(dem, cellsize=1.0, units="degrees")
         assert abs(result[y, x] - expected) < 1e-4, (
@@ -221,7 +223,6 @@ class TestSlopeGolden:
             synthetic_dem, resolution_x=1.0, resolution_y=1.0, output_units="degree"
         )["slope"]
 
-        diff = np.abs(plugin_result - rvt_result)
         # Should match to float32 precision.
         np.testing.assert_allclose(plugin_result, rvt_result, atol=1e-4, equal_nan=True)
 
@@ -247,13 +248,17 @@ class TestSVFGolden:
 
     def test_svf_flat_plane_one(self, flat_dem):
         """SVF of a flat plane must be 1.0 (no occlusion)."""
-        result = sky_view_factor(flat_dem, cellsize=1.0, num_directions=16, search_radius=10)
+        result = sky_view_factor(
+            flat_dem, cellsize=1.0, num_directions=16, search_radius=10
+        )
         valid = result[~np.isnan(result)]
         np.testing.assert_allclose(valid, 1.0, atol=0.05)
 
     def test_svf_range_zero_to_one(self, synthetic_dem):
         """SVF must be in [0, 1] for all valid pixels."""
-        result = sky_view_factor(synthetic_dem, cellsize=1.0, num_directions=16, search_radius=10)
+        result = sky_view_factor(
+            synthetic_dem, cellsize=1.0, num_directions=16, search_radius=10
+        )
         valid = result[~np.isnan(result)]
         assert valid.min() >= 0.0
         assert valid.max() <= 1.0
@@ -302,7 +307,11 @@ class TestSVFGolden:
         further. Tighten the tolerance at that point.
         """
         plugin_result = sky_view_factor(
-            synthetic_dem, cellsize=1.0, num_directions=16, search_radius=10, noise_level=0
+            synthetic_dem,
+            cellsize=1.0,
+            num_directions=16,
+            search_radius=10,
+            noise_level=0,
         )
         rvt_result = vis.sky_view_factor(
             synthetic_dem, resolution=1.0, svf_n_dir=16, svf_r_max=10, svf_noise=0
@@ -333,7 +342,11 @@ class TestOpennessGolden:
     def test_openness_flat_plane_90(self, flat_dem):
         """Positive openness of a flat plane must be ~90°."""
         result = topographic_openness(
-            flat_dem, cellsize=1.0, num_directions=16, search_radius=10, is_negative=False
+            flat_dem,
+            cellsize=1.0,
+            num_directions=16,
+            search_radius=10,
+            is_negative=False,
         )
         valid = result[~np.isnan(result)]
         np.testing.assert_allclose(valid, 90.0, atol=2.0)
@@ -341,7 +354,11 @@ class TestOpennessGolden:
     def test_openness_pit_lower(self, synthetic_dem):
         """Positive openness at the bottom of a pit must be lower than on flat terrain."""
         result = topographic_openness(
-            synthetic_dem, cellsize=1.0, num_directions=16, search_radius=20, is_negative=False
+            synthetic_dem,
+            cellsize=1.0,
+            num_directions=16,
+            search_radius=20,
+            is_negative=False,
         )
         pit_opns = result[75, 75]
         flat_opns = result[5, 5]
@@ -369,7 +386,11 @@ class TestOpennessGolden:
             max |diff|  ≈ 5.4°
         """
         plugin_result = topographic_openness(
-            synthetic_dem, cellsize=1.0, num_directions=16, search_radius=10, is_negative=False
+            synthetic_dem,
+            cellsize=1.0,
+            num_directions=16,
+            search_radius=10,
+            is_negative=False,
         )
         rvt_result = vis.sky_view_factor(
             synthetic_dem, resolution=1.0, svf_n_dir=16, svf_r_max=10, compute_opns=True
@@ -494,9 +515,13 @@ class TestHillshadeGolden:
         hs_dirs = []
         for az in [315, 45, 135, 225]:
             hs_dir = vis.hillshade(
-                synthetic_dem, resolution_x=1.0, resolution_y=1.0,
-                sun_azimuth=az, sun_elevation=45,
-                slope=rvt_slope, aspect=rvt_aspect,
+                synthetic_dem,
+                resolution_x=1.0,
+                resolution_y=1.0,
+                sun_azimuth=az,
+                sun_elevation=45,
+                slope=rvt_slope,
+                aspect=rvt_aspect,
             )
             hs_dirs.append(hs_dir)
         # rvt-py hillshade returns (H-2, W-2) — it doesn't pad borders

@@ -233,8 +233,6 @@ def _generate_viewer_html(
     zoom_js = json.dumps(zoom, allow_nan=False)
     min_zoom_js = json.dumps(min_zoom, allow_nan=False)
     max_zoom_js = json.dumps(max_zoom, allow_nan=False)
-    cog_min_zoom_js = json.dumps(cog_min_zoom)
-    cog_max_zoom_js = json.dumps(cog_max_zoom)
     opacity_js = json.dumps(opacity, allow_nan=False)
     style_js = json.dumps(style, allow_nan=False)
     cog_url_js = json.dumps(
@@ -247,9 +245,7 @@ def _generate_viewer_html(
     # Build optional SRI attributes for the CDN tags.
     css_sri = f' integrity="{_MAPLIBRE_CSS_SRI}"' if _MAPLIBRE_CSS_SRI else ""
     js_sri = f' integrity="{_MAPLIBRE_JS_SRI}"' if _MAPLIBRE_JS_SRI else ""
-    cog_sri = (
-        f' integrity="{_COG_PROTOCOL_JS_SRI}"' if _COG_PROTOCOL_JS_SRI else ""
-    )
+    cog_sri = f' integrity="{_COG_PROTOCOL_JS_SRI}"' if _COG_PROTOCOL_JS_SRI else ""
 
     return f"""<!DOCTYPE html>
 <html lang="en">

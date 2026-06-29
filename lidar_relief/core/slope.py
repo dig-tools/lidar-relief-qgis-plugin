@@ -82,7 +82,6 @@ def compute_slope(
         # Note: rvt-py uses (roll(-1) - roll(+1)) / 2 for dzdx, which
         # is the negative of the conventional finite difference. We use
         # the conventional form here; the slope magnitude is the same.
-        center = padded[1:-1, 1:-1]
         east = padded[1:-1, 2:]
         west = padded[1:-1, :-2]
         north = padded[:-2, 1:-1]
