@@ -27,8 +27,16 @@ class TestPDALPipeline:
     """Tests for PDAL pipeline construction."""
 
     def test_pdal_available(self):
-        """Check if PDAL is available (informational)."""
-        pass
+        """PDAL availability should be reported consistently.
+
+        The previous version of this test was a `pass` statement, which
+        always passed regardless of whether PDAL was actually installed.
+        We now skip the test if PDAL is missing (rather than silently
+        passing) so the test report accurately reflects the environment.
+        """
+        if not pdal_available():
+            pytest.skip("PDAL Python bindings not installed")
+        assert pdal_available()
 
     def test_pipelines_defined(self):
         """All expected pipeline presets should exist."""
@@ -51,10 +59,13 @@ class TestPDALPipeline:
             )
 
     def test_build_pipeline_json(self):
-        """build_pipeline should produce valid JSON with correct stages."""
-        if not pdal_available():
-            pytest.skip("PDAL not installed")
+        """build_pipeline should produce valid JSON with correct stages.
 
+        build_pipeline constructs the JSON string but does NOT execute
+        PDAL, so this test runs even when PDAL isn't installed. The
+        previous version skipped this test when PDAL was missing, which
+        meant the pipeline JSON construction was untested in CI.
+        """
         pipeline_json = build_pipeline(
             las_path=_TMP_LAS,
             output_path=_TMP_TIF,
@@ -68,9 +79,6 @@ class TestPDALPipeline:
 
     def test_build_with_custom_resolution(self):
         """Custom resolution should be applied to GDAL writer."""
-        if not pdal_available():
-            pytest.skip("PDAL not installed")
-
         pipeline_json = build_pipeline(
             las_path=_TMP_LAS,
             output_path=_TMP_TIF,

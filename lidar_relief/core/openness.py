@@ -5,12 +5,13 @@ rules:
   Pure NumPy — no QGIS imports.
   Input dem must be float32 with nodata as np.nan.
   Output is float32 in range [0, 180] (usually [0, 90]).
-  All operations MUST be vectorised.
-  No per-pixel Python loops.
+  Uses the same supersampled horizon scan as SVF (see core/svf.py) so
+  that horizon pixels on diagonal azimuths are correctly sampled.
 """
 
 import numpy as np
 from .array_utils import _shift_array
+from .svf import _build_horizon_samples
 
 
 def topographic_openness(
@@ -54,55 +55,42 @@ def topographic_openness(
     dem_filled = working_dem.copy()
     dem_filled[nan_mask] = dem_mean
 
-    # Generate evenly-spaced azimuth angles
-    azimuths_rad = np.linspace(0, 2 * np.pi, num_directions, endpoint=False)
-
-    # Pre-compute direction vectors
-    dir_rows = -np.cos(azimuths_rad)
-    dir_cols = np.sin(azimuths_rad)
+    # Pre-compute the horizon sample points (same supersampling approach as SVF)
+    horizon_samples = _build_horizon_samples(num_directions, search_radius)
 
     # Accumulate openness angles (in radians)
     openness_sum = np.zeros((rows, cols), dtype=np.float32)
 
-    total_steps = num_directions
-    for dir_idx in range(num_directions):
+    for dir_idx, row_shifts, col_shifts, dists in horizon_samples:
         if feedback is not None and feedback.isCanceled():
             return np.full_like(dem, np.nan)
-
-        dr = dir_rows[dir_idx]
-        dc = dir_cols[dir_idx]
 
         # Start at -1.0, which corresponds to -pi/2 (straight down)
         max_sin = np.full((rows, cols), -1.0, dtype=np.float32)
 
-        for dist in range(1, search_radius + 1):
-            row_offset = dr * dist
-            col_offset = dc * dist
-
-            row_shift = int(round(row_offset))
-            col_shift = int(round(col_offset))
-
-            if row_shift == 0 and col_shift == 0:
+        for row_shift, col_shift, dist_units in zip(row_shifts, col_shifts, dists):
+            actual_dist = dist_units * cellsize
+            if actual_dist == 0:
                 continue
 
             shifted = _shift_array(dem_filled, row_shift, col_shift, dem_mean)
-            actual_dist = np.sqrt(
-                (row_shift * cellsize) ** 2 + (col_shift * cellsize) ** 2
-            )
 
             delta_z = shifted - dem_filled
             hypot_3d = np.hypot(delta_z, actual_dist)
+            # Avoid division by zero; also clamp to avoid NaN from arcsin later
+            hypot_3d = np.where(hypot_3d == 0, 1.0, hypot_3d)
             sin_angle = delta_z / hypot_3d
 
             max_sin = np.maximum(max_sin, sin_angle)
 
+        # Clamp to [-1, 1] before arcsin to avoid NaN from floating-point drift
+        max_sin = np.clip(max_sin, -1.0, 1.0)
         max_angle = np.arcsin(max_sin)
         # Openness for this direction is zenith angle (pi/2 - max_angle)
-        # Zenith angle = 0 if straight up, pi/2 if horizontal, >pi/2 if below horizontal
         openness_sum += np.pi / 2.0 - max_angle
 
         if feedback is not None:
-            feedback.setProgress(int((dir_idx + 1) / total_steps * 100))
+            feedback.setProgress(int((dir_idx + 1) / num_directions * 100))
 
     # Mean openness in radians
     mean_openness_rad = openness_sum / num_directions

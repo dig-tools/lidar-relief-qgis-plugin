@@ -160,4 +160,17 @@ class TemporalDifferenceAlgorithm(QgsProcessingAlgorithm):
         )
         feedback.pushInfo(stats)
 
+        # Note: the v2.0.4 changelog promised "output layers are now
+        # auto-styled correctly" but DoD outputs a directory containing
+        # two rasters (DoD + mask), so the standard
+        # ReliefLayerPostProcessor pattern (designed for a single output
+        # raster) doesn't apply. The user will need to manually apply a
+        # diverging colour ramp to the DoD and a categorical ramp to the
+        # mask.
+        feedback.pushInfo(
+            "Tip: apply a diverging colour ramp (red-white-blue) to the DoD "
+            "raster, and a categorical ramp (erosion=red, no change=white, "
+            "deposition=blue) to the mask raster for best visualisation."
+        )
+
         return {self.OUTPUT_DIR: output_dir, self.OUTPUT_STATS: stats}

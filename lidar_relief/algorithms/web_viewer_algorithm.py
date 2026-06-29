@@ -197,6 +197,16 @@ class WebViewerAlgorithm(QgsProcessingAlgorithm):
         # 5. File Co-location logic (P4.3)
         dest_path = os.path.join(output_dir, os.path.basename(source_path))
         if os.path.abspath(dest_path) != os.path.abspath(source_path):
+            # Refuse to silently overwrite an existing file at dest_path.
+            # Previously shutil.copy2 would clobber any existing file
+            # without warning — a data-loss risk if the user pointed
+            # the output directory at a folder containing important data.
+            if os.path.exists(dest_path):
+                raise QgsProcessingException(
+                    f"A file already exists at the destination path: {dest_path}. "
+                    f"Remove it or choose a different output directory. "
+                    f"(The plugin refuses to silently overwrite files.)"
+                )
             feedback.pushInfo(f"Copying COG to output directory: {output_dir}")
             shutil.copy2(source_path, dest_path)
 

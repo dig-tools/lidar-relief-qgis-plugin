@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 
 pytest.importorskip("osgeo")
+# The ML detector requires onnxruntime in addition to GDAL.
+pytest.importorskip("onnxruntime")
 
 from osgeo import gdal  # noqa: E402
 

@@ -15,6 +15,9 @@ import numpy as np
 import pytest
 
 pytest.importorskip("osgeo")
+# COG export requires rio-cogeo (which itself depends on rasterio).
+pytest.importorskip("rio_cogeo")
+pytest.importorskip("rasterio")
 
 from osgeo import gdal  # noqa: E402
 

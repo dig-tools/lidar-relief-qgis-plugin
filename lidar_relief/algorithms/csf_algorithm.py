@@ -153,6 +153,18 @@ class CsfAlgorithm(QgsProcessingAlgorithm):
         )
         feedback.pushInfo(stats)
 
+        # Apply auto-styling post-processor so the output DEM is rendered
+        # with a contrast stretch in QGIS, not as a raw grey raster.
+        # The v2.0.4 changelog promised "output layers are now auto-styled
+        # correctly" but CSF/DoD/PDAL outputs were missed.
+        if context.willLoadLayerOnCompletion(output_path):
+            from ..styling import ReliefLayerPostProcessor
+
+            details = context.layerToLoadOnCompletionDetails(output_path)
+            details.setPostProcessor(
+                ReliefLayerPostProcessor(self.displayName(), stretch_type="stddev")
+            )
+
         return {
             self.OUTPUT: output_path,
             self.OUTPUT_STATS: stats,

@@ -27,10 +27,17 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
 
     INPUT = "INPUT"
     UNITS = "UNITS"
+    METHOD = "METHOD"
     OUTPUT = "OUTPUT"
 
     _UNIT_OPTIONS = ["Degrees", "Percent"]
     _UNIT_VALUES = ["degrees", "percent"]
+
+    _METHOD_OPTIONS = [
+        "Horn's 3×3 (default, QGIS/ArcGIS)",
+        "Finite difference (rvt-py / ESRI legacy)",
+    ]
+    _METHOD_VALUES = ["horn", "finite_difference"]
 
     # -- metadata -----------------------------------------------------------
 
@@ -50,7 +57,13 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
         return (
             "Computes terrain slope from a DEM. Output can be in "
             "degrees (0–90) or percent (0–∞). Slope highlights "
-            "edges of features such as banks, scarps, and walls."
+            "edges of features such as banks, scarps, and walls.\n\n"
+            "Two gradient methods are available:\n"
+            "  - Horn's 3×3 (default): standard QGIS/ArcGIS method. "
+            "Smoother on noisy data.\n"
+            "  - Finite difference: matches rvt-py and ESRI's older "
+            "tools. Sharper on noisy data. Use this if you need to "
+            "compare against ESRI outputs."
         )
 
     def createInstance(self):
@@ -74,6 +87,14 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addParameter(
+            QgsProcessingParameterEnum(
+                self.METHOD,
+                "Gradient method",
+                options=self._METHOD_OPTIONS,
+                defaultValue=0,  # Horn's
+            )
+        )
+        self.addParameter(
             QgsProcessingParameterRasterDestination(
                 self.OUTPUT,
                 "Slope output",
@@ -87,15 +108,18 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
 
         Rules:
             Map enum index to unit string via _UNIT_VALUES.
+            Map enum index to method string via _METHOD_VALUES.
             Abort gracefully on cancel.
         """
         source = self.parameterAsRasterLayer(parameters, self.INPUT, context)
         int_unit_index = self.parameterAsEnum(parameters, self.UNITS, context)
+        int_method_index = self.parameterAsEnum(parameters, self.METHOD, context)
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         str_units = self._UNIT_VALUES[int_unit_index]
+        str_method = self._METHOD_VALUES[int_method_index]
 
-        feedback.setProgressText(f"Computing slope ({str_units}) in tiles...")
+        feedback.setProgressText(f"Computing slope ({str_units}, {str_method}) in tiles...")
 
         process_in_tiles(
             source_path=source.source(),
@@ -105,6 +129,7 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
             tile_size=2048,
             feedback=feedback,
             units=str_units,
+            method=str_method,
         )
 
         if feedback.isCanceled():

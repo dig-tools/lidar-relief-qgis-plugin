@@ -14,6 +14,12 @@ import numpy as np
 import pytest
 
 pytest.importorskip("osgeo")
+# Fusion module additionally requires rasterio + rioxarray — skip the
+# entire module if either is missing (the previous code only checked
+# osgeo, which caused test_fusion_available to do `assert fusion_available()`
+# and fail with a confusing ImportError when rasterio wasn't installed).
+pytest.importorskip("rasterio")
+pytest.importorskip("rioxarray")
 
 from osgeo import gdal  # noqa: E402
 
@@ -59,6 +65,8 @@ class TestFusion:
         """Fusion libraries should be available."""
         from lidar_relief.fusion.sentinel_fusion import fusion_available
 
+        if not fusion_available():
+            pytest.skip("rasterio/rioxarray not installed")
         assert fusion_available()
 
     def test_co_register(self, setup):
@@ -134,7 +142,7 @@ class TestFusion:
         from lidar_relief.fusion.sentinel_fusion import apply_fusion_recipe
 
         with pytest.raises(ValueError, match="Unknown fusion recipe"):
-            out_path = os.path.join(self.tmpdir, "out.tif")
+            out_path = os.path.join(setup, "out.tif")
             apply_fusion_recipe("nonexistent.tif", {}, "fake_recipe", out_path)
 
     def test_missing_band(self, setup):
@@ -146,5 +154,5 @@ class TestFusion:
         _create_raster(lidar_path, lidar)
 
         with pytest.raises(ValueError, match="Missing band"):
-            out_path = os.path.join(self.tmpdir, "out2.tif")
+            out_path = os.path.join(setup, "out2.tif")
             apply_fusion_recipe(lidar_path, {}, "terrain_cir", out_path)

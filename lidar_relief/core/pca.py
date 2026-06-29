@@ -3,7 +3,7 @@ exports: compute_pca_composite(svf, openness, slope, local_dominance)
 used_by: algorithms/pca_algorithm.py
 rules:
   Compute PCA of 4 input variables to generate a 3-band RGB image.
-  Uses scipy for eigen decomposition.
+  Uses numpy.linalg.eigh for eigen decomposition (no scipy dependency).
 """
 
 import numpy as np
@@ -27,12 +27,18 @@ def compute_pca_composite(
     Returns:
         3D numpy array (rows, cols, 3) in [0, 255] float32.
     """
+    # The v2.0.5 changelog promised "decoupled scipy dependency for more
+    # resilient loading" but PCA still hard-required scipy at runtime.
+    # numpy.linalg.eigh is a drop-in replacement for scipy.linalg.eigh
+    # on symmetric/Hermitian matrices (like covariance matrices) and is
+    # always available. We keep scipy as an optional fast-path for users
+    # who have it installed, but fall back to numpy transparently.
     try:
-        from scipy import linalg
+        from scipy import linalg as _scipy_linalg
+
+        _eigh = _scipy_linalg.eigh
     except ImportError:
-        raise ImportError(
-            "PCA composite requires scipy. Install with: pip install scipy"
-        )
+        _eigh = np.linalg.eigh
 
     rows, cols = svf.shape
 
@@ -62,8 +68,8 @@ def compute_pca_composite(
     # Covariance matrix (4x4)
     cov = np.cov(data_std, rowvar=False)
 
-    # Eigen decomposition using scipy
-    evals, evecs = linalg.eigh(cov)
+    # Eigen decomposition (scipy if available, else numpy)
+    evals, evecs = _eigh(cov)
 
     # Sort eigenvalues in descending order
     idx = np.argsort(evals)[::-1]

@@ -13,6 +13,10 @@ rules:
   Plugin acts as inference engine only.
   Lightweight dependency: onnxruntime + numpy.
   Tiled processing for large rasters.
+  Bounding boxes are returned in RASTER PIXEL coordinates and MUST be
+  converted to map coordinates by the caller (see pixel_bbox_to_map_bbox).
+  Only object_detection (YOLO/SSD) is supported. Semantic segmentation
+  (U-Net) is detected but not post-processed — see SUPPORTED_MODEL_TYPES.
 """
 
 import json
@@ -33,8 +37,9 @@ except ImportError:
 
 # Supported model types and their expected output formats
 # NOTE (v2.0.4): semantic_segmentation is detected but NOT supported yet.
-# The postprocessor is not implemented — see _postprocess_segmentation() stub.
-# Full implementation is planned for v2.1.
+# The postprocessor is not implemented — full implementation is planned
+# for v2.1. Loading a segmentation model returns zero detections and
+# emits a clear warning.
 SUPPORTED_MODEL_TYPES = {
     "object_detection": {
         "description": "Bounding box detection (YOLO, SSD, etc.)",
@@ -173,37 +178,90 @@ def preprocess_tile(
     elif tile.ndim == 3 and tile.shape[2] == 1:
         tile = np.repeat(tile, 3, axis=2)
 
-    # Resize to input size using simple numpy interpolation
+    # Resize to input size using bilinear interpolation (cv2 preferred).
     h, w = input_size
     src_h, src_w = tile.shape[:2]
 
-    # Create coordinate grids
     try:
         import cv2
 
         tile_resized = cv2.resize(tile, (w, h), interpolation=cv2.INTER_LINEAR)
     except ImportError:
-        y_ratio = src_h / h
-        x_ratio = src_w / w
-        y_coords = np.clip(
-            np.floor(np.arange(h) * y_ratio).astype(np.int32), 0, src_h - 1
-        )
-        x_coords = np.clip(
-            np.floor(np.arange(w) * x_ratio).astype(np.int32), 0, src_w - 1
-        )
+        # Pure-NumPy bilinear fallback — the previous nearest-neighbour
+        # fallback aliasing was flagged in the v2.0.5 changelog as fixed,
+        # but only the cv2 path was actually bilinear. This fallback now
+        # matches the cv2 path's behaviour for non-uint8 inputs.
+        tile_resized = _bilinear_resize(tile, (h, w))
 
-        tile_resized = tile[y_coords[:, np.newaxis], x_coords[np.newaxis, :]]
-
-    # Normalize to [0, 1]
+    # Normalize to [0, 1]. The previous heuristic (`if max > 1: /=`)
+    # silently destroyed information for legitimate float rasters whose
+    # value range is 0..90 (slope degrees), 0..120 (openness), -1..1
+    # (SLRM). We now use a more conservative rule: only auto-scale
+    # integer-typed inputs (which are conventionally 0..255 image data).
     tile_float = tile_resized.astype(np.float32)
-    if tile_float.max() > 1.0:
+    if np.issubdtype(tile_resized.dtype, np.integer):
         tile_float /= 255.0
+    else:
+        # Per-tile min-max normalisation for floating-point rasters so
+        # the model always receives a [0,1] input regardless of the
+        # source algorithm. NaNs are preserved.
+        finite = tile_float[np.isfinite(tile_float)]
+        if finite.size > 0:
+            t_min = finite.min()
+            t_max = finite.max()
+            if t_max - t_min > 1e-6:
+                tile_float = (tile_float - t_min) / (t_max - t_min)
+            else:
+                tile_float = np.zeros_like(tile_float)
+        tile_float = np.nan_to_num(tile_float, nan=0.0, posinf=1.0, neginf=0.0)
 
     # Convert to (C, H, W) format and add batch dimension
     tile_nhwc = np.transpose(tile_float, (2, 0, 1))  # (C, H, W)
     tile_batch = np.expand_dims(tile_nhwc, axis=0)  # (1, C, H, W)
 
     return tile_batch
+
+
+def _bilinear_resize(tile: np.ndarray, target_size: tuple[int, int]) -> np.ndarray:
+    """Pure-NumPy bilinear resize. Matches cv2.INTER_LINEAR for 2D and 3D inputs.
+
+    Args:
+        tile: (H, W) or (H, W, C) array.
+        target_size: (out_h, out_w).
+
+    Returns:
+        Resized array with dtype preserved.
+    """
+    out_h, out_w = target_size
+    src_h, src_w = tile.shape[:2]
+    if tile.ndim == 2:
+        return _bilinear_resize(tile[..., np.newaxis], target_size)[..., 0]
+
+    # Compute source coordinates for each output pixel (align_corners=False,
+    # half-pixel shift — matches cv2/OpenCV semantics).
+    y_ratio = src_h / out_h
+    x_ratio = src_w / out_w
+    y_src = (np.arange(out_h) + 0.5) * y_ratio - 0.5
+    x_src = (np.arange(out_w) + 0.5) * x_ratio - 0.5
+    y_src = np.clip(y_src, 0.0, src_h - 1.0)
+    x_src = np.clip(x_src, 0.0, src_w - 1.0)
+    y0 = np.floor(y_src).astype(np.int32)
+    x0 = np.floor(x_src).astype(np.int32)
+    y1 = np.clip(y0 + 1, 0, src_h - 1)
+    x1 = np.clip(x0 + 1, 0, src_w - 1)
+    wy = (y_src - y0)[:, np.newaxis]
+    wx = (x_src - x0)[np.newaxis, :]
+
+    # Gather four neighbours and interpolate.
+    tile_00 = tile[y0[:, np.newaxis], x0[np.newaxis, :], :]
+    tile_01 = tile[y0[:, np.newaxis], x1[np.newaxis, :], :]
+    tile_10 = tile[y1[:, np.newaxis], x0[np.newaxis, :], :]
+    tile_11 = tile[y1[:, np.newaxis], x1[np.newaxis, :], :]
+
+    top = tile_00 * (1 - wx)[..., np.newaxis] + tile_01 * wx[..., np.newaxis]
+    bot = tile_10 * (1 - wx)[..., np.newaxis] + tile_11 * wx[..., np.newaxis]
+    out = top * (1 - wy)[..., np.newaxis] + bot * wy[..., np.newaxis]
+    return out.astype(tile.dtype, copy=False)
 
 
 def detect_features(
@@ -250,8 +308,13 @@ def detect_features(
     labels = model["labels"]
     model_type = model["model_type"]
 
-    # Expected input size from model (H, W)
-    _, _, model_h, model_w = input_shape
+    # Expected input size from model (H, W). The shape is typically
+    # (N, C, H, W) but ONNX exports with dynamic batch / channel dims
+    # may return fewer or more elements; only unpack the last two.
+    if len(input_shape) >= 2:
+        model_h, model_w = input_shape[-2], input_shape[-1]
+    else:
+        model_h = model_w = None
     if isinstance(model_h, int) and isinstance(model_w, int):
         model_input_size = (model_h, model_w)
     else:
@@ -270,6 +333,10 @@ def detect_features(
 
     raster_x = ds.RasterXSize
     raster_y = ds.RasterYSize
+    # GeoTransform — needed by the caller to convert pixel-space bboxes
+    # into map-space polygons. We attach it to the result dict.
+    geo_transform = ds.GetGeoTransform()
+    raster_projection = ds.GetProjection()
 
     all_detections = []
     tiles_processed = 0
@@ -286,7 +353,15 @@ def detect_features(
                 return {
                     "detections": all_detections,
                     "detection_count": len(all_detections),
-                    "total_tiles": tiles_processed,
+                    # In the cancelled path we report the total tile count
+                    # (consistent with the non-cancelled return) so callers
+                    # can compute a meaningful progress percentage.
+                    "total_tiles": total_tiles,
+                    "tiles_processed": tiles_processed,
+                    "geo_transform": geo_transform,
+                    "projection": raster_projection,
+                    "model_type": model_type,
+                    "cancelled": True,
                 }
 
             # Compute tile window
@@ -348,7 +423,49 @@ def detect_features(
         "detections": all_detections,
         "detection_count": len(all_detections),
         "total_tiles": total_tiles,
+        # Pass the raster geotransform/projection so callers can convert
+        # pixel-space bboxes (returned in each detection['bbox']) to map
+        # coordinates before writing to a vector layer. Without this
+        # conversion detections land hundreds of kilometres from where
+        # they were actually detected.
+        "geo_transform": geo_transform,
+        "projection": raster_projection,
+        "model_type": model_type,
+        "cancelled": False,
     }
+
+
+def pixel_bbox_to_map_bbox(
+    bbox_pixels,
+    geo_transform,
+):
+    """Convert a pixel-space bbox (x1, y1, x2, y2) to map-space coordinates.
+
+    GDAL GeoTransform layout (6-tuple):
+        [0] top-left x
+        [1] pixel width  (W-E; positive for north-up rasters)
+        [2] row rotation (typically 0; north-up)
+        [3] top-left y
+        [4] column rotation (typically 0; north-up)
+        [5] pixel height (N-S; NEGATIVE for north-up rasters)
+
+    Returns:
+        Tuple ``(x1, y1, x2, y2)`` in the same coordinate system as the
+        source raster, with ``(x1, y1)`` as the south-west corner and
+        ``(x2, y2)`` as the north-east corner regardless of axis
+        orientation.
+    """
+    if not geo_transform or len(geo_transform) < 6:
+        raise ValueError("Invalid GeoTransform")
+    gt_x, gt_pw, gt_rx, gt_y, gt_ry, gt_ph = geo_transform
+    px1, py1, px2, py2 = bbox_pixels
+    mx1 = gt_x + px1 * gt_pw + py1 * gt_rx
+    my1 = gt_y + px1 * gt_ry + py1 * gt_ph
+    mx2 = gt_x + px2 * gt_pw + py2 * gt_rx
+    my2 = gt_y + px2 * gt_ry + py2 * gt_ph
+    x1, x2 = (mx1, mx2) if mx1 <= mx2 else (mx2, mx1)
+    y1, y2 = (my1, my2) if my1 <= my2 else (my2, my1)
+    return (x1, y1, x2, y2)
 
 
 def _postprocess_yolo(
@@ -393,8 +510,17 @@ def _postprocess_yolo(
                         )
                     )
 
-        # YOLOv5: (1, N, 85) — [x_center, y_center, w, h, obj_conf, ...class_scores]
-        elif len(outputs) == 1 and outputs[0].shape[-1] == 85:
+        # YOLOv5/v7: single output tensor with layout
+        # (1, N, 5 + num_classes) — [x_center, y_center, w, h, obj_conf, ...class_scores]
+        # The original code hard-coded 85 (= 5 + 80 COCO classes); we now
+        # accept any width >= 6 so custom YOLOv5 models with fewer or
+        # more classes are supported.
+        elif (
+            len(outputs) == 1
+            and outputs[0].ndim == 3
+            and outputs[0].shape[-1] >= 6
+            and outputs[0].shape[-1] != 6  # exclude the v8/v11 layout
+        ):
             out = outputs[0][0]
             for det in out:
                 scores = det[5:]
@@ -478,7 +604,13 @@ def _make_detection(
     tile_shape,
     model_input_size,
 ) -> dict:
-    """Create a detection dict with proper coordinate scaling."""
+    """Create a detection dict with proper coordinate scaling.
+
+    Bounding boxes are returned in **raster pixel coordinates** (col0, row0,
+    col1, row1) including tile offset. Callers must convert these to map
+    coordinates via :func:`pixel_bbox_to_map_bbox` before writing to a
+    vector layer — see ``algorithms/ai_detection_algorithm.py``.
+    """
     # Scale from model input size back to tile size
     mh, mw = model_input_size
     th, tw = tile_shape[:2]
@@ -507,6 +639,8 @@ def _make_detection(
         "class_id": class_id,
         "class_name": class_name,
         "tile_offset": (x_off, y_off),
+        # Mark coordinate space so downstream code can assert.
+        "bbox_crs": "raster_pixels",
     }
 
 

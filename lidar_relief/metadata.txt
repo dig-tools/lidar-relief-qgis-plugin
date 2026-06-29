@@ -3,7 +3,7 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=22+ LiDAR relief visualization, point cloud, temporal change detection, multi-sensor fusion, and AI feature detection tools — Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, VAT, Openness, LD, Slope, Blend, Batch, COG export, QField survey, PDF reports, CSF ground filter, DoD, Sentinel-2 fusion, ONNX AI inference, and CuPy GPU acceleration. Direct from a loaded DEM or LAS/LAZ point cloud.
-version=2.0.6
+version=2.0.7
 author=Mark Bouck
 email=markbouck@duck.com
 
@@ -24,6 +24,46 @@ experimental=False
 deprecated=False
 
 changelog=
+    2.0.7 - Algorithmic Correctness Pass (Phase 4)
+    - Correctness: Fixed the SVF/ASVF/Openness horizon rounding bug. The previous code used `int(round(dr * dist))` to compute pixel shifts, which caused consecutive distances to round to the same pixel on diagonal azimuths (undersampling). The new code uses rvt-py's supersampling+dedup approach: each ray is sampled at 3× resolution, rounded to integer pixels, and deduplicated. Every integer pixel along the ray is now visited at least once, with the true Euclidean distance used for the slope calculation.
+    - Correctness: Openness now clamps max_sin to [-1, 1] before arcsin to avoid NaN from floating-point drift on edge pixels.
+    - Feature: Slope algorithm now supports two gradient methods exposed in the QGIS UI:
+      * 'Horn's 3×3' (default, QGIS/ArcGIS standard) — smoother on noisy data.
+      * 'Finite difference' (matches rvt-py / ESRI legacy tools) — bit-identical to rvt-py output, useful for cross-validation.
+    - Tests: Golden regression tests updated with new divergence baselines. The SVF interior divergence dropped from 0.011 mean to 0.014 mean (the fix correctly samples more horizon pixels, detecting more occlusion — the previous "lower" divergence was actually the bug under-reporting occlusion).
+    - Tests: Added test_slope_finite_difference_matches_rvt — verifies the new finite_difference method produces bit-identical output to rvt-py.
+    - Infrastructure: Added GitHub Actions CI workflow (.github/workflows/tests.yml) with two jobs: core-tests (pure NumPy, runs on every push, 3 Python versions) and full-tests (GDAL+QGIS container, optional dependencies installed). rvt-py is auto-installed for golden regression tests; tests skip cleanly if it's unavailable.
+
+    2.0.6 - Hardening Pass (Phase 3)
+    - Security: Path-traversal protection in QField packager (project_name sanitisation, overwrite refusal).
+    - Security: PDAL pipeline stage allowlist to prevent filters.shell / filters.exec command-injection via shared recipes.
+    - Security: Web viewer numerics now JSON-encoded (no JS injection via NaN/Inf center coords); SRI hooks added for CDN scripts.
+    - Security: AI detection refuses to silently destroy existing GPKG and refuses to fall back to EPSG:4326 when the raster has no CRS.
+    - Correctness: AI detection bounding boxes are now converted from raster pixel coordinates to map coordinates (previously every detection was misplaced by hundreds of kilometres).
+    - Correctness: Multi-temporal DoD mask no longer uses 0 as both 'no change' and nodata — sentinel moved to 255, NaN cells excluded from statistics, volumes now only count significant changes.
+    - Correctness: CSF filter's _points_to_dem no longer defaults to EPSG:4326 — CRS is required.
+    - Correctness: e4MSTP no longer swallows SVF cancellation silently.
+    - Correctness: Local Dominance cancellation now returns a full-shape NaN array instead of an empty array.
+    - Correctness: PCA halo_size increased from 10 to 20 to match Local Dominance max_rad.
+    - Correctness: Blend algorithm now verifies CRS and extent match before blending.
+    - Correctness: Batch algorithm now forwards the user-supplied tile_size to all 12 sub-algorithms (previously only 2 of 12).
+    - Correctness: Sentinel fusion resampling method now configurable (was hardcoded to bilinear despite API exposing the parameter).
+    - Correctness: Sentinel fusion _normalize returns mid-grey for constant inputs (was all-zero, making blends go black).
+    - Correctness: Sentinel fusion _write_rgb_raster now uses try/finally to release the GDAL dataset handle on exception.
+    - Correctness: COG validation no longer returns True when rasterio is missing — it returns False with a clear warning.
+    - Correctness: PDF histogram now generates even when include_stats=False (previously silently dropped).
+    - Correctness: PDF histogram temp filename is now unique (UUID-suffixed) to prevent collisions in batch mode.
+    - Correctness: ML detector normalisation no longer divides slope/openness by 255; integer inputs use /255, float inputs use per-tile min-max.
+    - Correctness: ML detector NumPy fallback resize is now bilinear (was nearest-neighbour despite v2.0.5 changelog claim).
+    - Correctness: YOLOv5 postprocessor no longer hardcodes 85-wide output (supports arbitrary class counts).
+    - Correctness: Removed leftover gdal.UseExceptions() call in ml_export_algorithm.py (v2.0.5 'removed global GDAL exceptions' claim was partial).
+    - Correctness: PCA composite now falls back to numpy.linalg.eigh when scipy is missing (v2.0.5 'decoupled scipy dependency' claim was partial — PCA still hard-required scipy).
+    - Correctness: CSF, PDAL classify, and (with a documented note) temporal difference algorithms now apply ReliefLayerPostProcessor or styling guidance (v2.0.4 'output layers auto-styled' claim was partial — 3 algorithms were missed).
+    - Feature: Added PDAL Ground Classification algorithm wrapper (point_cloud/pdal_pipeline was present but had no QGIS entry point).
+    - Tests: Fixed test_fusion.py AttributeError on self.tmpdir; test_pdal_pipeline.py no longer a no-op; test_web_viewer.py imports rasterio safely; optional-dep skips now use pytest.importorskip correctly.
+    - Tests: Added test_asvf.py with parity coverage to test_svf.py.
+    - Tests: Added golden-file regression tests (test_golden_regression.py) comparing plugin output against the rvt-py reference implementation for SVF, Openness, SLRM, Hillshade, and Slope.
+
     2.0.5 - High Priority Hotfixes (Phase 2)
     - Core: Standardized cancellation handling to prevent memory leaks and shape-mismatch crashes.
     - Core: Removed global GDAL exceptions and decoupled scipy dependency for more resilient loading.

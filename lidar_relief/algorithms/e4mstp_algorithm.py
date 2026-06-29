@@ -44,7 +44,14 @@ class E4MstpAlgorithm(QgsProcessingAlgorithm):
         return (
             "Enhanced 4-Scale Topographic Position (e4MSTP) uses the Kokalj (2025) "
             "4-step composite process to combine Openness, Local Dominance, Slope, "
-            "SVF (dual scales), and MSTP into a highly detailed RGB visualization."
+            "and MSTP into a highly detailed RGB visualization.\n\n"
+            "Note: the implementation also computes dual-scale Sky-View Factor "
+            "(SVF_S radius=10, SVF_L radius=50) internally as a multiply-blend "
+            "modifier (step 3 of the 4-step composite). SVF is not a user-tunable "
+            "parameter for this algorithm.\n\n"
+            "Sub-algorithm parameters (openness, LD, slope, MSTP radii) are "
+            "currently hardcoded to canonical values; user-tunable exposure is "
+            "planned for a future release."
         )
 
     def createInstance(self):

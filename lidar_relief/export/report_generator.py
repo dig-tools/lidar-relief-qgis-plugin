@@ -353,8 +353,13 @@ def generate_report(
 
     # ── 3. Statistics & Histogram ─────────────────────────────────────
 
+    # Compute stats if EITHER stats or histogram is requested. The
+    # previous code only computed stats when `include_stats=True`,
+    # which meant `include_histogram=True, include_stats=False`
+    # silently produced no histogram (the `if include_histogram and stats:`
+    # branch was never entered).
     if include_stats or include_histogram:
-        stats = _compute_raster_stats(raster_path) if include_stats else {}
+        stats = _compute_raster_stats(raster_path)
 
         if stats:
             story.append(Spacer(1, 8 * mm))
@@ -401,16 +406,31 @@ def generate_report(
                     ]
                 )
             )
-            story.append(stat_table)
+            # Only render the stats table if include_stats is set;
+            # otherwise we computed stats just to feed the histogram.
+            if include_stats:
+                story.append(stat_table)
 
         # Histogram (if requested and we have stats)
         if include_histogram and stats:
             story.append(Spacer(1, 6 * mm))
             try:
-                hist_path = _generate_histogram_image(
-                    raster_path, output_dir=os.path.dirname(output_path)
+                # Use a unique temp filename to prevent collisions when
+                # multiple reports are generated in the same directory
+                # (batch mode). The previous code used the fixed name
+                # '_histogram.png' which two concurrent reports would
+                # clobber.
+                import tempfile
+                import uuid
+
+                hist_dir = os.path.dirname(output_path) or "."
+                hist_path = os.path.join(
+                    hist_dir, f"_histogram_{uuid.uuid4().hex[:8]}.png"
                 )
-                if hist_path and os.path.exists(hist_path):
+                rendered = _generate_histogram_image(
+                    raster_path, output_dir=hist_dir, out_path=hist_path
+                )
+                if rendered and os.path.exists(rendered):
                     story.append(
                         Paragraph(
                             "Figure 1: Pixel value distribution",
@@ -418,7 +438,7 @@ def generate_report(
                         )
                     )
                     story.append(Spacer(1, 2 * mm))
-                    img = Image(hist_path, width=160 * mm, height=80 * mm)
+                    img = Image(rendered, width=160 * mm, height=80 * mm)
                     story.append(img)
             except Exception as e:
                 logger.warning("Histogram generation failed: %s", e)
@@ -464,11 +484,18 @@ def generate_report(
     except Exception as e:
         raise RuntimeError(f"PDF generation failed: {e}") from e
     finally:
-        if include_histogram and stats:
-            hist_path = os.path.join(os.path.dirname(output_path), "_histogram.png")
-            if os.path.exists(hist_path):
+        # Clean up the histogram temp file if one was created.
+        # We use a glob pattern because the filename includes a unique
+        # UUID prefix to avoid collisions in batch mode.
+        if include_histogram:
+            import glob as _glob
+
+            hist_dir = os.path.dirname(output_path) or "."
+            for hist_file in _glob.glob(
+                os.path.join(hist_dir, "_histogram_*.png")
+            ):
                 try:
-                    os.remove(hist_path)
+                    os.remove(hist_file)
                 except OSError:
                     pass
 
@@ -559,6 +586,7 @@ def _compute_raster_stats(raster_path: str) -> dict:
 def _generate_histogram_image(
     raster_path: str,
     output_dir: str,
+    out_path: Optional[str] = None,
     bins: int = 100,
 ) -> Optional[str]:
     """Generate a histogram image for embedding in the PDF.
@@ -568,7 +596,11 @@ def _generate_histogram_image(
 
     Args:
         raster_path: Path to the raster file.
-        output_dir: Directory to save the histogram image.
+        output_dir: Directory to save the histogram image (ignored if
+            ``out_path`` is provided).
+        out_path: Explicit output path. If provided, overrides the
+            default ``_histogram.png`` filename in ``output_dir``.
+            Use this to avoid filename collisions in batch mode.
         bins: Number of histogram bins.
 
     Returns:
@@ -580,6 +612,11 @@ def _generate_histogram_image(
         from reportlab.graphics import renderPM
     except ImportError:
         renderPM = None
+        logger.warning(
+            "reportlab.graphics.renderPM is not available — histogram "
+            "image will not be embedded in the PDF. Install Pillow "
+            "(pip install pillow) to enable histogram rendering."
+        )
     from osgeo import gdal
     import numpy as np
 
@@ -678,9 +715,14 @@ def _generate_histogram_image(
         )
     )
 
-    hist_path = os.path.join(output_dir, "_histogram.png")
+    if out_path is None:
+        hist_path = os.path.join(output_dir, "_histogram.png")
+    else:
+        hist_path = out_path
     if renderPM is not None:
         renderPM.drawToFile(d, hist_path, fmt="PNG")
     else:
-        pass  # Or draw a placeholder/skip
+        # Without renderPM we can't actually produce the PNG — return
+        # None so the caller knows there's no image to embed.
+        return None
     return hist_path

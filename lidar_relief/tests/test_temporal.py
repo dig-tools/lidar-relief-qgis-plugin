@@ -14,6 +14,12 @@ import numpy as np
 import pytest
 
 pytest.importorskip("osgeo")
+# The temporal module requires xarray + rioxarray in addition to GDAL.
+# The previous code only skipped if osgeo was missing, which meant
+# test_xarray_available did `assert xarray_available()` and FAILED
+# (instead of skipping) in environments with GDAL but no xarray.
+pytest.importorskip("xarray")
+pytest.importorskip("rioxarray")
 
 from osgeo import gdal  # noqa: E402
 

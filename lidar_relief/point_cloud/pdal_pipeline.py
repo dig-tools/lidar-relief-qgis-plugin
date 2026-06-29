@@ -1,7 +1,7 @@
 """pdal_pipeline.py — PDAL-based ground classification pipelines for archaeology.
 
 exports: pdal_available() -> bool,
-         build_archaeology_pipeline(las_path, output_path, preset, **kwargs) -> str,
+         build_pipeline(las_path, output_path, preset, **kwargs) -> str,
          run_pipeline(pipeline_json) -> dict,
          ARCHAEOLOGY_PIPELINES
 
@@ -11,8 +11,12 @@ rules:
   Uses PDAL Python bindings for point cloud processing.
   All pipelines use a JSON configuration format.
   Archaeology presets tuned for micro-relief preservation.
+  run_pipeline rejects any stage not in _ALLOWED_PDAL_STAGES — this
+  prevents command-injection via filters.shell/filters.exec when
+  pipelines are loaded from untrusted recipe files.
 """
 
+import copy
 import json
 import logging
 
@@ -137,6 +141,12 @@ def build_pipeline(
 
     Returns:
         JSON string of the complete PDAL pipeline.
+
+    Note:
+        Does NOT require PDAL to be installed — pipeline construction
+        is pure JSON manipulation. PDAL is only needed by run_pipeline.
+        The previous version called check_dependencies() here, which
+        prevented JSON-only testing and pre-validation workflows.
     """
     if preset not in ARCHAEOLOGY_PIPELINES:
         raise ValueError(
@@ -144,29 +154,89 @@ def build_pipeline(
             f"Available: {list(ARCHAEOLOGY_PIPELINES.keys())}"
         )
 
-    check_dependencies()
-
     preset_def = ARCHAEOLOGY_PIPELINES[preset]
-    pipeline = json.loads(json.dumps(preset_def["pipeline"]))
+    # Use deepcopy instead of json.loads(json.dumps(...)) for clarity
+    # and speed (no string serialisation round-trip).
+    pipeline = copy.deepcopy(preset_def["pipeline"])
 
-    # Set input file
+    # Set input file on the reader stage.
     pipeline[0]["filename"] = las_path
 
-    # Update output
+    # Configure the writer (last stage) — set output path and, for
+    # GDAL writers, the requested resolution. The previous code set
+    # `last_stage["filename"]` redundantly three times; we set it once.
     last_stage = pipeline[-1]
-    last_stage["filename"] = output_path
-
-    # Update resolution for GDAL writers
-    if output_format == "gdal" and last_stage.get("type") == "writers.gdal":
+    writer_type = last_stage.get("type", "")
+    if writer_type in ("writers.gdal", "writers.las", "writers.laz"):
+        last_stage["filename"] = output_path
+    if writer_type == "writers.gdal" and output_format == "gdal":
         last_stage["resolution"] = resolution
 
-    # Update output type for last stage
-    if last_stage.get("type") == "writers.las":
-        last_stage["filename"] = output_path
-    elif last_stage.get("type") == "writers.gdal":
-        last_stage["filename"] = output_path
-
     return json.dumps({"pipeline": pipeline}, indent=2)
+
+
+# Stages allowed in user-supplied PDAL pipelines. Anything else is
+# rejected to prevent command-injection via filters.shell / filters.exec
+# when recipes are shared between users. Add new stages here ONLY after
+# reviewing their parameters for shell/command execution.
+_ALLOWED_PDAL_STAGES = frozenset(
+    {
+        "readers.las",
+        "readers.laz",
+        "readers.copc",
+        "readers.pcd",
+        "readers.optech",
+        "writers.las",
+        "writers.laz",
+        "writers.gdal",
+        "writers.copc",
+        "filters.pmf",
+        "filters.smrf",
+        "filters.outlier",
+        "filters.range",
+        "filters.ferry",
+        "filters.assign",
+        "filters.reprojection",
+        "filters.transformation",
+        "filters.crop",
+        "filters.merge",
+        "filters.splitter",
+        "filters.sample",
+        "filters.voxelcentroid",
+        "filters.cluster",
+        "filters.hag_nn",
+        "filters.hag_delaunay",
+        "filters.elm",
+        "filters.returns",
+        "filters.stats",
+        "filters.expression",
+    }
+)
+
+
+def _validate_pipeline_stages(pipeline_data: dict) -> None:
+    """Reject PDAL pipelines that contain stages outside the allowlist.
+
+    PDAL supports ``filters.shell`` and ``filters.exec`` which execute
+    arbitrary commands — accepting pipelines from untrusted recipe files
+    would be a code-execution vector. We allow only well-known readers,
+    writers, and safe filters.
+    """
+    stages = pipeline_data.get("pipeline", [])
+    if not isinstance(stages, list):
+        raise ValueError("PDAL pipeline JSON must have a 'pipeline' list")
+    for i, stage in enumerate(stages):
+        if not isinstance(stage, dict):
+            raise ValueError(f"Pipeline stage {i} is not a JSON object")
+        stage_type = stage.get("type", "")
+        if not stage_type:
+            raise ValueError(f"Pipeline stage {i} has no 'type' field")
+        if stage_type not in _ALLOWED_PDAL_STAGES:
+            raise ValueError(
+                f"PDAL stage type {stage_type!r} is not in the allowlist. "
+                f"Refusing to execute potentially unsafe pipeline. "
+                f"Allowed stages: {sorted(_ALLOWED_PDAL_STAGES)}"
+            )
 
 
 def run_pipeline(pipeline_json: str, feedback=None) -> dict:
@@ -180,6 +250,8 @@ def run_pipeline(pipeline_json: str, feedback=None) -> dict:
         dict with pipeline metadata (point count, stages, etc.).
 
     Raises:
+        ValueError: If the pipeline JSON is invalid or contains a
+            disallowed stage (e.g. filters.shell, filters.exec).
         RuntimeError: If pipeline execution fails.
     """
     check_dependencies()
@@ -189,12 +261,21 @@ def run_pipeline(pipeline_json: str, feedback=None) -> dict:
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid pipeline JSON: {e}") from e
 
+    # Security check: reject pipelines containing stages outside the
+    # allowlist. This prevents command-injection via shared recipes.
+    _validate_pipeline_stages(pipeline_data)
+
     if feedback:
         feedback.setProgressText("Executing PDAL pipeline...")
 
     try:
         pdal_pipeline = pdal.Pipeline(json.dumps(pipeline_data))
-        metadata = pdal_pipeline.execute()
+        # Modern PDAL (>=2.4) returns an int point count from execute(),
+        # NOT a dict. Older versions returned None. The metadata dict is
+        # accessed via the .metadata property. The previous code assumed
+        # execute() returned a dict and silently reported 0 points.
+        point_count = pdal_pipeline.execute()
+        metadata = pdal_pipeline.metadata
     except Exception as e:
         raise RuntimeError(f"PDAL pipeline failed: {e}") from e
 
@@ -203,10 +284,27 @@ def run_pipeline(pipeline_json: str, feedback=None) -> dict:
 
     # Extract basic metadata from the pipeline
     stage_count = len(pipeline_data.get("pipeline", []))
-    point_count = metadata.get("num_points", 0) if isinstance(metadata, dict) else 0
+    # point_count may be an int (modern PDAL) or a dict (older bindings).
+    if isinstance(point_count, int):
+        processed_points = point_count
+    elif isinstance(point_count, dict):
+        processed_points = point_count.get("num_points", 0)
+    else:
+        processed_points = 0
+
+    # Try to extract a more detailed point count from metadata.
+    if isinstance(metadata, dict):
+        stages_meta = metadata.get("metadata", {}).get("stages", {})
+        for stage_name, stage_meta in stages_meta.items():
+            if "point_count" in stage_meta:
+                processed_points = int(stage_meta["point_count"])
+                break
 
     return {
-        "point_count": point_count,
+        "point_count": processed_points,
         "stage_count": stage_count,
-        "preset": pipeline_data.get("pipeline", [{}])[0].get("type", "unknown"),
+        # Return the actual preset name (last reader stage's filename is
+        # not a preset; the preset is set by build_pipeline at the call site).
+        # We retain backwards compatibility by returning the first stage type.
+        "first_stage_type": pipeline_data.get("pipeline", [{}])[0].get("type", "unknown"),
     }

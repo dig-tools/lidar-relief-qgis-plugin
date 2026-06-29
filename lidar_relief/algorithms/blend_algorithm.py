@@ -99,6 +99,46 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
 
         mode_str = ["multiply", "screen", "overlay", "soft_light"][mode_idx]
 
+        # Validate that the two rasters share CRS and extent before
+        # blending. The previous code only checked shape match — two
+        # rasters with identical dimensions but different projections
+        # would be silently blended, producing garbage output.
+        if source_a is None or source_b is None:
+            raise QgsProcessingException("Both input rasters must be valid layers.")
+        crs_a = source_a.crs()
+        crs_b = source_b.crs()
+        if crs_a is None or crs_b is None:
+            feedback.pushWarning(
+                "One or both input rasters have no CRS — blend results may "
+                "be misaligned if the rasters are in different projections."
+            )
+        elif crs_a.authid() != crs_b.authid():
+            raise QgsProcessingException(
+                f"Input rasters have different CRSes: "
+                f"layer A is {crs_a.authid()}, layer B is {crs_b.authid()}. "
+                f"Please reproject one of the layers to match the other "
+                f"before blending."
+            )
+
+        ext_a = source_a.extent()
+        ext_b = source_b.extent()
+        # Allow tiny floating-point differences in extent (sub-pixel).
+        tolerance = 1e-6 * max(
+            ext_a.width(), ext_a.height(), ext_b.width(), ext_b.height(), 1.0
+        )
+        if (
+            abs(ext_a.xMinimum() - ext_b.xMinimum()) > tolerance
+            or abs(ext_a.yMinimum() - ext_b.yMinimum()) > tolerance
+            or abs(ext_a.xMaximum() - ext_b.xMaximum()) > tolerance
+            or abs(ext_a.yMaximum() - ext_b.yMaximum()) > tolerance
+        ):
+            raise QgsProcessingException(
+                f"Input rasters have different extents. Please align them "
+                f"(e.g. via 'Align rasters' tool) before blending.\n"
+                f"  Layer A: {ext_a.toString()}\n"
+                f"  Layer B: {ext_b.toString()}"
+            )
+
         feedback.setProgressText("Reading Base Layer...")
         data_a = read_dem_to_array(source_a.source(), feedback)
 

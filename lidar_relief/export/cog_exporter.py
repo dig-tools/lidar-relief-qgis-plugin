@@ -177,12 +177,20 @@ def _validate_cog_structure(path: str) -> bool:
         path: Path to the COG file.
 
     Returns:
-        True if the file appears to be a valid COG.
+        True if the file appears to be a valid COG. Returns False (not True)
+        if rasterio is unavailable — the previous behaviour of returning
+        True silently approved broken/invalid files. Callers who want to
+        skip validation when rasterio is missing should explicitly check
+        ``cog_is_supported()`` first.
     """
     try:
         import rasterio
     except ImportError:
-        return True  # Can't validate without rasterio, assume OK
+        logger.warning(
+            "Cannot validate COG structure: rasterio not installed. "
+            "Marking file as invalid — install rasterio to enable validation."
+        )
+        return False
 
     try:
         with rasterio.open(path) as src:

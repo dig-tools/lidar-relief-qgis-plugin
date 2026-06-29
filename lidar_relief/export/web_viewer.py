@@ -12,14 +12,28 @@ rules:
 
 import json
 import logging
+import math
 import os
 from typing import Optional
+from urllib.parse import quote
 
 logger = logging.getLogger(__name__)
 
 # MapLibre GL JS version for CDN loading
 _MAPLIBRE_VERSION = "4.7.1"
 _COG_PROTOCOL_VERSION = "0.0.2"
+
+# Subresource Integrity hashes for the CDN scripts we embed.
+# These prevent a compromised CDN from injecting malicious JS into
+# generated viewers. To update: pull the file, compute
+# `openssl dgst -sha384 -binary FILE | openssl base64 -A`, prefix with
+# the algorithm and wrap in the integrity attribute. If you don't want
+# to verify hashes, set these to None and the integrity attribute will
+# be omitted (NOT recommended — leaves the viewer vulnerable to CDN
+# compromise).
+_MAPLIBRE_CSS_SRI = None
+_MAPLIBRE_JS_SRI = None
+_COG_PROTOCOL_JS_SRI = None
 
 
 def generate_web_viewer(
@@ -100,6 +114,26 @@ def generate_web_viewer(
 
     centre_lon, centre_lat = center
 
+    # Validate numerics before they're interpolated into the JS template.
+    # A NaN or Inf in center_lon/lat/zoom/opacity would produce broken
+    # JS (or, in the worst case, executable JS via a crafted float
+    # representation). Coerce to safe finite floats.
+    def _safe_float(v, default):
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return default
+        if not math.isfinite(f):
+            return default
+        return f
+
+    centre_lon = _safe_float(centre_lon, 0.0)
+    centre_lat = _safe_float(centre_lat, 0.0)
+    zoom = _safe_float(zoom, 8.0)
+    min_zoom = _safe_float(min_zoom, 0.0)
+    max_zoom = _safe_float(max_zoom, 22.0)
+    opacity = max(0.0, min(1.0, _safe_float(opacity, 1.0)))
+
     # Provide default description mentioning the COG file
     if not description:
         description = (
@@ -122,7 +156,6 @@ def generate_web_viewer(
         dark_mode=dark_mode,
         opacity=opacity,
     )
-
     # Generate config JSON
     config = {
         "version": "1.0",
@@ -185,15 +218,48 @@ def _generate_viewer_html(
     cog_min_zoom = 0
     cog_max_zoom = max_zoom
 
+    # URL-encode the COG filename for safe embedding in the cog:// URL.
+    # The previous code HTML-escaped the filename, which is the wrong
+    # transformation for a URL component — spaces and other reserved
+    # characters produced invalid cog:// URLs.
+    cog_filename_url = quote(cog_filename, safe="")
+
+    # Format numerics as JSON-safe literals. json.dumps guarantees
+    # correct escaping and rejects NaN/Inf (when allow_nan=False),
+    # eliminating the JS-injection risk via the center/zoom/opacity
+    # parameters that were previously f-string-interpolated raw.
+    center_lon_js = json.dumps(center_lon, allow_nan=False)
+    center_lat_js = json.dumps(center_lat, allow_nan=False)
+    zoom_js = json.dumps(zoom, allow_nan=False)
+    min_zoom_js = json.dumps(min_zoom, allow_nan=False)
+    max_zoom_js = json.dumps(max_zoom, allow_nan=False)
+    cog_min_zoom_js = json.dumps(cog_min_zoom)
+    cog_max_zoom_js = json.dumps(cog_max_zoom)
+    opacity_js = json.dumps(opacity, allow_nan=False)
+    style_js = json.dumps(style, allow_nan=False)
+    cog_url_js = json.dumps(
+        f"cog://{cog_filename_url}?minzoom={cog_min_zoom}&maxzoom={cog_max_zoom}",
+        allow_nan=False,
+    )
+    attribution_js = json.dumps(attribution, allow_nan=False)
+    title_html = _escape_html(title)
+
+    # Build optional SRI attributes for the CDN tags.
+    css_sri = f' integrity="{_MAPLIBRE_CSS_SRI}"' if _MAPLIBRE_CSS_SRI else ""
+    js_sri = f' integrity="{_MAPLIBRE_JS_SRI}"' if _MAPLIBRE_JS_SRI else ""
+    cog_sri = (
+        f' integrity="{_COG_PROTOCOL_JS_SRI}"' if _COG_PROTOCOL_JS_SRI else ""
+    )
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{_escape_html(title)}</title>
-<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.css" crossorigin="anonymous" />
-<script src="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.js" crossorigin="anonymous"></script>
-<script src="https://unpkg.com/@maplibre/maplibre-gl-cog-protocol@{_COG_PROTOCOL_VERSION}/dist/index.umd.js"></script>
+<title>{title_html}</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.css" crossorigin="anonymous"{css_sri} />
+<script src="https://unpkg.com/maplibre-gl@{_MAPLIBRE_VERSION}/dist/maplibre-gl.js" crossorigin="anonymous"{js_sri}></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-cog-protocol@{_COG_PROTOCOL_VERSION}/dist/index.umd.js" crossorigin="anonymous"{cog_sri}></script>
 <style>
   * {{ margin: 0; padding: 0; box-sizing: border-box; }}
   body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
@@ -218,22 +284,22 @@ def _generate_viewer_html(
 </head>
 <body>
 <div class="info">
-  <h1>{_escape_html(title)}</h1>
+  <h1>{title_html}</h1>
   <p>{description}</p>
 </div>
 <div id="map"></div>
 <div class="controls">
-  <label>Opacity: <input type="range" id="opacity" min="0" max="1" step="0.05" value="{opacity}" /></label>
+  <label>Opacity: <input type="range" id="opacity" min="0" max="1" step="0.05" value={opacity_js} /></label>
   <span id="coord-display">—</span>
 </div>
 <script>
   const map = new maplibregl.Map({{
     container: 'map',
-    style: '{style}',
-    center: [{center_lon}, {center_lat}],
-    zoom: {zoom},
-    minZoom: {min_zoom},
-    maxZoom: {max_zoom},
+    style: {style_js},
+    center: [{center_lon_js}, {center_lat_js}],
+    zoom: {zoom_js},
+    minZoom: {min_zoom_js},
+    maxZoom: {max_zoom_js},
     attributionControl: true,
   }});
 
@@ -245,15 +311,15 @@ def _generate_viewer_html(
   map.on('style.load', () => {{
     map.addSource('relief', {{
       type: 'raster',
-      tiles: ['cog://{_escape_html(cog_filename)}' + '?minzoom={cog_min_zoom}&maxzoom={cog_max_zoom}'],
+      tiles: [{cog_url_js}],
       tileSize: 512,
-      attribution: '{_escape_html(attribution)}'
+      attribution: {attribution_js}
     }});
     map.addLayer({{
       id: 'relief-layer',
       type: 'raster',
       source: 'relief',
-      paint: {{ 'raster-opacity': {opacity} }}
+      paint: {{ 'raster-opacity': {opacity_js} }}
     }});
   }});
 
@@ -266,7 +332,7 @@ def _generate_viewer_html(
   map.on('mousemove', (e) => {{
     const lng = e.lngLat.lng.toFixed(5);
     const lat = e.lngLat.lat.toFixed(5);
-    document.getElementById('coord-display').textContent = `Lng {{lng}}  Lat {{lat}}`;
+    document.getElementById('coord-display').textContent = `Lng ${{lng}}  Lat ${{lat}}`;
   }});
 
   // Share link button

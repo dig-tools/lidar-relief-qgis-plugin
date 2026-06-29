@@ -15,8 +15,12 @@ from qgis.core import (
     QgsProcessing,
 )
 
-# Suppress GDAL printing errors to stderr; we handle them ourselves.
-gdal.UseExceptions()
+# Note: do NOT call gdal.UseExceptions() at module import time.
+# The v2.0.5 changelog promised "Removed global GDAL exceptions" — that
+# cleanup was applied to core/raster_utils.py but missed this file.
+# Calling gdal.UseExceptions() globally affects every other plugin and
+# QGIS itself, which can break code that relies on GDAL's default
+# behaviour of returning None on error instead of raising.
 
 
 class MlExportAlgorithm(QgsProcessingAlgorithm):

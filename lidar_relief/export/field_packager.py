@@ -15,11 +15,18 @@ rules:
 
 import logging
 import os
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
 logger = logging.getLogger(__name__)
+
+
+# Regex for safe project names — letters, digits, spaces, hyphens,
+# underscores, dots only. Anything else is replaced with `_`.
+# This prevents path traversal via `../` and SQL-injection via `'; DROP`.
+_SAFE_PROJECT_NAME_RE = re.compile(r"[^A-Za-z0-9 _\-.]")
 
 
 # ── Anomaly data model ──────────────────────────────────────────────
@@ -101,6 +108,24 @@ ANOMALY_SCHEMA = {
 # ── Core functions ──────────────────────────────────────────────────
 
 
+def _sanitize_project_name(project_name: str) -> str:
+    """Return a filesystem-safe slug derived from ``project_name``.
+
+    Replaces any character that isn't a letter, digit, space, hyphen,
+    underscore, or dot with ``_``. Strips leading dots and path
+    separators to prevent path traversal (``../../``) and rejects names
+    that resolve to empty after sanitisation.
+    """
+    if not project_name or not isinstance(project_name, str):
+        return "untitled"
+    slug = _SAFE_PROJECT_NAME_RE.sub("_", project_name).strip()
+    # Strip leading dots / separators that could escape the output dir.
+    slug = slug.lstrip("._/\\")
+    # Collapse whitespace to single underscores for filename stability.
+    slug = re.sub(r"\s+", "_", slug)
+    return slug or "untitled"
+
+
 def create_anomaly_template(output_path: str) -> str:
     """Create an empty GeoPackage with the standard anomaly schema.
 
@@ -115,8 +140,17 @@ def create_anomaly_template(output_path: str) -> str:
 
     Raises:
         RuntimeError: If GeoPackage creation fails.
+        ValueError: If ``output_path`` would escape its parent directory
+            (path traversal attempt).
     """
     from osgeo import ogr, osr
+
+    # Refuse to overwrite an existing file silently.
+    if os.path.exists(output_path):
+        raise ValueError(
+            f"Output file already exists: {output_path}. "
+            f"Delete it first or choose a different output path."
+        )
 
     driver = ogr.GetDriverByName("GPKG")
     ds = driver.CreateDataSource(output_path)
@@ -165,27 +199,99 @@ def package_for_qfield(
         raster_path: Path to the relief visualization raster.
         anomaly_points: List of dicts with 'x', 'y', and anomaly fields.
         output_dir: Directory to write the package into.
-        project_name: Name for the QGIS project and package.
-        crs: CRS string for the project (auto-detected if None).
+        project_name: Name for the QGIS project and package. Sanitised
+            to a filesystem-safe slug before being used in filenames.
+        crs: CRS string for the project (auto-detected from the raster
+            if None — no longer hardcoded to EPSG:4326).
         include_raster_copy: If True, copy raster into package.
 
     Returns:
         dict with paths to generated files.
     """
     import shutil
-    from osgeo import ogr, osr
+    from osgeo import gdal, ogr, osr
 
     os.makedirs(output_dir, exist_ok=True)
 
-    gpkg_path = os.path.join(
-        output_dir, f"{project_name.lower().replace(' ', '_')}.gpkg"
-    )
-    qgs_path = os.path.join(output_dir, f"{project_name.lower().replace(' ', '_')}.qgs")
+    # Sanitise the project name BEFORE using it to build file paths.
+    # This prevents path traversal via project_name='../../etc/passwd'.
+    safe_name = _sanitize_project_name(project_name)
+    if safe_name != project_name:
+        logger.info(
+            "Sanitised project name %r → %r for filesystem safety.",
+            project_name,
+            safe_name,
+        )
+
+    gpkg_path = os.path.join(output_dir, f"{safe_name}.gpkg")
+    qgs_path = os.path.join(output_dir, f"{safe_name}.qgs")
+
+    # Refuse to silently destroy existing files.
+    for existing in (gpkg_path, qgs_path):
+        if os.path.exists(existing):
+            raise ValueError(
+                f"Output file already exists: {existing}. "
+                f"Delete it first or choose a different project name."
+            )
+
+    # Auto-detect CRS from the source raster if the caller didn't
+    # override it. Previously this was hardcoded to EPSG:4326 which
+    # silently misplaced anomaly points when the raster was in a
+    # projected CRS (e.g. EPSG:27700 British National Grid).
+    if crs is None:
+        try:
+            raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
+            if raster_ds:
+                raster_wkt = raster_ds.GetProjection()
+                if raster_wkt:
+                    detected_srs = osr.SpatialReference()
+                    detected_srs.ImportFromWkt(raster_wkt)
+                    auto_authid = detected_srs.GetAuthorityCode(None)
+                    if auto_authid:
+                        crs = f"EPSG:{auto_authid}"
+                    else:
+                        crs = raster_wkt
+                raster_ds = None
+        except Exception as e:
+            logger.warning("Could not auto-detect raster CRS: %s", e)
+    if crs is None:
+        # Last-resort fallback: WGS84, but warn loudly.
+        logger.warning(
+            "No CRS detected for raster %s — falling back to EPSG:4326 "
+            "for anomaly layer. Anomaly points may be misplaced if the "
+            "raster is in a local CRS.",
+            raster_path,
+        )
+        crs = "EPSG:4326"
+
+    # Compute raster extent for the QGS project's mapcanvas so QField
+    # opens zoomed to the data, not to the whole world.
+    raster_extent = None
+    try:
+        raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
+        if raster_ds:
+            gt = raster_ds.GetGeoTransform()
+            x_size = raster_ds.RasterXSize
+            y_size = raster_ds.RasterYSize
+            if gt and len(gt) >= 6:
+                x_min = gt[0]
+                y_max = gt[3]
+                x_max = gt[0] + x_size * gt[1]
+                y_min = gt[3] + y_size * gt[5]
+                raster_extent = (x_min, y_min, x_max, y_max)
+            raster_ds = None
+    except Exception as e:
+        logger.warning("Could not read raster extent: %s", e)
 
     # Copy raster if requested
     if include_raster_copy:
         raster_ext = os.path.splitext(raster_path)[1] or ".tif"
         packaged_raster = os.path.join(output_dir, f"relief{raster_ext}")
+        if os.path.exists(packaged_raster):
+            raise ValueError(
+                f"Output raster already exists: {packaged_raster}. "
+                f"Delete it first or choose a different output directory."
+            )
         shutil.copy2(raster_path, packaged_raster)
         raster_ref = packaged_raster
     else:
@@ -193,16 +299,17 @@ def package_for_qfield(
 
     # Create GeoPackage with anomaly points
     driver = ogr.GetDriverByName("GPKG")
-    if os.path.exists(gpkg_path):
-        driver.DeleteDataSource(gpkg_path)
-
     ds = driver.CreateDataSource(gpkg_path)
     if ds is None:
         raise RuntimeError(f"Failed to create GeoPackage: {gpkg_path}")
 
-    # Use WGS84 for field GPS compatibility
+    # Use the detected CRS rather than hardcoded WGS84.
     srs = osr.SpatialReference()
-    srs.ImportFromEPSG(4326)
+    if crs.startswith("EPSG:"):
+        srs.ImportFromEPSG(int(crs.split(":")[1]))
+    else:
+        # Treat as WKT.
+        srs.ImportFromWkt(crs)
     layer = ds.CreateLayer("anomalies", srs, ogr.wkbPoint)
 
     # Create fields
@@ -220,6 +327,13 @@ def package_for_qfield(
     # Add features
     for i, pt in enumerate(anomaly_points):
         anom_idx = i + 1
+        # Validate anomaly point has required x/y coordinates.
+        if "x" not in pt or "y" not in pt:
+            logger.warning(
+                "Skipping anomaly point %d: missing 'x' or 'y' coordinate.",
+                anom_idx,
+            )
+            continue
         feature = ogr.Feature(layer.GetLayerDefn())
         feature.SetField("anomaly_id", pt.get("anomaly_id", f"ANOM-{anom_idx:04d}"))
         feature.SetField("detection_method", pt.get("detection_method", "manual"))
@@ -248,13 +362,21 @@ def package_for_qfield(
     rel_gpkg_path = os.path.basename(gpkg_path)
 
     # Create QGIS project file
-    _create_qgis_project(qgs_path, rel_raster_ref, rel_gpkg_path, project_name, crs)
+    _create_qgis_project(
+        qgs_path,
+        rel_raster_ref,
+        rel_gpkg_path,
+        project_name,  # Pass the original name (XML-escaped inside)
+        crs,
+        extent=raster_extent,
+    )
 
     return {
         "gpkg": gpkg_path,
         "qgs": qgs_path,
         "raster": raster_ref if include_raster_copy else raster_path,
         "anomaly_count": len(anomaly_points),
+        "crs": crs,
     }
 
 
@@ -264,6 +386,7 @@ def _create_qgis_project(
     gpkg_path: str,
     project_name: str,
     crs: Optional[str] = None,
+    extent: Optional[tuple[float, float, float, float]] = None,
 ) -> None:
     """Create a minimal QGIS project file for field survey.
 
@@ -272,22 +395,52 @@ def _create_qgis_project(
       - The anomaly GeoPackage layer loaded with field-validation form
       - Dark theme map canvas
       - Coordinate display in WGS84
+      - Map canvas zoomed to the raster extent (not the whole world)
+
+    All user-supplied strings are XML-escaped to prevent injection.
     """
     from xml.etree import ElementTree as ET
 
+    # Determine the canvas extent. Previously hardcoded to (-180,-90,180,90)
+    # which caused QField to open zoomed out to the whole world.
+    if extent is not None and len(extent) == 4:
+        x_min, y_min, x_max, y_max = extent
+    else:
+        # Sensible default for WGS84 if no extent available.
+        x_min, y_min, x_max, y_max = -180.0, -90.0, 180.0, 90.0
+
+    # Determine CRS authid to display
+    crs_authid = crs if crs else "EPSG:4326"
+    # Determine map units based on whether CRS is geographic or projected
+    if crs_authid.startswith("EPSG:4326"):
+        units = "degrees"
+    else:
+        units = "meters"
+
+    # XML-escape all user-supplied strings. ElementTree's .text does this
+    # automatically for content, but we still escape project_name because
+    # it's used as an attribute value.
+    safe_project_name = _xml_escape_attr(project_name)
+
     # Build a minimal QGIS project XML
     # This is schema-compatible with QGIS 3.x / 4.x project files
-    doc = ET.Element("qgis", projectname=project_name, version="3.40.0")
+    doc = ET.Element("qgis", projectname=safe_project_name, version="3.40.0")
 
     # Map canvas settings
     canvas = ET.SubElement(doc, "mapcanvas")
-    ET.SubElement(canvas, "units").text = "degrees"
-    ET.SubElement(canvas, "extent", xmin="-180", ymin="-90", xmax="180", ymax="90")
+    ET.SubElement(canvas, "units").text = units
+    ET.SubElement(
+        canvas,
+        "extent",
+        xmin=f"{x_min:.10g}",
+        ymin=f"{y_min:.10g}",
+        xmax=f"{x_max:.10g}",
+        ymax=f"{y_max:.10g}",
+    )
 
     # Project CRS
     map_crs = ET.SubElement(doc, "mapcrs")
     ET.SubElement(map_crs, "spatialrefsys")
-    crs_authid = crs if crs else "EPSG:4326"
     ET.SubElement(map_crs.find("spatialrefsys"), "authid").text = crs_authid
 
     # Raster layer
@@ -306,10 +459,12 @@ def _create_qgis_project(
     ET.SubElement(vector_maplayer, "id").text = "anomalies"
     ET.SubElement(vector_maplayer, "name").text = "Anomalies"
     ET.SubElement(vector_maplayer, "type").text = "vector"
-    escaped_gpkg_path = gpkg_path.replace("'", "''")
-    ET.SubElement(
-        vector_maplayer, "datasource"
-    ).text = f"dbname='{escaped_gpkg_path}' table=\"anomalies\" (geometry)"
+    # Use ElementTree's text= (which auto-escapes) for the datasource
+    # rather than string-replace on single quotes only — the previous
+    # implementation was vulnerable to characters like `;`, `--`, `/*`,
+    # and newlines that can break OGR's URI parser.
+    datasource_elem = ET.SubElement(vector_maplayer, "datasource")
+    datasource_elem.text = f"dbname='{gpkg_path}' table=\"anomalies\" (geometry)"
 
     # Field configuration (for QField digitising form)
     edit_types = ET.SubElement(vector_maplayer, "fieldConfiguration")
@@ -352,3 +507,21 @@ def _create_qgis_project(
         f.write(pretty_xml)
 
     logger.info("Created QGIS project: %s", qgs_path)
+
+
+def _xml_escape_attr(value: str) -> str:
+    """Escape a string for safe use as an XML attribute value.
+
+    ElementTree's text= auto-escapes for element content; for attributes
+    we escape manually to prevent attribute-injection via project_name.
+    """
+    if value is None:
+        return ""
+    return (
+        str(value)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&apos;")
+    )
