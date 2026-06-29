@@ -39,10 +39,7 @@ jobs:
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           if gh release view "v${VERSION}" >/dev/null 2>&1; then
-            echo "Release v${VERSION} already exists; regenerating notes."
-            gh release edit "v${VERSION}" \
-              --title "Release v${VERSION}" \
-              --generate-notes
+            echo "Release v${VERSION} already exists; qgis-plugin-ci will refresh assets in step 7."
           else
             echo "Creating release v${VERSION}."
             gh release create "v${VERSION}" \
