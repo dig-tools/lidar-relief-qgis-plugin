@@ -180,6 +180,114 @@ def create_anomaly_template(output_path: str) -> str:
     return output_path
 
 
+def _detect_raster_crs(raster_path: str) -> Optional[str]:
+    """Auto-detect CRS from a raster file's projection.
+
+    Returns an 'EPSG:NNNN' string if the CRS has an EPSG code, otherwise
+    the WKT string. Returns None if the raster has no CRS or cannot be
+    opened. Uses try/finally to guarantee the GDAL dataset is released.
+    """
+    from osgeo import gdal, osr
+
+    raster_ds = None
+    try:
+        raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
+        if not raster_ds:
+            return None
+        raster_wkt = raster_ds.GetProjection()
+        if not raster_wkt:
+            return None
+        detected_srs = osr.SpatialReference()
+        detected_srs.ImportFromWkt(raster_wkt)
+        auto_authid = detected_srs.GetAuthorityCode(None)
+        if auto_authid:
+            return f"EPSG:{auto_authid}"
+        return raster_wkt
+    except Exception as e:
+        logger.warning("Could not auto-detect raster CRS: %s", e)
+        return None
+    finally:
+        raster_ds = None
+
+
+def _read_raster_extent(raster_path: str) -> Optional[tuple[float, float, float, float]]:
+    """Read a raster's geographic extent as (x_min, y_min, x_max, y_max).
+
+    Returns None if the raster cannot be opened or has no geo-transform.
+    Uses try/finally to guarantee the GDAL dataset is released.
+    """
+    from osgeo import gdal
+
+    raster_ds = None
+    try:
+        raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
+        if not raster_ds:
+            return None
+        gt = raster_ds.GetGeoTransform()
+        x_size = raster_ds.RasterXSize
+        y_size = raster_ds.RasterYSize
+        if not gt or len(gt) < 6:
+            return None
+        x_min = gt[0]
+        y_max = gt[3]
+        x_max = gt[0] + x_size * gt[1]
+        y_min = gt[3] + y_size * gt[5]
+        return (x_min, y_min, x_max, y_max)
+    except Exception as e:
+        logger.warning("Could not read raster extent: %s", e)
+        return None
+    finally:
+        raster_ds = None
+
+
+def _create_anomaly_fields(layer) -> None:
+    """Create the anomaly schema fields on an OGR layer."""
+    from osgeo import ogr
+
+    field_type_map = {
+        "TEXT": ogr.OFTString,
+        "REAL": ogr.OFTReal,
+        "INTEGER": ogr.OFTInteger,
+    }
+    for field_name, field_info in ANOMALY_SCHEMA.items():
+        field_defn = ogr.FieldDefn(
+            field_name, field_type_map.get(field_info["type"], ogr.OFTString)
+        )
+        layer.CreateField(field_defn)
+
+
+def _add_anomaly_features(layer, anomaly_points: list[dict]) -> None:
+    """Add anomaly point features to an OGR layer.
+
+    Skips any points missing 'x' or 'y' coordinates (with a warning).
+    """
+    from osgeo import ogr
+
+    for i, pt in enumerate(anomaly_points):
+        anom_idx = i + 1
+        if "x" not in pt or "y" not in pt:
+            logger.warning(
+                "Skipping anomaly point %d: missing 'x' or 'y' coordinate.",
+                anom_idx,
+            )
+            continue
+        feature = ogr.Feature(layer.GetLayerDefn())
+        feature.SetField("anomaly_id", pt.get("anomaly_id", f"ANOM-{anom_idx:04d}"))
+        feature.SetField("detection_method", pt.get("detection_method", "manual"))
+        feature.SetField("confidence", float(pt.get("confidence", 0.5)))
+        feature.SetField("feature_type", pt.get("feature_type", "unknown"))
+        feature.SetField("field_status", pt.get("field_status", "pending"))
+        feature.SetField("observer", pt.get("observer", ""))
+        feature.SetField("photo_path", pt.get("photo_path", ""))
+        feature.SetField("notes", pt.get("notes", ""))
+        feature.SetField("timestamp", pt.get("timestamp", datetime.now().isoformat()))
+
+        point = ogr.Geometry(ogr.wkbPoint)
+        point.AddPoint(float(pt["x"]), float(pt["y"]))
+        feature.SetGeometry(point)
+        layer.CreateFeature(feature)
+
+
 def package_for_qfield(
     raster_path: str,
     anomaly_points: list[dict],
@@ -239,27 +347,7 @@ def package_for_qfield(
     # silently misplaced anomaly points when the raster was in a
     # projected CRS (e.g. EPSG:27700 British National Grid).
     if crs is None:
-        # Use try/finally to guarantee the GDAL dataset is closed even
-        # if ImportFromWkt or GetAuthorityCode raises — otherwise the
-        # raster file handle leaks (and on Windows the file is locked).
-        raster_ds = None
-        try:
-            raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
-            if raster_ds:
-                raster_wkt = raster_ds.GetProjection()
-                if raster_wkt:
-                    detected_srs = osr.SpatialReference()
-                    detected_srs.ImportFromWkt(raster_wkt)
-                    auto_authid = detected_srs.GetAuthorityCode(None)
-                    if auto_authid:
-                        crs = f"EPSG:{auto_authid}"
-                    else:
-                        crs = raster_wkt
-        except Exception as e:
-            logger.warning("Could not auto-detect raster CRS: %s", e)
-        finally:
-            # Always release the GDAL dataset to free the file handle.
-            raster_ds = None
+        crs = _detect_raster_crs(raster_path)
     if crs is None:
         # Last-resort fallback: WGS84, but warn loudly.
         logger.warning(
@@ -272,24 +360,7 @@ def package_for_qfield(
 
     # Compute raster extent for the QGS project's mapcanvas so QField
     # opens zoomed to the data, not to the whole world.
-    raster_extent = None
-    raster_ds = None
-    try:
-        raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
-        if raster_ds:
-            gt = raster_ds.GetGeoTransform()
-            x_size = raster_ds.RasterXSize
-            y_size = raster_ds.RasterYSize
-            if gt and len(gt) >= 6:
-                x_min = gt[0]
-                y_max = gt[3]
-                x_max = gt[0] + x_size * gt[1]
-                y_min = gt[3] + y_size * gt[5]
-                raster_extent = (x_min, y_min, x_max, y_max)
-    except Exception as e:
-        logger.warning("Could not read raster extent: %s", e)
-    finally:
-        raster_ds = None
+    raster_extent = _read_raster_extent(raster_path)
 
     # Copy raster if requested
     if include_raster_copy:
@@ -321,43 +392,10 @@ def package_for_qfield(
     layer = ds.CreateLayer("anomalies", srs, ogr.wkbPoint)
 
     # Create fields
-    for field_name, field_info in ANOMALY_SCHEMA.items():
-        field_type_map = {
-            "TEXT": ogr.OFTString,
-            "REAL": ogr.OFTReal,
-            "INTEGER": ogr.OFTInteger,
-        }
-        field_defn = ogr.FieldDefn(
-            field_name, field_type_map.get(field_info["type"], ogr.OFTString)
-        )
-        layer.CreateField(field_defn)
+    _create_anomaly_fields(layer)
 
     # Add features
-    for i, pt in enumerate(anomaly_points):
-        anom_idx = i + 1
-        # Validate anomaly point has required x/y coordinates.
-        if "x" not in pt or "y" not in pt:
-            logger.warning(
-                "Skipping anomaly point %d: missing 'x' or 'y' coordinate.",
-                anom_idx,
-            )
-            continue
-        feature = ogr.Feature(layer.GetLayerDefn())
-        feature.SetField("anomaly_id", pt.get("anomaly_id", f"ANOM-{anom_idx:04d}"))
-        feature.SetField("detection_method", pt.get("detection_method", "manual"))
-        feature.SetField("confidence", float(pt.get("confidence", 0.5)))
-        feature.SetField("feature_type", pt.get("feature_type", "unknown"))
-        feature.SetField("field_status", pt.get("field_status", "pending"))
-        feature.SetField("observer", pt.get("observer", ""))
-        feature.SetField("photo_path", pt.get("photo_path", ""))
-        feature.SetField("notes", pt.get("notes", ""))
-        feature.SetField("timestamp", pt.get("timestamp", datetime.now().isoformat()))
-
-        # Create point geometry
-        point = ogr.Geometry(ogr.wkbPoint)
-        point.AddPoint(float(pt["x"]), float(pt["y"]))
-        feature.SetGeometry(point)
-        layer.CreateFeature(feature)
+    _add_anomaly_features(layer, anomaly_points)
 
     ds.FlushCache()
     ds = None
