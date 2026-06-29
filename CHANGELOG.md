@@ -4,6 +4,19 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [Unreleased]
+
+---
+
+## [2.0.8] - 2026-06-30
+
+### Added
+- RVT Multi-directional Hillshade algorithm (`rvt_multidirectional_hillshade`) that wraps the `rvt-py` (Relief Visualization Toolbox) reference implementation. Useful for cross-validating results against other RVT installations.
+- RVT Topographic Openness algorithm (`rvt_openness`) with Positive and Negative modes, configurable search directions (8/16/32) and search radius (1–500 px). Wraps `rvt.vis.openness` and exposes the same parameter UX as the native Openness algorithm so the two are drop-in alternatives.
+- CI step to install `rvt-py` as an optional test dependency (`pip install rvt-py 2>/dev/null || true`).
+
+---
+
 ## [2.0.6] - 2026-06-19
 
 ### Fixed

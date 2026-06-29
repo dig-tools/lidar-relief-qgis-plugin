@@ -25,6 +25,7 @@ jobs:
           pip install ruff pytest numpy scipy
           pip install rio-cogeo reportlab xarray rioxarray onnxruntime onnx 2>/dev/null || true
           pip install cloth-simulation-filter 2>/dev/null || true
+          pip install rvt-py 2>/dev/null || true
 
       - name: Run Tests and Linter
         run: ./test.sh

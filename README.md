@@ -1,7 +1,7 @@
 # LiDAR Relief Visualization Plugin — v2.0
 
 A QGIS Processing plugin for advanced archaeological terrain visualization from
-Digital Elevation Models (DEMs). Provides **22+ algorithms** covering LiDAR
+Digital Elevation Models (DEMs). Provides **24+ algorithms** covering LiDAR
 relief visualization, multi-temporal change detection, multi-sensor fusion,
 AI feature detection, point cloud ground filtering, and export/publishing —
 all within QGIS with zero external dependencies beyond QGIS's bundled
@@ -16,6 +16,9 @@ the following terrain visualization algorithms:
 
 - **Multi-directional Hillshade**: Blends multiple illumination angles to
   eliminate the directional bias of traditional single-light-source hillshades.
+- **RVT Multi-directional Hillshade**: Reference implementation from the
+  rvt-py (Relief Visualization Toolbox) package. Useful for cross-validating
+  results against any other RVT installation (QGIS, R, standalone).
 - **Simple Local Relief Model (SLRM)**: Removes macro-topography to isolate
   micro-relief features like ancient ditches, walls, and mounds.
 - **Sky-View Factor (SVF)**: Computes the proportion of the sky visible from
@@ -25,6 +28,10 @@ the following terrain visualization algorithms:
   simulating anisotropic lighting conditions.
 - **Topographic Openness (Positive/Negative)**: Highlights ridges/crests
   (positive) or valleys/pits (negative).
+- **RVT Topographic Openness**: Reference implementation from the `rvt-py`
+  Relief Visualization Toolbox, exposing the same Positive/Negative modes,
+  search directions, and search radius as the native implementation for
+  cross-validation against other RVT installations.
 - **Local Dominance**: Horizon-scanning ray trace identifying locally dominant
   or dominated pixels.
 - **Multi-Scale Topographic Position (MSTP)**: DEV at Broad/Meso/Local scales
@@ -118,6 +125,7 @@ require additional Python packages installed via the OSGeo4W Shell:
 | AI Detection | `onnxruntime` | `pip install onnxruntime` |
 | GPU Acceleration | `cupy-cuda12x` | `pip install cupy-cuda12x` |
 | LAS/LAZ input | `laspy` or `pdal` | `pip install laspy` |
+| RVT Relief Toolbox | `rvt-py` | `pip install rvt-py` |
 
 All optional features degrade gracefully with clear error messages pointing
 to the correct install command.

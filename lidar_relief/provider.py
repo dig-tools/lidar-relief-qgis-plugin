@@ -34,6 +34,8 @@ from .algorithms.pdal_classify_algorithm import PdalClassifyAlgorithm
 from .algorithms.temporal_difference_algorithm import TemporalDifferenceAlgorithm
 from .algorithms.fusion_algorithm import FusionAlgorithm
 from .algorithms.ai_detection_algorithm import AiDetectionAlgorithm
+from .algorithms.rvt_algorithm import RvtMultidirectionalHillshadeAlgorithm
+from .algorithms.rvt_openness_algorithm import RvtOpennessAlgorithm
 
 
 from .algorithms.web_viewer_algorithm import WebViewerAlgorithm
@@ -88,4 +90,6 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(TemporalDifferenceAlgorithm())
         self.addAlgorithm(FusionAlgorithm())
         self.addAlgorithm(AiDetectionAlgorithm())
+        self.addAlgorithm(RvtMultidirectionalHillshadeAlgorithm())
+        self.addAlgorithm(RvtOpennessAlgorithm())
         self.addAlgorithm(WebViewerAlgorithm())
