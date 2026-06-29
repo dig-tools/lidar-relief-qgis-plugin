@@ -76,6 +76,43 @@ def load_dem(path: str, band: int = 1) -> "xr.DataArray":
     return da
 
 
+def _resolve_resampling(method):
+    """Convert a string resampling method name to a rasterio.enums.Resampling.
+
+    Older rioxarray versions accept string names directly; newer versions
+    require the enum value. This helper handles both by always returning
+    the enum value.
+    """
+    from rasterio.enums import Resampling
+
+    if hasattr(method, "name"):
+        # Already a Resampling enum value
+        return method
+    resampling_map = {
+        "nearest": Resampling.nearest,
+        "bilinear": Resampling.bilinear,
+        "cubic": Resampling.cubic,
+        "cubic_spline": Resampling.cubic_spline,
+        "lanczos": Resampling.lanczos,
+        "average": Resampling.average,
+        "mode": Resampling.mode,
+        "max": Resampling.max,
+        "min": Resampling.min,
+        "med": Resampling.med,
+        "q1": Resampling.q1,
+        "q3": Resampling.q3,
+        "sum": Resampling.sum,
+        "rms": Resampling.rms,
+    }
+    result = resampling_map.get(method)
+    if result is None:
+        raise ValueError(
+            f"Unknown resampling method '{method}'. "
+            f"Valid options: {list(resampling_map.keys())}"
+        )
+    return result
+
+
 def compute_dod(
     dem_old_path: str,
     dem_new_path: str,
@@ -176,9 +213,12 @@ def compute_dod_xarray(
         )
         dem_new = dem_new.rio.reproject(dem_old.rio.crs)
 
-    # Step 2: align grid extent and resolution
+    # Step 2: align grid extent and resolution.
+    # Convert string method name to Resampling enum (older rioxarray
+    # accepted strings, newer versions require the enum).
+    resolved_method = _resolve_resampling(align_method)
     logger.info("Aligning grid extent and resolution...")
-    dem_new_aligned = dem_new.rio.reproject_match(dem_old, resampling=align_method)
+    dem_new_aligned = dem_new.rio.reproject_match(dem_old, resampling=resolved_method)
 
     # Fill nodata with NaN for safe arithmetic
     dem_old_filled = dem_old.copy()
