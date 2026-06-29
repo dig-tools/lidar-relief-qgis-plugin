@@ -250,10 +250,14 @@ def compute_dod_xarray(
     # Downstream tools treated all stable terrain as missing data. We
     # now use 255 as the nodata sentinel and ensure NaN cells get 255
     # rather than being silently classified as 'no change'.
+    #
+    # Use uint8 (not int8) because 255 is out of range for signed int8.
+    # Older numpy versions silently wrapped 255 to -1; numpy 1.24+
+    # emits a DeprecationWarning and numpy 2.0+ will raise.
     nan_mask = np.isnan(dod)
-    mask = xr.where(nan_mask, np.int8(255), np.int8(0))
-    mask = xr.where(dod < -threshold, np.int8(1), mask)
-    mask = xr.where(dod > threshold, np.int8(2), mask)
+    mask = xr.where(nan_mask, np.uint8(255), np.uint8(0))
+    mask = xr.where(dod < -threshold, np.uint8(1), mask)
+    mask = xr.where(dod > threshold, np.uint8(2), mask)
 
     # Statistics — exclude NaN cells from the denominator.
     valid_mask = ~nan_mask
@@ -307,16 +311,17 @@ def compute_dod_xarray(
         dod_out.rio.to_raster(
             dod_path, dtype="float32", nodata=np.nan, compress="LZW", tiled=True
         )
+        # Use uint8 (not int8) so 255 fits — int8 range is -128..127.
         # Use nodata=255 (not 0) so the 'no change' sentinel (0) is
         # preserved as a real value rather than treated as missing.
         mask_out.rio.to_raster(
-            mask_path, dtype="int8", nodata=255, compress="LZW", tiled=True
+            mask_path, dtype="uint8", nodata=255, compress="LZW", tiled=True
         )
     except Exception as e:
         logger.warning("rioxarray write failed, trying GDAL: %s", e)
         # Fallback: write via GDAL
         _write_array_via_gdal(dod, dod_path, "float32", dem_old)
-        _write_array_via_gdal(mask.astype(np.int8), mask_path, "int8", dem_old, nodata=255)
+        _write_array_via_gdal(mask.astype(np.uint8), mask_path, "uint8", dem_old, nodata=255)
 
     volume_report = {
         "cut_volume_m3": round(cut_volume, 1),
@@ -352,9 +357,9 @@ def _write_array_via_gdal(
     Args:
         data: xarray DataArray to write.
         path: Output raster path.
-        dtype: 'float32' or 'int8'.
+        dtype: 'float32' or 'uint8'.
         template: DataArray whose CRS/transform to copy.
-        nodata: Override the nodata value. For int8 masks we use 255.
+        nodata: Override the nodata value. For uint8 masks we use 255.
     """
     from osgeo import gdal
 
