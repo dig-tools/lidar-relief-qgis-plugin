@@ -80,31 +80,33 @@ jobs:
       - name: Install test dependencies
         run: |
           # qgis/qgis container has Python 3 with QGIS bindings + GDAL.
-          # Install the optional dependencies needed for full coverage.
           # Use python3 explicitly — the container has no `python` alias.
-          # NOTE: We do NOT install rvt-py here. The QGIS container's
-          # scipy was compiled against numpy 1.x and crashes under
-          # numpy 2.x with "_ARRAY_API not found". rvt-py imports scipy,
-          # which would crash test collection. The golden regression
-          # tests (test_golden_regression.py) handle this via
-          # pytest.importorskip("rvt") and will skip cleanly.
-          # The golden tests run properly in the core-tests job which
-          # uses a clean numpy/scipy install.
+          #
+          # Pin numpy<2 because the container's pre-built scipy, rasterio,
+          # rio-cogeo, reportlab, and rioxarray were all compiled against
+          # numpy 1.x. Under numpy 2.x they crash with
+          # "numpy.core.multiarray failed to import" /
+          # "numpy.dtype size changed". Pinning numpy<2 makes them all
+          # work. (QGIS 3.34 itself works fine under numpy 1.x.)
           python3 -m pip install --upgrade pip
-          python3 -m pip install numpy scipy pytest
+          python3 -m pip install "numpy<2" scipy pytest
           python3 -m pip install rasterio rioxarray xarray reportlab laspy || true
           python3 -m pip install rio-cogeo || true
           python3 -m pip install onnxruntime onnx || true
+
+      - name: Install rvt-py (pure-Python module)
+        run: |
+          # rvt-py imports scipy.ndimage, which works once numpy<2 is pinned.
+          python3 -m pip download rvt-py --no-deps -d /tmp/rvt-download || true
+          if [ -f /tmp/rvt-download/rvt_py-*.whl ]; then
+            unzip -q /tmp/rvt-download/rvt_py-*.whl -d /tmp/rvt-extracted
+            SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])")
+            cp -r /tmp/rvt-extracted/rvt "$SITE_PACKAGES"/
+          fi
 
       - name: Run full test suite
         env:
           PYTHONPATH: /usr/share/qgis/python:.
           LD_LIBRARY_PATH: /usr/lib
         run: |
-          # Skip the golden regression tests here — they require rvt-py
-          # which depends on scipy, and scipy in this container is
-          # binary-incompatible with the installed numpy 2.x. The golden
-          # tests run in the core-tests job instead.
-          python3 -m pytest lidar_relief/tests/ \
-            --ignore=lidar_relief/tests/test_golden_regression.py \
-            --tb=short -v
+          python3 -m pytest lidar_relief/tests/ --tb=short -v
