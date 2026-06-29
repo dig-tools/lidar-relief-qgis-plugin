@@ -239,6 +239,10 @@ def package_for_qfield(
     # silently misplaced anomaly points when the raster was in a
     # projected CRS (e.g. EPSG:27700 British National Grid).
     if crs is None:
+        # Use try/finally to guarantee the GDAL dataset is closed even
+        # if ImportFromWkt or GetAuthorityCode raises — otherwise the
+        # raster file handle leaks (and on Windows the file is locked).
+        raster_ds = None
         try:
             raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
             if raster_ds:
@@ -251,9 +255,11 @@ def package_for_qfield(
                         crs = f"EPSG:{auto_authid}"
                     else:
                         crs = raster_wkt
-                raster_ds = None
         except Exception as e:
             logger.warning("Could not auto-detect raster CRS: %s", e)
+        finally:
+            # Always release the GDAL dataset to free the file handle.
+            raster_ds = None
     if crs is None:
         # Last-resort fallback: WGS84, but warn loudly.
         logger.warning(
@@ -267,6 +273,7 @@ def package_for_qfield(
     # Compute raster extent for the QGS project's mapcanvas so QField
     # opens zoomed to the data, not to the whole world.
     raster_extent = None
+    raster_ds = None
     try:
         raster_ds = gdal.Open(raster_path, gdal.GA_ReadOnly)
         if raster_ds:
@@ -279,9 +286,10 @@ def package_for_qfield(
                 x_max = gt[0] + x_size * gt[1]
                 y_min = gt[3] + y_size * gt[5]
                 raster_extent = (x_min, y_min, x_max, y_max)
-            raster_ds = None
     except Exception as e:
         logger.warning("Could not read raster extent: %s", e)
+    finally:
+        raster_ds = None
 
     # Copy raster if requested
     if include_raster_copy:
@@ -417,14 +425,14 @@ def _create_qgis_project(
     else:
         units = "meters"
 
-    # XML-escape all user-supplied strings. ElementTree's .text does this
-    # automatically for content, but we still escape project_name because
-    # it's used as an attribute value.
-    safe_project_name = _xml_escape_attr(project_name)
+    # Note: ElementTree automatically escapes attribute values during
+    # serialization, so we pass project_name directly. The previous code
+    # manually escaped it via _xml_escape_attr, which caused
+    # double-escaping (e.g. "&" became "&amp;amp;").
 
     # Build a minimal QGIS project XML
     # This is schema-compatible with QGIS 3.x / 4.x project files
-    doc = ET.Element("qgis", projectname=safe_project_name, version="3.40.0")
+    doc = ET.Element("qgis", projectname=project_name, version="3.40.0")
 
     # Map canvas settings
     canvas = ET.SubElement(doc, "mapcanvas")
@@ -507,21 +515,3 @@ def _create_qgis_project(
         f.write(pretty_xml)
 
     logger.info("Created QGIS project: %s", qgs_path)
-
-
-def _xml_escape_attr(value: str) -> str:
-    """Escape a string for safe use as an XML attribute value.
-
-    ElementTree's text= auto-escapes for element content; for attributes
-    we escape manually to prevent attribute-injection via project_name.
-    """
-    if value is None:
-        return ""
-    return (
-        str(value)
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
-        .replace("'", "&apos;")
-    )

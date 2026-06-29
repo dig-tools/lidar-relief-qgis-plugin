@@ -58,8 +58,16 @@ import pytest
 pytest.importorskip("rvt")
 pytest.importorskip("scipy")  # plugin SLRM uses scipy when available
 
+import os
 import sys
-sys.path.insert(0, "/home/z/my-project/lidar-relief-qgis-plugin")
+
+# Resolve the project root relative to this test file so the tests work
+# in any environment (local dev, CI, other developers' machines) —
+# the previous code hardcoded /home/z/my-project which only worked in
+# the original development environment.
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 from lidar_relief.core.svf import sky_view_factor
 from lidar_relief.core.openness import topographic_openness

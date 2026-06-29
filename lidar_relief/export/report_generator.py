@@ -196,6 +196,11 @@ def generate_report(
     )
 
     story = []
+
+    # Track the histogram temp file path (if any) so we can clean it up
+    # in the finally block at the end. Initialised here so it's in scope
+    # for both the histogram-rendering block and the cleanup block.
+    _histogram_temp_path = None
     page_count = [0]
 
     def add_header_footer(canvas, doc):
@@ -431,6 +436,9 @@ def generate_report(
                     raster_path, output_dir=hist_dir, out_path=hist_path
                 )
                 if rendered and os.path.exists(rendered):
+                    # Track the path so the finally block at the bottom
+                    # can clean it up without racing with concurrent reports.
+                    _histogram_temp_path = rendered
                     story.append(
                         Paragraph(
                             "Figure 1: Pixel value distribution",
@@ -484,20 +492,14 @@ def generate_report(
     except Exception as e:
         raise RuntimeError(f"PDF generation failed: {e}") from e
     finally:
-        # Clean up the histogram temp file if one was created.
-        # We use a glob pattern because the filename includes a unique
-        # UUID prefix to avoid collisions in batch mode.
-        if include_histogram:
-            import glob as _glob
-
-            hist_dir = os.path.dirname(output_path) or "."
-            for hist_file in _glob.glob(
-                os.path.join(hist_dir, "_histogram_*.png")
-            ):
-                try:
-                    os.remove(hist_file)
-                except OSError:
-                    pass
+        # Clean up only the histogram temp file THIS run created —
+        # using a glob would race with other concurrent reports in the
+        # same directory (batch mode).
+        if _histogram_temp_path and os.path.exists(_histogram_temp_path):
+            try:
+                os.remove(_histogram_temp_path)
+            except OSError:
+                pass
 
     size_bytes = os.path.getsize(output_path)
 

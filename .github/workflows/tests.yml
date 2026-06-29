@@ -40,7 +40,8 @@ jobs:
           pip download rvt-py --no-deps -d /tmp/rvt-download || true
           if [ -f /tmp/rvt-download/rvt_py-*.whl ]; then
             unzip -q /tmp/rvt-download/rvt_py-*.whl -d /tmp/rvt-extracted
-            cp -r /tmp/rvt-extracted/rvt $(python -c "import site; print(site.getsitepackages()[0])")/
+            SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
+            cp -r /tmp/rvt-extracted/rvt "$SITE_PACKAGES"/
             echo "rvt-py installed (pure-Python only)"
           else
             echo "rvt-py download failed — golden tests will skip"
@@ -65,9 +66,10 @@ jobs:
 
   # ─────────────────────────────────────────────────────────────────────
   # Full test suite — includes GDAL-dependent tests.
-  # Uses the OSGeo4W conda environment which has GDAL + QGIS Python
-  # bindings pre-installed. Skipped tests are OK (optional dependencies
-  # like onnxruntime, rasterio, rio-cogeo, etc. are not installed).
+  # Uses the official qgis/qgis Docker image which has GDAL + QGIS
+  # Python bindings pre-installed. The container only ships `python3`
+  # (no `python` alias) and uses `sh` (no bash), so we use `python3`
+  # everywhere and avoid bash-specific syntax.
   # ─────────────────────────────────────────────────────────────────────
   full-tests:
     runs-on: ubuntu-latest
@@ -79,18 +81,20 @@ jobs:
         run: |
           # qgis/qgis container has Python 3 with QGIS bindings + GDAL.
           # Install the optional dependencies needed for full coverage.
-          pip install --upgrade pip
-          pip install numpy scipy pytest
-          pip install rasterio rioxarray xarray reportlab laspy || true
-          pip install rio-cogeo || true
-          pip install onnxruntime onnx || true
+          # Use python3 explicitly — the container has no `python` alias.
+          python3 -m pip install --upgrade pip
+          python3 -m pip install numpy scipy pytest
+          python3 -m pip install rasterio rioxarray xarray reportlab laspy || true
+          python3 -m pip install rio-cogeo || true
+          python3 -m pip install onnxruntime onnx || true
 
       - name: Install rvt-py (pure-Python module)
         run: |
-          pip download rvt-py --no-deps -d /tmp/rvt-download || true
+          python3 -m pip download rvt-py --no-deps -d /tmp/rvt-download || true
           if [ -f /tmp/rvt-download/rvt_py-*.whl ]; then
             unzip -q /tmp/rvt-download/rvt_py-*.whl -d /tmp/rvt-extracted
-            cp -r /tmp/rvt-extracted/rvt $(python -c "import site; print(site.getsitepackages()[0])")/
+            SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])")
+            cp -r /tmp/rvt-extracted/rvt "$SITE_PACKAGES"/
           fi
 
       - name: Run full test suite
@@ -98,4 +102,4 @@ jobs:
           PYTHONPATH: /usr/share/qgis/python:.
           LD_LIBRARY_PATH: /usr/lib
         run: |
-          python -m pytest lidar_relief/tests/ --tb=short -v
+          python3 -m pytest lidar_relief/tests/ --tb=short -v
