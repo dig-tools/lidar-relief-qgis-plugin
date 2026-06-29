@@ -177,7 +177,11 @@ class TestWebViewer:
         )
         with open(result["index_html"]) as f:
             html = f.read()
-        assert "dark_all" in html
+        # v2.0.7+ uses Carto's dark-matter-gl-style (the old dark_all
+        # basemap URL was deprecated). Check for the dark style name.
+        assert "dark-matter" in html or "dark_all" in html, (
+            "Dark mode HTML should reference the dark basemap style"
+        )
 
     def test_light_mode(self, synthetic_dem_path):
         """Light mode should use light base map URL."""
@@ -192,7 +196,11 @@ class TestWebViewer:
         )
         with open(result["index_html"]) as f:
             html = f.read()
-        assert "light_all" in html
+        # v2.0.7+ uses Carto's positron-gl-style (the old light_all
+        # basemap URL was deprecated). Check for the light style name.
+        assert "positron" in html or "light_all" in html, (
+            "Light mode HTML should reference the light basemap style"
+        )
 
     def test_custom_opacity(self, synthetic_dem_path):
         """Custom opacity should be reflected in HTML."""
@@ -207,4 +215,9 @@ class TestWebViewer:
         )
         with open(result["index_html"]) as f:
             html = f.read()
-        assert 'value="0.5"' in html
+        # v2.0.7+ JSON-encodes the opacity value for safety, so it
+        # appears as value=0.5 (no quotes) rather than value="0.5".
+        # Accept either format for backwards compatibility.
+        assert 'value="0.5"' in html or "value=0.5" in html, (
+            "Custom opacity (0.5) should be reflected in the HTML slider"
+        )

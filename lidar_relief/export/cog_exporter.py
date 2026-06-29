@@ -92,17 +92,31 @@ def convert_to_cog(
     """
     check_dependencies()
 
-    # Resolve the profile
-    available_profiles = cog_profiles.get(profile)
+    # Resolve the profile.
+    # cog_profiles.get(profile) returns None for unknown profiles in
+    # older rio-cogeo versions but raises KeyError in newer versions
+    # (rio-cogeo 6.0+). Handle both gracefully.
+    try:
+        available_profiles = cog_profiles.get(profile)
+    except (KeyError, TypeError):
+        available_profiles = None
 
     if available_profiles is None:
         logger.warning(
             "Unknown COG profile '%s', falling back to 'deflate'. Available: %s",
             profile,
-            list(cog_profiles.keys()),
+            list(cog_profiles.keys()) if hasattr(cog_profiles, "keys") else "unknown",
         )
         profile = _DEFAULT_PROFILE
-        available_profiles = cog_profiles.get(profile)
+        try:
+            available_profiles = cog_profiles.get(profile)
+        except (KeyError, TypeError):
+            available_profiles = None
+        if available_profiles is None:
+            raise RuntimeError(
+                f"Could not load default COG profile '{_DEFAULT_PROFILE}'. "
+                f"rio-cogeo installation may be corrupted."
+            )
 
     profile_config = available_profiles.copy()
 
