@@ -12,7 +12,13 @@ used_by: core/svf.py (optional acceleration),
 
 rules:
   Dynamic dispatch: CuPy if NVIDIA GPU available, else NumPy.
-  All GPU implementations produce bit-identical results to NumPy.
+  GPU implementations aim to produce **numerically close** results to
+  NumPy (typically within 1e-6 for float32), but NOT bit-identical —
+  CUDA floating-point operations are not bit-reproducible across GPU
+  architectures or drivers, and the GPU path may use a different
+  accumulator dtype than the CPU path. Callers that require
+  bit-identical output (e.g. for reproducible test fixtures) should
+  force the NumPy backend via ``get_backend() == "numpy"``.
   No CUDA-specific code in the main algorithm cores.
 """
 

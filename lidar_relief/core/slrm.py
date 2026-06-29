@@ -11,12 +11,17 @@ rules:
 
 import numpy as np
 
-# Attempt scipy import — QGIS bundles it on most platforms
+# Attempt scipy import — QGIS bundles it on most platforms.
+# Catch both ImportError (scipy not installed) and ValueError /
+# AttributeError (scipy installed but binary-incompatible with the
+# installed numpy version, e.g. scipy compiled against numpy 1.x
+# running under numpy 2.x). In those cases fall back to the pure
+# NumPy box filter — slower but correct.
 try:
     from scipy.ndimage import uniform_filter
 
     _HAS_SCIPY = True
-except ImportError:
+except (ImportError, ValueError, AttributeError):
     _HAS_SCIPY = False
 
 

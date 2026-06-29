@@ -480,6 +480,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=multidirectional_hillshade,
                 halo_size=1,
+                tile_size=tile_size,
                 feedback=feedback,
                 azimuths=[315.0, 45.0, 135.0, 225.0, 270.0, 360.0],
                 altitude=45.0,
@@ -501,6 +502,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=slrm_wrapper,
                 halo_size=p_cfg["slrm_radius"],
+                tile_size=tile_size,
                 feedback=feedback,
                 radius=p_cfg["slrm_radius"],
             )
@@ -515,6 +517,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=sky_view_factor,
                 halo_size=p_cfg["svf_radius"],
+                tile_size=tile_size,
                 feedback=feedback,
                 num_directions=p_cfg["svf_num_directions"],
                 search_radius=p_cfg["svf_radius"],
@@ -533,6 +536,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=compute_slope,
                 halo_size=1,
+                tile_size=tile_size,
                 feedback=feedback,
                 units="degrees",
             )
@@ -549,6 +553,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=topographic_openness,
                 halo_size=p_cfg["openness_radius"],
+                tile_size=tile_size,
                 feedback=feedback,
                 num_directions=p_cfg["openness_num_directions"],
                 search_radius=p_cfg["openness_radius"],
@@ -573,6 +578,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=mstp_wrapper,
                 halo_size=p_cfg["mstp_broad"],
+                tile_size=tile_size,
                 feedback=feedback,
                 local_r=p_cfg["mstp_local"],
                 meso_r=p_cfg["mstp_meso"],
@@ -596,6 +602,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=vat_wrapper,
                 halo_size=max(p_cfg["svf_radius"], p_cfg["openness_radius"]),
+                tile_size=tile_size,
                 feedback=feedback,
                 svf_radius=p_cfg["svf_radius"],
                 openness_radius=p_cfg["openness_radius"],
@@ -617,6 +624,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=red_relief_wrapper,
                 halo_size=p_cfg["slrm_radius"],
+                tile_size=tile_size,
                 feedback=feedback,
                 slrm_radius=p_cfg["slrm_radius"],
             )
@@ -644,6 +652,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=ld_wrapper,
                 halo_size=p_cfg["ld_max_rad"],
+                tile_size=tile_size,
                 feedback=feedback,
             )
             dict_results[self.LOCAL_DOMINANCE_OUTPUT] = out_path
@@ -672,6 +681,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 output_path=out_path,
                 algorithm_func=asvf_wrapper,
                 halo_size=p_cfg["svf_radius"],
+                tile_size=tile_size,
                 feedback=feedback,
                 radius=p_cfg["svf_radius"],
             )

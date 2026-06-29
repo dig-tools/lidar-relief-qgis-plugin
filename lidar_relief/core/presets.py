@@ -2,7 +2,11 @@
 exports: PRESETS dict, get_preset(context_name) -> dict
 used_by: algorithms/batch_algorithm.py
 rules: Data-only module. No computation. Values from peer-reviewed literature.
+  get_preset returns a deep copy so callers can mutate it without
+  corrupting the canonical preset.
 """
+import copy
+
 
 PRESETS = {
     "flat_agricultural": {
@@ -33,10 +37,15 @@ PRESETS = {
 
 
 def get_preset(context_name: str) -> dict:
-    """Return parameter dict for the given terrain context name."""
+    """Return parameter dict for the given terrain context name.
+
+    Returns a deep copy so callers can freely mutate the returned dict
+    (e.g. overriding individual parameters) without corrupting the
+    canonical preset definition in ``PRESETS``.
+    """
     if context_name not in PRESETS:
         raise ValueError(
             f"Unknown preset context: {context_name!r}. "
             f"Valid options: {list(PRESETS.keys())}"
         )
-    return PRESETS[context_name]
+    return copy.deepcopy(PRESETS[context_name])

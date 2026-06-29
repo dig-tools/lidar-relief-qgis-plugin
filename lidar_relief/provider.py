@@ -30,6 +30,7 @@ from .algorithms.field_export_algorithm import FieldExportAlgorithm
 from .algorithms.pdf_report_algorithm import PdfReportAlgorithm
 from .algorithms.recipe_io_algorithm import RecipeExportAlgorithm, RecipeImportAlgorithm
 from .algorithms.csf_algorithm import CsfAlgorithm
+from .algorithms.pdal_classify_algorithm import PdalClassifyAlgorithm
 from .algorithms.temporal_difference_algorithm import TemporalDifferenceAlgorithm
 from .algorithms.fusion_algorithm import FusionAlgorithm
 from .algorithms.ai_detection_algorithm import AiDetectionAlgorithm
@@ -83,6 +84,7 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(RecipeExportAlgorithm())
         self.addAlgorithm(RecipeImportAlgorithm())
         self.addAlgorithm(CsfAlgorithm())
+        self.addAlgorithm(PdalClassifyAlgorithm())
         self.addAlgorithm(TemporalDifferenceAlgorithm())
         self.addAlgorithm(FusionAlgorithm())
         self.addAlgorithm(AiDetectionAlgorithm())

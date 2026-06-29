@@ -1,0 +1,121 @@
+name: Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # Core tests — pure NumPy, no GDAL/QGIS required.
+  # These run on every push and cover the relief visualisation algorithms
+  # (hillshade, SVF, ASVF, openness, SLRM, MSTP, slope, blend, etc.).
+  # ─────────────────────────────────────────────────────────────────────
+  core-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install core dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy scipy pytest
+
+      - name: Install rvt-py for golden regression tests
+        # rvt-py requires GDAL which isn't easy to install via pip on
+        # Ubuntu. We install just the pure-Python visualization module
+        # by extracting it from the wheel (the same trick used in dev).
+        # If this fails, the golden tests skip cleanly via
+        # pytest.importorskip("rvt").
+        run: |
+          pip download rvt-py --no-deps -d /tmp/rvt-download || true
+          if [ -f /tmp/rvt-download/rvt_py-*.whl ]; then
+            unzip -q /tmp/rvt-download/rvt_py-*.whl -d /tmp/rvt-extracted
+            SITE_PACKAGES=$(python -c "import site; print(site.getsitepackages()[0])")
+            cp -r /tmp/rvt-extracted/rvt "$SITE_PACKAGES"/
+            echo "rvt-py installed (pure-Python only)"
+          else
+            echo "rvt-py download failed — golden tests will skip"
+          fi
+
+      - name: Run core tests (no GDAL required)
+        env:
+          PYTHONPATH: .
+        run: |
+          python -m pytest lidar_relief/tests/ \
+            --ignore=lidar_relief/tests/test_csf_filter.py \
+            --ignore=lidar_relief/tests/test_pdal_pipeline.py \
+            --ignore=lidar_relief/tests/test_temporal.py \
+            --ignore=lidar_relief/tests/test_fusion.py \
+            --ignore=lidar_relief/tests/test_ml_detector.py \
+            --ignore=lidar_relief/tests/test_gpu.py \
+            --ignore=lidar_relief/tests/test_cog_export.py \
+            --ignore=lidar_relief/tests/test_web_viewer.py \
+            --ignore=lidar_relief/tests/test_field_export.py \
+            --ignore=lidar_relief/tests/test_report_generator.py \
+            --tb=short -v
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Full test suite — includes GDAL-dependent tests.
+  # Uses the official qgis/qgis Docker image which has GDAL + QGIS
+  # Python bindings pre-installed. The container only ships `python3`
+  # (no `python` alias) and uses `sh` (no bash), so we use `python3`
+  # everywhere and avoid bash-specific syntax.
+  # ─────────────────────────────────────────────────────────────────────
+  full-tests:
+    runs-on: ubuntu-latest
+    container: qgis/qgis:final-3_34_2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install test dependencies
+        run: |
+          set -e
+          # qgis/qgis container has Python 3 with QGIS bindings + GDAL.
+          # Use python3 explicitly — the container has no `python` alias.
+          #
+          # The container's pre-built scipy, rasterio, rio-cogeo,
+          # reportlab, and rioxarray wheels were compiled against
+          # numpy 1.x and crash under numpy 2.x. We pin numpy==1.26.4
+          # (the last 1.x release, compatible with all the packages we
+          # need) by installing everything in ONE pip command — pip's
+          # resolver will then keep numpy at 1.26.4 because all packages
+          # accept numpy>=1.21.6 (which 1.26.4 satisfies) and we're
+          # explicitly requesting numpy==1.26.4.
+          python3 -m pip install --upgrade pip
+          python3 -m pip install \
+            "numpy==1.26.4" \
+            scipy pytest \
+            rasterio rioxarray xarray reportlab laspy \
+            rio-cogeo \
+            onnxruntime onnx
+          # Verify numpy stayed at 1.x — if a package upgraded it, fail
+          # the job early with a clear message rather than failing later
+          # with a confusing "numpy.dtype size changed" error.
+          python3 -c "import numpy; assert numpy.__version__.startswith('1.'), f'numpy was upgraded to {numpy.__version__} — will break scipy'"
+
+      - name: Install rvt-py (pure-Python module)
+        run: |
+          # rvt-py imports scipy.ndimage, which works with numpy 1.26.4.
+          python3 -m pip download rvt-py --no-deps -d /tmp/rvt-download || true
+          if [ -f /tmp/rvt-download/rvt_py-*.whl ]; then
+            unzip -q /tmp/rvt-download/rvt_py-*.whl -d /tmp/rvt-extracted
+            SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])")
+            cp -r /tmp/rvt-extracted/rvt "$SITE_PACKAGES"/
+          fi
+
+      - name: Run full test suite
+        env:
+          PYTHONPATH: /usr/share/qgis/python:.
+          LD_LIBRARY_PATH: /usr/lib
+        run: |
+          python3 -m pytest lidar_relief/tests/ --tb=short -v

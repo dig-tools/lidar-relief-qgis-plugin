@@ -4,11 +4,14 @@ used_by: algorithms/asvf_algorithm.py
 rules:
   Pure NumPy — no QGIS imports.
   Vectorized trigonometric functions.
+  Uses the same supersampled horizon scan as SVF (see core/svf.py) so
+  that horizon pixels on diagonal azimuths are correctly sampled.
 """
 
 import numpy as np
 
 from .array_utils import _shift_array
+from .svf import _build_horizon_samples
 
 
 def anisotropic_sky_view_factor(
@@ -31,8 +34,9 @@ def anisotropic_sky_view_factor(
     dem_filled[nan_mask] = dem_mean
 
     azimuths_rad = np.linspace(0, 2 * np.pi, num_directions, endpoint=False)
-    dir_rows = -np.cos(azimuths_rad)
-    dir_cols = np.sin(azimuths_rad)
+
+    # Pre-compute the horizon sample points (same supersampling approach as SVF)
+    horizon_samples = _build_horizon_samples(num_directions, search_radius)
 
     total_asvf = np.zeros((rows, cols), dtype=np.float32)
     weight_sum = 0.0
@@ -40,14 +44,10 @@ def anisotropic_sky_view_factor(
     anisotropy_rad = np.radians(anisotropy_dir)
     threshold_sin = np.sin(np.radians(2.0))
 
-    total_steps = num_directions
-
-    for dir_idx in range(num_directions):
+    for dir_idx, row_shifts, col_shifts, dists in horizon_samples:
         if feedback is not None and feedback.isCanceled():
             return np.full_like(array, np.nan)
 
-        dr = dir_rows[dir_idx]
-        dc = dir_cols[dir_idx]
         azimuth = azimuths_rad[dir_idx]
 
         dir_weight = 1.0 + anisotropy_weight * np.cos(azimuth - anisotropy_rad)
@@ -60,22 +60,16 @@ def anisotropic_sky_view_factor(
             countdown = np.zeros((rows, cols), dtype=np.int32)
             candidate_valid = np.zeros((rows, cols), dtype=bool)
 
-        for dist in range(1, search_radius + 1):
-            row_offset = dr * dist
-            col_offset = dc * dist
-            row_shift = int(round(row_offset))
-            col_shift = int(round(col_offset))
-
-            if row_shift == 0 and col_shift == 0:
+        for row_shift, col_shift, dist_units in zip(row_shifts, col_shifts, dists):
+            actual_dist = dist_units * cellsize
+            if actual_dist == 0:
                 continue
 
             shifted = _shift_array(dem_filled, row_shift, col_shift, dem_mean)
-            actual_dist = np.sqrt(
-                (row_shift * cellsize) ** 2 + (col_shift * cellsize) ** 2
-            )
 
             delta_z = shifted - dem_filled
             hypot_3d = np.hypot(delta_z, actual_dist)
+            hypot_3d = np.where(hypot_3d == 0, 1.0, hypot_3d)
             sin_angle = delta_z / hypot_3d
 
             if noise_level > 0:
@@ -116,7 +110,7 @@ def anisotropic_sky_view_factor(
         total_asvf += svf_dir * dir_weight
 
         if feedback is not None:
-            feedback.setProgress(int((dir_idx + 1) / total_steps * 100))
+            feedback.setProgress(int((dir_idx + 1) / num_directions * 100))
 
     asvf = total_asvf / weight_sum
     asvf = np.clip(asvf, 0.0, 1.0).astype(np.float32)

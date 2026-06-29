@@ -100,7 +100,12 @@ class PcaAlgorithm(QgsProcessingAlgorithm):
             source_path=source.source(),
             output_path=output_path,
             algorithm_func=pca_wrapper,
-            halo_size=10,  # Max radius of the sub-algorithms
+            # halo_size must be >= max(search_radius, ld_max_rad) so that
+            # pixels near tile edges get correct values from all
+            # sub-algorithms. The previous value of 10 was too small for
+            # the Local Dominance sub-call (max_rad=20) — LD pixels near
+            # tile edges had wrong values.
+            halo_size=20,
             tile_size=1024,
             feedback=feedback,
         )

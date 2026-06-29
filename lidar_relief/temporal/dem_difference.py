@@ -76,6 +76,43 @@ def load_dem(path: str, band: int = 1) -> "xr.DataArray":
     return da
 
 
+def _resolve_resampling(method):
+    """Convert a string resampling method name to a rasterio.enums.Resampling.
+
+    Older rioxarray versions accept string names directly; newer versions
+    require the enum value. This helper handles both by always returning
+    the enum value.
+    """
+    from rasterio.enums import Resampling
+
+    if hasattr(method, "name"):
+        # Already a Resampling enum value
+        return method
+    resampling_map = {
+        "nearest": Resampling.nearest,
+        "bilinear": Resampling.bilinear,
+        "cubic": Resampling.cubic,
+        "cubic_spline": Resampling.cubic_spline,
+        "lanczos": Resampling.lanczos,
+        "average": Resampling.average,
+        "mode": Resampling.mode,
+        "max": Resampling.max,
+        "min": Resampling.min,
+        "med": Resampling.med,
+        "q1": Resampling.q1,
+        "q3": Resampling.q3,
+        "sum": Resampling.sum,
+        "rms": Resampling.rms,
+    }
+    result = resampling_map.get(method)
+    if result is None:
+        raise ValueError(
+            f"Unknown resampling method '{method}'. "
+            f"Valid options: {list(resampling_map.keys())}"
+        )
+    return result
+
+
 def compute_dod(
     dem_old_path: str,
     dem_new_path: str,
@@ -176,9 +213,12 @@ def compute_dod_xarray(
         )
         dem_new = dem_new.rio.reproject(dem_old.rio.crs)
 
-    # Step 2: align grid extent and resolution
+    # Step 2: align grid extent and resolution.
+    # Convert string method name to Resampling enum (older rioxarray
+    # accepted strings, newer versions require the enum).
+    resolved_method = _resolve_resampling(align_method)
     logger.info("Aligning grid extent and resolution...")
-    dem_new_aligned = dem_new.rio.reproject_match(dem_old, resampling=align_method)
+    dem_new_aligned = dem_new.rio.reproject_match(dem_old, resampling=resolved_method)
 
     # Fill nodata with NaN for safe arithmetic
     dem_old_filled = dem_old.copy()
@@ -202,14 +242,27 @@ def compute_dod_xarray(
 
     # Significance mask
     # 0 = no significant change, 1 = negative change (erosion/cut),
-    # 2 = positive change (deposition/fill)
-    mask = xr.where(dod < -threshold, np.int8(1), np.int8(0))
-    mask = xr.where(dod > threshold, np.int8(2), mask)
+    # 2 = positive change (deposition/fill),
+    # 255 = nodata (NaN DoD — where either input DEM had nodata).
+    #
+    # NOTE: The previous implementation used nodata=0 on the mask raster,
+    # which collided with the 'no significant change' sentinel value.
+    # Downstream tools treated all stable terrain as missing data. We
+    # now use 255 as the nodata sentinel and ensure NaN cells get 255
+    # rather than being silently classified as 'no change'.
+    #
+    # Use uint8 (not int8) because 255 is out of range for signed int8.
+    # Older numpy versions silently wrapped 255 to -1; numpy 1.24+
+    # emits a DeprecationWarning and numpy 2.0+ will raise.
+    nan_mask = np.isnan(dod)
+    mask = xr.where(nan_mask, np.uint8(255), np.uint8(0))
+    mask = xr.where(dod < -threshold, np.uint8(1), mask)
+    mask = xr.where(dod > threshold, np.uint8(2), mask)
 
-    # Statistics
-    valid_mask = ~np.isnan(dod)
+    # Statistics — exclude NaN cells from the denominator.
+    valid_mask = ~nan_mask
     total_pixels = int(valid_mask.sum().values)
-    significant = int((mask > 0).sum().values)
+    significant = int(((mask > 0) & (mask < 255)).sum().values)
     neg_changes = int((mask == 1).sum().values)
     pos_changes = int((mask == 2).sum().values)
 
@@ -221,10 +274,16 @@ def compute_dod_xarray(
     else:
         cell_area = 1.0
 
-    # Cut volume (negative change) and fill volume (positive change)
+    # Cut volume (negative change) and fill volume (positive change).
+    # Only sum cells that exceed the LoD threshold — the previous code
+    # included sub-threshold noise in the volume totals, which made the
+    # 'probabilistic' mask meaningless for volumetric reporting.
     dod_valid = dod.where(~np.isnan(dod), 0)
-    cut_volume = float(abs(dod_valid.where(dod_valid < 0, 0)).sum().values * cell_area)
-    fill_volume = float(dod_valid.where(dod_valid > 0, 0).sum().values * cell_area)
+    # Apply the significance mask: only count significant changes.
+    sig_neg = dod_valid.where(mask == 1, 0)
+    sig_pos = dod_valid.where(mask == 2, 0)
+    cut_volume = float(abs(sig_neg).sum().values * cell_area)
+    fill_volume = float(sig_pos.sum().values * cell_area)
     net_volume = fill_volume - cut_volume
 
     # Write outputs
@@ -252,14 +311,17 @@ def compute_dod_xarray(
         dod_out.rio.to_raster(
             dod_path, dtype="float32", nodata=np.nan, compress="LZW", tiled=True
         )
+        # Use uint8 (not int8) so 255 fits — int8 range is -128..127.
+        # Use nodata=255 (not 0) so the 'no change' sentinel (0) is
+        # preserved as a real value rather than treated as missing.
         mask_out.rio.to_raster(
-            mask_path, dtype="int8", nodata=0, compress="LZW", tiled=True
+            mask_path, dtype="uint8", nodata=255, compress="LZW", tiled=True
         )
     except Exception as e:
         logger.warning("rioxarray write failed, trying GDAL: %s", e)
         # Fallback: write via GDAL
         _write_array_via_gdal(dod, dod_path, "float32", dem_old)
-        _write_array_via_gdal(mask.astype(np.int8), mask_path, "int8", dem_old)
+        _write_array_via_gdal(mask.astype(np.uint8), mask_path, "uint8", dem_old, nodata=255)
 
     volume_report = {
         "cut_volume_m3": round(cut_volume, 1),
@@ -288,12 +350,27 @@ def _write_array_via_gdal(
     path: str,
     dtype: str,
     template: "xr.DataArray",
+    nodata: float | None = None,
 ) -> None:
-    """Fallback raster write using GDAL when rioxarray fails."""
+    """Fallback raster write using GDAL when rioxarray fails.
+
+    Args:
+        data: xarray DataArray to write.
+        path: Output raster path.
+        dtype: 'float32' or 'uint8'.
+        template: DataArray whose CRS/transform to copy.
+        nodata: Override the nodata value. For uint8 masks we use 255.
+    """
     from osgeo import gdal
 
     rows, cols = data.shape
-    gdal_dtype = gdal.GDT_Float32 if dtype == "float32" else gdal.GDT_Byte
+    if dtype == "float32":
+        gdal_dtype = gdal.GDT_Float32
+        default_nodata = -9999.0
+    else:
+        gdal_dtype = gdal.GDT_Byte
+        default_nodata = 255
+    effective_nodata = nodata if nodata is not None else default_nodata
 
     driver = gdal.GetDriverByName("GTiff")
     ds = driver.Create(
@@ -304,21 +381,39 @@ def _write_array_via_gdal(
         gdal_dtype,
         options=["COMPRESS=LZW", "TILED=YES"],
     )
+    if ds is None:
+        raise RuntimeError(f"Failed to create raster: {path}")
 
     if hasattr(template, "rio"):
-        ds.SetGeoTransform(template.rio.transform().to_gdal())
-        if hasattr(template.rio.crs, "to_wkt"):
-            ds.SetProjection(template.rio.crs.to_wkt())
-        else:
-            ds.SetProjection(str(template.rio.crs))
+        try:
+            ds.SetGeoTransform(template.rio.transform().to_gdal())
+        except Exception as e:
+            logger.warning("Could not set GeoTransform: %s", e)
+        # Set projection only if the template has a real CRS. Previously
+        # if template.rio.crs was None, SetProjection received the
+        # literal string 'None', which is invalid WKT.
+        template_crs = template.rio.crs if hasattr(template.rio, "crs") else None
+        if template_crs is not None:
+            try:
+                if hasattr(template_crs, "to_wkt"):
+                    wkt = template_crs.to_wkt()
+                else:
+                    wkt = str(template_crs)
+                if wkt and wkt != "None":
+                    ds.SetProjection(wkt)
+            except Exception as e:
+                logger.warning("Could not set projection: %s", e)
 
     band = ds.GetRasterBand(1)
     values = data.values
     if np.issubdtype(values.dtype, np.floating):
         nan_mask = np.isnan(values)
         values = values.copy()
-        values[nan_mask] = -9999.0
-        band.SetNoDataValue(-9999.0)
+        values[nan_mask] = effective_nodata
+        band.SetNoDataValue(float(effective_nodata))
+    elif gdal_dtype == gdal.GDT_Byte:
+        # For byte masks, replace NaN-derived sentinel (255) explicitly.
+        band.SetNoDataValue(float(effective_nodata))
 
     band.WriteArray(values)
     band.FlushCache()

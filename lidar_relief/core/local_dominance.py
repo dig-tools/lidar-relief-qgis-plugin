@@ -31,14 +31,24 @@ def compute_local_dominance(
     ld_accumulator = np.zeros_like(dem, dtype=np.float32)
     valid_counts = np.zeros_like(dem, dtype=np.float32)
 
-    directions = np.linspace(0, 2 * np.pi, int(360 / anglr_res), endpoint=False)
+    # Use ceil to ensure we cover the full 360° even when anglr_res
+    # doesn't divide 360 evenly (e.g. 7° → 52 directions covers 364°,
+    # which is fine — the last direction overlaps the first by 4°).
+    # The previous code used int(360/anglr_res) which silently left
+    # a gap (e.g. 7° → 51 directions covers only 357°).
+    n_directions = max(1, int(np.ceil(360.0 / anglr_res)))
+    directions = np.linspace(0, 2 * np.pi, n_directions, endpoint=False)
     radii = np.arange(min_rad, max_rad + rad_inc, rad_inc)
 
     total_steps = len(directions)
 
     for i, theta in enumerate(directions):
         if feedback and feedback.isCanceled():
-            return np.array([])
+            # Return a full NaN-filled array of the correct shape so
+            # callers can handle this consistently with other algorithms.
+            # The previous code returned np.array([]) which crashed any
+            # downstream code that tried to use the result as a raster.
+            return np.full_like(dem, np.nan, dtype=np.float32)
 
         for r in radii:
             dy = int(np.round(-r * np.cos(theta)))
@@ -50,7 +60,11 @@ def compute_local_dominance(
             target_z = padded_dem[y1:y2, x1:x2]
 
             delta_z = z_obs - target_z
+            # dist could be zero if min_rad == 0; guard to avoid
+            # ZeroDivisionError in np.arctan below.
             dist = r * cellsize
+            if dist == 0:
+                continue
 
             angle_grid = np.arctan(delta_z / dist)
 

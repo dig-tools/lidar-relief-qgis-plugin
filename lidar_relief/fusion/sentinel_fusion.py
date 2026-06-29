@@ -162,13 +162,26 @@ def co_register_bands(
 
 
 def _normalize(array: np.ndarray) -> np.ndarray:
-    """Normalize an array to 0.0–1.0 range for blending."""
+    """Normalize an array to 0.0–1.0 range for blending.
+
+    For constant inputs (e.g. a fully cloud-covered S2 band where every
+    pixel has the same value), returns a mid-grey (0.5) array instead of
+    the previous all-zero output — all-zero made the blend output black.
+    NaNs are preserved.
+    """
     arr = array.astype(np.float64)
-    min_val = np.nanmin(arr)
-    max_val = np.nanmax(arr)
+    min_val = np.nanmin(arr) if np.isfinite(arr).any() else 0.0
+    max_val = np.nanmax(arr) if np.isfinite(arr).any() else 0.0
     if max_val - min_val > 1e-10:
-        return (arr - min_val) / (max_val - min_val)
-    return np.zeros_like(arr)
+        result = (arr - min_val) / (max_val - min_val)
+        # Preserve NaN locations.
+        result = np.where(np.isnan(arr), np.nan, result)
+        return result
+    # Constant input: return mid-grey rather than all-zero so the
+    # blend doesn't go fully black.
+    result = np.full_like(arr, 0.5)
+    result = np.where(np.isnan(arr), np.nan, result)
+    return result
 
 
 def _luminance_overlay(
@@ -253,6 +266,7 @@ def apply_fusion_recipe(
     recipe_name: str,
     output_path: str,
     lidar_opacity: Optional[float] = None,
+    resampling: str = "bilinear",
 ) -> dict:
     """Apply a fusion recipe to combine LiDAR relief with Sentinel-2 bands.
 
@@ -262,6 +276,8 @@ def apply_fusion_recipe(
         recipe_name: Name of the recipe from FUSION_RECIPES.
         output_path: Path for the output RGB fusion raster.
         lidar_opacity: Override recipe's default opacity.
+        resampling: Resampling method for S2 band alignment
+            ('bilinear', 'cubic', 'nearest', 'lanczos', 'average').
 
     Returns:
         dict with output metadata.
@@ -278,6 +294,18 @@ def apply_fusion_recipe(
     opacity = lidar_opacity if lidar_opacity is not None else recipe["lidar_opacity"]
     blend_mode = recipe["blend_mode"]
     required_bands = recipe["s2_bands"]
+
+    # Resolve resampling method once — the previous code hardcoded
+    # Resampling.bilinear in apply_fusion_recipe even though
+    # co_register_bands exposed a resampling parameter.
+    resampling_map = {
+        "bilinear": Resampling.bilinear,
+        "cubic": Resampling.cubic,
+        "nearest": Resampling.nearest,
+        "lanczos": Resampling.lanczos,
+        "average": Resampling.average,
+    }
+    resampler = resampling_map.get(resampling, Resampling.bilinear)
 
     # Load LiDAR layer
     with rioxarray.open_rasterio(lidar_path) as lidar_da:
@@ -307,9 +335,9 @@ def apply_fusion_recipe(
                     band_da_sq = band_da.squeeze("band")
                 else:
                     band_da_sq = band_da
-                # Align to LiDAR grid
+                # Align to LiDAR grid using the user-supplied resampler.
                 band_aligned = band_da_sq.rio.reproject_match(
-                    lidar_da_sq, resampling=Resampling.bilinear
+                    lidar_da_sq, resampling=resampler
                 )
                 s2_arrays.append(band_aligned.values.astype(np.float64))
 
@@ -341,6 +369,7 @@ def apply_fusion_recipe(
         "blend_mode": blend_mode,
         "lidar_opacity": opacity,
         "bands_used": required_bands,
+        "resampling": resampling,
     }
 
 
@@ -350,7 +379,13 @@ def _write_rgb_raster(
     crs: Optional[str] = None,
     transform: Optional[tuple] = None,
 ) -> None:
-    """Write a 3-band uint8 RGB array to GeoTIFF."""
+    """Write a 3-band uint8 RGB array to GeoTIFF.
+
+    Uses a try/finally to ensure the GDAL dataset is closed (set to None)
+    even if WriteArray raises mid-write. The previous code leaked the
+    file handle on exception, which on Windows locked the file and
+    prevented subsequent reads.
+    """
     from osgeo import gdal
 
     rows, cols, bands = rgb.shape
@@ -362,25 +397,30 @@ def _write_rgb_raster(
         gdal.GDT_Byte,
         options=["COMPRESS=LZW", "TILED=YES", "PHOTOMETRIC=RGB"],
     )
+    if ds is None:
+        raise RuntimeError(f"Failed to create raster: {path}")
 
-    if transform is not None:
-        # Handle both Affine objects and 6-element tuples
-        try:
-            # Affine has to_gdal() method
-            gt = transform.to_gdal()
-        except AttributeError:
-            # Already a sequence
-            if len(transform) >= 6:
-                gt = transform[:6]
-            else:
-                gt = transform
-        ds.SetGeoTransform(gt)
-    if crs:
-        ds.SetProjection(str(crs))
+    try:
+        if transform is not None:
+            # Handle both Affine objects and 6-element tuples
+            try:
+                # Affine has to_gdal() method
+                gt = transform.to_gdal()
+            except AttributeError:
+                # Already a sequence
+                if len(transform) >= 6:
+                    gt = transform[:6]
+                else:
+                    gt = transform
+            ds.SetGeoTransform(gt)
+        if crs:
+            ds.SetProjection(str(crs))
 
-    for b in range(bands):
-        band = ds.GetRasterBand(b + 1)
-        band.WriteArray(rgb[:, :, b])
-
-    ds.FlushCache()
-    ds = None
+        for b in range(bands):
+            band = ds.GetRasterBand(b + 1)
+            band.WriteArray(rgb[:, :, b])
+            band.FlushCache()
+    finally:
+        # Always close the dataset, even on exception, to release the
+        # file handle and flush pending writes.
+        ds = None

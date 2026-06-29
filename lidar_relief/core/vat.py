@@ -17,15 +17,28 @@ from .blend import blend_rasters
 
 
 def _normalize(array: np.ndarray, invert: bool = False) -> np.ndarray:
-    """Normalize array to 0-1 range. Ignores NaNs."""
-    min_val = np.nanmin(array)
-    max_val = np.nanmax(array)
+    """Normalize array to 0-255 range. Preserves NaN locations.
+
+    For constant input (max == min), returns a mid-grey (127.5) array
+    rather than all-zero — all-zero would silently black out regions
+    of the VAT composite. NaNs in the input are preserved as NaNs in
+    the output so they can be masked downstream.
+    """
+    min_val = np.nanmin(array) if np.isfinite(array).any() else 0.0
+    max_val = np.nanmax(array) if np.isfinite(array).any() else 0.0
     if max_val == min_val:
-        norm = np.zeros_like(array)
+        # Constant input: mid-grey instead of zero so the blend
+        # doesn't go black.
+        norm = np.full_like(array, 0.5, dtype=np.float32)
     else:
         norm = (array - min_val) / (max_val - min_val)
     if invert:
         norm = 1.0 - norm
+    # Preserve NaN locations — the previous code's `np.zeros_like`
+    # branch turned NaN pixels into 0, destroying the nodata mask.
+    nan_mask = np.isnan(array)
+    if nan_mask.any():
+        norm = np.where(nan_mask, np.nan, norm)
     return norm * 255.0
 
 
@@ -46,6 +59,9 @@ def compute_vat(
     """
     if feedback:
         feedback.setProgressText("VAT: Computing Multidirectional Hillshade...")
+    # NOTE: multidirectional_hillshade does not currently accept a
+    # feedback parameter; the other sub-computations do. Progress for
+    # the hillshade step is reported only via setProgressText above.
     hillshade = multidirectional_hillshade(
         array, cellsize, azimuths=[315, 45, 135, 225], altitude=45.0
     )
@@ -64,13 +80,19 @@ def compute_vat(
         num_directions=16,
         search_radius=openness_radius,
         is_negative=False,
+        feedback=feedback,
     )
     openness_norm = _normalize(openness)
 
     if feedback:
         feedback.setProgressText("VAT: Computing Sky-View Factor...")
     svf = sky_view_factor(
-        array, cellsize, num_directions=16, search_radius=svf_radius, noise_level=0
+        array,
+        cellsize,
+        num_directions=16,
+        search_radius=svf_radius,
+        noise_level=0,
+        feedback=feedback,
     )
     svf_norm = _normalize(svf)
 

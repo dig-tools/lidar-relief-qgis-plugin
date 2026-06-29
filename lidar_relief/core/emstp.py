@@ -42,7 +42,23 @@ def compute_e4mstp(
     # SVF_S uses radius ~10px, SVF_L uses radius ~50px. Both computed internally.
     SVF_S = sky_view_factor(dem, cellsize, search_radius=10, feedback=feedback)
 
+    # If the first SVF call was cancelled (or returned all-NaN), bail
+    # out early with a NaN-filled result so callers can detect the
+    # cancellation. Previously the code computed the second SVF anyway,
+    # then np.nan_to_num() silently turned the cancelled output black.
+    if feedback is not None and feedback.isCanceled():
+        return np.full(dem.shape + (3,), 0, dtype=np.uint8)
+    if np.all(np.isnan(SVF_S)):
+        return np.full(dem.shape + (3,), 0, dtype=np.uint8)
+
     SVF_L = sky_view_factor(dem, cellsize, search_radius=50, feedback=feedback)
+
+    if feedback is not None and feedback.isCanceled():
+        return np.full(dem.shape + (3,), 0, dtype=np.uint8)
+    # Replace any NaN in SVF_L (cancellation or NoData) with a neutral
+    # 1.0 (open sky) so the stretch doesn't go fully black.
+    SVF_L = np.where(np.isnan(SVF_L), 1.0, SVF_L)
+    SVF_S = np.where(np.isnan(SVF_S), 1.0, SVF_S)
 
     svf_s_stretched = np.clip((SVF_S - 0.7) / (1.0 - 0.7), 0.0, 1.0)
     svf_l_stretched = np.clip((SVF_L - 0.9) / (1.0 - 0.9), 0.0, 1.0)

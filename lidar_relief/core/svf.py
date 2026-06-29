@@ -9,6 +9,62 @@ import numpy as np
 from .array_utils import _shift_array
 
 
+def _build_horizon_samples(num_directions, search_radius, scale=3):
+    """Build the list of (row_shift, col_shift, distance) samples for each
+    direction, deduplicated by integer pixel coordinates.
+
+    This mirrors rvt-py's horizon_shift_vector approach: supersample the
+    ray at `scale` times the integer resolution, round to integer pixel
+    coordinates, deduplicate, and sort by true Euclidean distance. This
+    ensures every integer pixel along the ray is visited at least once
+    (fixing the previous undersampling bug where consecutive distances
+    rounded to the same pixel on diagonal azimuths), AND the distance
+    used for the slope calculation is the true Euclidean distance to
+    that pixel.
+
+    Returns:
+        List of tuples: (direction_index, row_shift, col_shift, distance)
+        sorted by direction then by distance ascending.
+    """
+    angles = (2 * np.pi / num_directions) * np.arange(num_directions)
+    dir_rows = -np.cos(angles)  # negative because row index increases southward
+    dir_cols = np.sin(angles)
+
+    min_radius = 1  # don't sample the origin pixel
+    samples = []
+    for dir_idx in range(num_directions):
+        dr = dir_rows[dir_idx]
+        dc = dir_cols[dir_idx]
+        # Supersample the ray from min_radius to search_radius at `scale`
+        # resolution. This matches rvt-py's horizon_shift_vector exactly:
+        # radii = arange((radius_max - min_radius) * scale + 1) / scale + min_radius
+        radii = np.arange((search_radius - min_radius) * scale + 1) / scale + min_radius
+        # Compute fractional pixel coordinates along the ray
+        row_frac = dr * radii
+        col_frac = dc * radii
+        # Round to integer pixel coordinates
+        row_int = np.round(row_frac).astype(np.int32)
+        col_int = np.round(col_frac).astype(np.int32)
+        # Deduplicate by (row, col) — keep the first occurrence (smallest radius)
+        seen = set()
+        unique_rows = []
+        unique_cols = []
+        unique_dists = []
+        for r, c, frac_r, frac_c in zip(row_int, col_int, row_frac, col_frac):
+            key = (int(r), int(c))
+            if key in seen:
+                continue
+            if r == 0 and c == 0:
+                continue
+            seen.add(key)
+            unique_rows.append(int(r))
+            unique_cols.append(int(c))
+            # True Euclidean distance to this pixel centre (in pixel units)
+            unique_dists.append(float(np.hypot(frac_r, frac_c)))
+        samples.append((dir_idx, unique_rows, unique_cols, unique_dists))
+    return samples
+
+
 def sky_view_factor(
     dem: np.ndarray,
     cellsize: float,
@@ -24,18 +80,16 @@ def sky_view_factor(
     dem_filled = dem.copy()
     dem_filled[nan_mask] = dem_mean
 
-    azimuths_rad = np.linspace(0, 2 * np.pi, num_directions, endpoint=False)
-    dir_rows = -np.cos(azimuths_rad)
-    dir_cols = np.sin(azimuths_rad)
+    # Pre-compute the horizon sample points for each direction using
+    # the supersampling+dedup approach (fixes the horizon rounding bug
+    # documented in the v2.0.6 review).
+    horizon_samples = _build_horizon_samples(num_directions, search_radius)
 
     sin_horizon_sum = np.zeros((rows, cols), dtype=np.float32)
 
-    for dir_idx in range(num_directions):
+    for dir_idx, row_shifts, col_shifts, dists in horizon_samples:
         if feedback is not None and feedback.isCanceled():
             return np.full_like(dem, np.nan)
-
-        dr = dir_rows[dir_idx]
-        dc = dir_cols[dir_idx]
 
         max_sin = np.zeros((rows, cols), dtype=np.float32)
 
@@ -44,19 +98,13 @@ def sky_view_factor(
             countdown = np.zeros((rows, cols), dtype=np.int32)
             candidate_valid = np.zeros((rows, cols), dtype=bool)
 
-        for dist in range(1, search_radius + 1):
-            row_offset = dr * dist
-            col_offset = dc * dist
-            row_shift = int(round(row_offset))
-            col_shift = int(round(col_offset))
-
-            if row_shift == 0 and col_shift == 0:
+        for row_shift, col_shift, dist_units in zip(row_shifts, col_shifts, dists):
+            # actual distance in map units (cellsize * pixel-distance)
+            actual_dist = dist_units * cellsize
+            if actual_dist == 0:
                 continue
 
             shifted = _shift_array(dem_filled, row_shift, col_shift, dem_mean)
-            actual_dist = np.sqrt(
-                (row_shift * cellsize) ** 2 + (col_shift * cellsize) ** 2
-            )
 
             delta_z = shifted - dem_filled
             hypot_3d = np.hypot(delta_z, actual_dist)
@@ -74,7 +122,7 @@ def sky_view_factor(
                 # New candidate found
                 is_new_candidate = sin_angle > np.maximum(max_sin, candidate_sin)
 
-                # If tracking and found new candidate, old candidate is validated implicitly (since sin_angle > candidate_sin)
+                # If tracking and found new candidate, old candidate is validated implicitly
                 max_sin = np.where(
                     is_tracking & is_new_candidate, candidate_sin, max_sin
                 )
@@ -98,7 +146,8 @@ def sky_view_factor(
                 max_sin = np.maximum(max_sin, sin_angle)
 
         if noise_level > 0:
-            # At the end of the ray, promote candidates that were valid, or didn't get enough look-ahead pixels to be rejected
+            # At the end of the ray, promote candidates that were valid,
+            # or didn't get enough look-ahead pixels to be rejected
             promote_end = candidate_valid | (countdown > 0)
             max_sin = np.where(promote_end, np.maximum(max_sin, candidate_sin), max_sin)
 

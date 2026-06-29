@@ -377,8 +377,10 @@ def _crs_to_authid(crs) -> Optional[str]:
         wkt = crs.to_wkt()
         if wkt:
             return wkt
-    except (AttributeError, Exception):
+    except AttributeError:
         pass
+    except Exception as e:  # pragma: no cover — pyproj can raise pyproj.exceptions.CRSError
+        logger.debug("Could not convert CRS to WKT: %s", e)
     return None
 
 
@@ -412,7 +414,7 @@ def _points_to_dem(
     xyz: np.ndarray,
     output_path: str,
     cellsize: float = 1.0,
-    crs: str = "EPSG:4326",
+    crs: Optional[str] = None,
     feedback=None,
 ) -> str:
     """Rasterize XYZ ground points to a DEM GeoTIFF.
@@ -423,6 +425,13 @@ def _points_to_dem(
         xyz: (N, 3) float64 NumPy array (X, Y, Z).
         output_path: Output GeoTIFF path.
         cellsize: Output cell size.
+        crs: CRS to tag the output DEM with, as an 'EPSG:NNNN' string
+            or WKT. **Required** — pass ``None`` only if you have
+            already validated the source has no CRS and explicitly want
+            GDAL to write a CRS-less raster. Previously this defaulted
+            to ``'EPSG:4326'`` which silently tagged every output DEM
+            as WGS84 (the v2.0.4 changelog claimed this was fixed, but
+            the default argument remained EPSG:4326).
         feedback: Optional progress callback.
 
     Returns:
@@ -432,6 +441,16 @@ def _points_to_dem(
         from osgeo import gdal
     except ImportError:
         raise RuntimeError("GDAL is required for DEM generation but not available.")
+
+    if crs is None:
+        # Refuse to silently produce a CRS-less DEM. The caller
+        # (filter_las_file) already validates this and provides a CRS
+        # from the LAS header — but defend in depth.
+        raise ValueError(
+            "_points_to_dem requires an explicit CRS. Pass crs='EPSG:NNNN' "
+            "or a WKT string. Refusing to write a DEM with no coordinate "
+            "system — it would be silently misaligned with other data."
+        )
 
     if feedback:
         feedback.setProgressText("Generating DEM from ground points...")

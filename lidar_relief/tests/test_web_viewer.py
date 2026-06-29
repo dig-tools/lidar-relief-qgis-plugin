@@ -1,5 +1,11 @@
 import os
 import pytest
+
+# Web viewer tests require rasterio to build the test fixture COG.
+# Without this guard the entire module would crash during collection
+# if rasterio isn't installed (rather than skipping cleanly).
+pytest.importorskip("rasterio")
+
 from lidar_relief.export.cog_exporter import validate_cog
 from lidar_relief.export.web_viewer import generate_web_viewer
 import rasterio

@@ -3,7 +3,7 @@
 exports: (test functions)
 used_by: pytest runner
 rules:
-  Tests require reportlab and GDAL (Python 3.14 system).
+  Tests require reportlab and GDAL.
   Tests generate PDFs to temp dir, verify structure and content.
 """
 
@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 
 pytest.importorskip("osgeo")
+# PDF report generation requires reportlab in addition to GDAL.
+pytest.importorskip("reportlab")
 
 from osgeo import gdal  # noqa: E402
 
