@@ -79,24 +79,33 @@ jobs:
 
       - name: Install test dependencies
         run: |
+          set -e
           # qgis/qgis container has Python 3 with QGIS bindings + GDAL.
           # Use python3 explicitly — the container has no `python` alias.
           #
-          # Pin numpy<2 because the container's pre-built scipy, rasterio,
-          # rio-cogeo, reportlab, and rioxarray were all compiled against
-          # numpy 1.x. Under numpy 2.x they crash with
-          # "numpy.core.multiarray failed to import" /
-          # "numpy.dtype size changed". Pinning numpy<2 makes them all
-          # work. (QGIS 3.34 itself works fine under numpy 1.x.)
+          # The container's pre-built scipy, rasterio, rio-cogeo,
+          # reportlab, and rioxarray wheels were compiled against
+          # numpy 1.x and crash under numpy 2.x. We pin numpy==1.26.4
+          # (the last 1.x release, compatible with all the packages we
+          # need) by installing everything in ONE pip command — pip's
+          # resolver will then keep numpy at 1.26.4 because all packages
+          # accept numpy>=1.21.6 (which 1.26.4 satisfies) and we're
+          # explicitly requesting numpy==1.26.4.
           python3 -m pip install --upgrade pip
-          python3 -m pip install "numpy<2" scipy pytest
-          python3 -m pip install rasterio rioxarray xarray reportlab laspy || true
-          python3 -m pip install rio-cogeo || true
-          python3 -m pip install onnxruntime onnx || true
+          python3 -m pip install \
+            "numpy==1.26.4" \
+            scipy pytest \
+            rasterio rioxarray xarray reportlab laspy \
+            rio-cogeo \
+            onnxruntime onnx
+          # Verify numpy stayed at 1.x — if a package upgraded it, fail
+          # the job early with a clear message rather than failing later
+          # with a confusing "numpy.dtype size changed" error.
+          python3 -c "import numpy; assert numpy.__version__.startswith('1.'), f'numpy was upgraded to {numpy.__version__} — will break scipy'"
 
       - name: Install rvt-py (pure-Python module)
         run: |
-          # rvt-py imports scipy.ndimage, which works once numpy<2 is pinned.
+          # rvt-py imports scipy.ndimage, which works with numpy 1.26.4.
           python3 -m pip download rvt-py --no-deps -d /tmp/rvt-download || true
           if [ -f /tmp/rvt-download/rvt_py-*.whl ]; then
             unzip -q /tmp/rvt-download/rvt_py-*.whl -d /tmp/rvt-extracted
