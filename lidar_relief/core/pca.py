@@ -33,11 +33,15 @@ def compute_pca_composite(
     # on symmetric/Hermitian matrices (like covariance matrices) and is
     # always available. We keep scipy as an optional fast-path for users
     # who have it installed, but fall back to numpy transparently.
+    # Catch ValueError/AttributeError too — scipy may be installed but
+    # binary-incompatible with the installed numpy version (e.g. scipy
+    # compiled against numpy 1.x running under numpy 2.x raises
+    # "numpy.dtype size changed" ValueError on import).
     try:
         from scipy import linalg as _scipy_linalg
 
         _eigh = _scipy_linalg.eigh
-    except ImportError:
+    except (ImportError, ValueError, AttributeError):
         _eigh = np.linalg.eigh
 
     rows, cols = svf.shape
