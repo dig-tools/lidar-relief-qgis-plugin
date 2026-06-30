@@ -210,7 +210,9 @@ def _detect_raster_crs(raster_path: str) -> Optional[str]:
         raster_ds = None
 
 
-def _read_raster_extent(raster_path: str) -> Optional[tuple[float, float, float, float]]:
+def _read_raster_extent(
+    raster_path: str,
+) -> Optional[tuple[float, float, float, float]]:
     """Read a raster's geographic extent as (x_min, y_min, x_max, y_max).
 
     Returns None if the raster cannot be opened or has no geo-transform.
@@ -317,7 +319,7 @@ def package_for_qfield(
         dict with paths to generated files.
     """
     import shutil
-    from osgeo import gdal, ogr, osr
+    from osgeo import ogr, osr
 
     os.makedirs(output_dir, exist_ok=True)
 

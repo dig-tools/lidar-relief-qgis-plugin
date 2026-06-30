@@ -515,11 +515,8 @@ def _postprocess_yolo(
         # The original code hard-coded 85 (= 5 + 80 COCO classes); we now
         # accept any width >= 6 so custom YOLOv5 models with fewer or
         # more classes are supported.
-        elif (                len(outputs) == 1 and
-                outputs[0].ndim == 3 and
-                outputs[0].shape[-1] >= 6 and
-                outputs[0].shape[-1] != 6  # exclude the v8/v11 layout
-        ):
+        # exclude the v8/v11 layout (which has exactly 6 cols)
+        elif len(outputs) == 1 and outputs[0].ndim == 3 and outputs[0].shape[-1] >= 6 and outputs[0].shape[-1] != 6:
             out = outputs[0][0]
             for det in out:
                 scores = det[5:]

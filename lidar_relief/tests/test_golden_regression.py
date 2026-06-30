@@ -159,15 +159,9 @@ class TestSlopeGolden:
         dem = synthetic_dem
         # Manual Horn's at pixel (50, 50)
         y, x = 50, 50
-        window = dem[y-1:y+2, x-1:x+2]
-        dz_dx = (
-            (window[0, 0] + 2 * window[1, 0] + window[2, 0]) -
-            (window[0, 2] + 2 * window[1, 2] + window[2, 2])
-        ) / 8.0
-        dz_dy = (
-            (window[0, 0] + 2 * window[0, 1] + window[0, 2]) -
-            (window[2, 0] + 2 * window[2, 1] + window[2, 2])
-        ) / 8.0
+        window = dem[y - 1:y + 2, x - 1:x + 2]
+        dz_dx = ((window[0, 0] + 2 * window[1, 0] + window[2, 0]) - (window[0, 2] + 2 * window[1, 2] + window[2, 2])) / 8.0
+        dz_dy = ((window[0, 0] + 2 * window[0, 1] + window[0, 2]) - (window[2, 0] + 2 * window[2, 1] + window[2, 2])) / 8.0
         expected = np.degrees(np.arctan(np.sqrt(dz_dx**2 + dz_dy**2)))
 
         result = compute_slope(dem, cellsize=1.0, units="degrees")

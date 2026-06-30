@@ -425,7 +425,6 @@ def generate_report(
                 # (batch mode). The previous code used the fixed name
                 # '_histogram.png' which two concurrent reports would
                 # clobber.
-                import tempfile
                 import uuid
 
                 hist_dir = os.path.dirname(output_path) or "."

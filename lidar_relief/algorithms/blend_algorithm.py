@@ -127,12 +127,13 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
         tolerance = 1e-6 * max(
             ext_a.width(), ext_a.height(), ext_b.width(), ext_b.height(), 1.0
         )
-        if (
-            abs(ext_a.xMinimum() - ext_b.xMinimum()) > tolerance or
-            abs(ext_a.yMinimum() - ext_b.yMinimum()) > tolerance or
-            abs(ext_a.xMaximum() - ext_b.xMaximum()) > tolerance or
-            abs(ext_a.yMaximum() - ext_b.yMaximum()) > tolerance
-        ):
+        extents_aligned = all((
+            abs(ext_a.xMinimum() - ext_b.xMinimum()) <= tolerance,
+            abs(ext_a.yMinimum() - ext_b.yMinimum()) <= tolerance,
+            abs(ext_a.xMaximum() - ext_b.xMaximum()) <= tolerance,
+            abs(ext_a.yMaximum() - ext_b.yMaximum()) <= tolerance,
+        ))
+        if not extents_aligned:
             raise QgsProcessingException(
                 f"Input rasters have different extents. Please align them "
                 f"(e.g. via 'Align rasters' tool) before blending.\n"

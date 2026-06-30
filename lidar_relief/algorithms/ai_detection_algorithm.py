@@ -247,7 +247,7 @@ def _write_detections_gpkg(
     if os.path.exists(output_path):
         raise QgsProcessingException(
             f"Output GeoPackage already exists: {output_path}. "
-            f"Delete it first or choose a different output path."
+            "Delete it first or choose a different output path."
         )
 
     driver = ogr.GetDriverByName("GPKG")
@@ -273,10 +273,10 @@ def _write_detections_gpkg(
         # Refuse to write garbage instead.
         ds = None
         raise QgsProcessingException(
-            f"Input raster has no CRS (projection is empty). Refusing to "
-            f"write detections with an unknown coordinate system — they "
-            f"would be misplaced by potentially hundreds of kilometres. "
-            f"Please assign a CRS to the raster before running AI detection."
+            "Input raster has no CRS (projection is empty). Refusing to "
+            "write detections with an unknown coordinate system — they "
+            "would be misplaced by potentially hundreds of kilometres. "
+            "Please assign a CRS to the raster before running AI detection."
         )
 
     layer = ds.CreateLayer("detections", srs, ogr.wkbPolygon)

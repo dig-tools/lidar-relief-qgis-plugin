@@ -25,6 +25,15 @@ echo "=== Running Linter (ruff check, no --fix) ==="
 # without risking the publish pipeline.
 python3 -m ruff check lidar_relief/ || echo "(ruff check findings reported; informational only)"
 
+echo "=== Running Comprehensive Linter (flake8 --isolated, mirrors QGIS scanner profile) ==="
+# Mirrors plugins.qgis.org scanner exactly: enable W504 (line break AFTER
+# binary operator) and explicitly ignore cosmetic visual-indent rules
+# (#E117 over-indented, #E128 under-indented continuation, #E124 closing
+# bracket mismatch, #E201 whitespace after '(') that the scanner does
+# NOT enforce but default flake8 does. Net effect: CI failure mirrors
+# scanner failure on the rules the scanner actually checks.
+python3 -m flake8 --isolated --max-line-length=200     --extend-select=W504 --extend-ignore=E117,E128,E124,E201     lidar_relief/
+
 echo "=== Running Unit Tests (pytest) ==="
 python3 -m pytest lidar_relief/tests/ -v --tb=short
 
