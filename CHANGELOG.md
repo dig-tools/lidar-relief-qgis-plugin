@@ -8,10 +8,11 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
-## [2.0.9] - 2026-06-30
+## [2.0.10] - 2026-06-30
 
 ### Fixed
-- Lint scanner now passes 100% report: 0 findings across W503 (line break before binary operator), E402 (module-level import not at top of file), and E203 (whitespace before ':') rules. 18 fixes applied across 5 files (algorithms/blend_algorithm.py, algorithms/csf_algorithm.py, ml/detector.py, tests/test_golden_regression.py, tests/test_web_viewer.py): 9 W503 sites have their binary operator moved from line-start to end-of-previous-line; 7 E402 imports after a `pytest.importorskip` syscall are now marked `# noqa: E402`; 2 E203 violations in slice notation removed.
+- Lint scanner passes 100% with 0 findings across W503 (line break before binary operator), E402 (module-level import not at top of file), and E203 (whitespace before ':') rules. 18 fixes applied across 5 files (algorithms/blend_algorithm.py, algorithms/csf_algorithm.py, ml/detector.py, tests/test_golden_regression.py, tests/test_web_viewer.py): 9 W503 sites have their binary operator moved from line-start to end-of-previous-line; 7 E402 imports after a `pytest.importorskip` syscall are now marked `# noqa: E402`; 2 E203 violations in slice notation removed.
+- Republished as v2.0.10 to bypass GitHub's `/archive/refs/tags/v2.0.9.zip` CDN cache. The v2.0.9 published artifact on plugins.qgis.org was the cached source archive (containing v2.0.8 code with all lint violations), not the lint-fixed commit (`37fda8b`), because `qgis-plugin-ci release` downloads the auto-generated tag archive rather than repackaging from the local checkout, and the auto-generated archive is not refreshed when a tag is force-pushed. A new tag name produces a fresh archive with the corrected code.
 
 ## [2.0.8] - 2026-06-30
 
