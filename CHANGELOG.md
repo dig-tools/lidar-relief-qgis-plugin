@@ -8,6 +8,38 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.14] - 2026-06-30
+
+### Fixed
+
+- **ImportError crash at plugin init on QGIS 4.0.3.** The `pdal_classify_algorithm.py`
+  file used the non-existent class name `QgsProcessingParameterOutputString` (a typo
+  confusing QGIS Processing's *input* Parameter classes with its *output* Output
+  classes). Changed to the correct `QgsProcessingOutputString` in both the `from
+  qgis.core import (...)` block and the `self.addOutput(...)` call site. This was the
+  only instance of this typo across the entire codebase.
+
+### Added
+
+- **Pre-commit + CI changelog guard.** A new `scripts/check_changelog.py` stdlib-only
+  script reads `version=` from `lidar_relief/metadata.txt` and verifies that
+  `CHANGELOG.md` contains a matching `## [X.Y.Z]` header. Integrated as a local-repo
+  `.pre-commit-config.yaml` hook and a hard-fail step in `.github/workflows/release.yml`
+  (before the `qgis-plugin-ci release` publish) and in `test.sh`. This ensures future
+  releases cannot ship with an empty GitHub Release body.
+
+### Changed
+
+- **Pre-merge hardening pass.** Incorporated local working-tree improvements for
+  NumPy 2 deprecation compatibility (`int8` → `int16`/`uint8` type promotions),
+  rio-cogeo reprojection alignment in CSF ground filter, and field_packager
+  refactoring.
+- **Branch cleanup.** Merged the stale `fix/v2.0.7-hardening-pass` branch into
+  `master` and deleted it from GitHub. The repository now has a single branch:
+  `master`. GitLab remote switched from HTTPS token-auth to SSH.
+
+---
+
 ## [2.0.13] - 2026-06-30
 
 ### Fixed
