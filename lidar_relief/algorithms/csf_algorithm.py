@@ -121,7 +121,9 @@ class CsfAlgorithm(QgsProcessingAlgorithm):
             raise QgsProcessingException(
                 "Point cloud is too large (> 50 million points). Please clip the data first."
             )
-        elif not vlayer.isValid() and os.path.getsize(las_path) > 1.5 * 1024 * 1024 * 1024:
+        elif (                not vlayer.isValid() and
+                os.path.getsize(las_path) > 1.5 * 1024 * 1024 * 1024
+        ):
             raise QgsProcessingException(
                 "Point cloud file is too large (> 1.5 GB). Please clip the data first."
             )

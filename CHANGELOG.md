@@ -8,6 +8,11 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.9] - 2026-06-30
+
+### Fixed
+- Lint scanner now passes 100% report: 0 findings across W503 (line break before binary operator), E402 (module-level import not at top of file), and E203 (whitespace before ':') rules. 18 fixes applied across 5 files (algorithms/blend_algorithm.py, algorithms/csf_algorithm.py, ml/detector.py, tests/test_golden_regression.py, tests/test_web_viewer.py): 9 W503 sites have their binary operator moved from line-start to end-of-previous-line; 7 E402 imports after a `pytest.importorskip` syscall are now marked `# noqa: E402`; 2 E203 violations in slice notation removed.
+
 ## [2.0.8] - 2026-06-30
 
 ### Added

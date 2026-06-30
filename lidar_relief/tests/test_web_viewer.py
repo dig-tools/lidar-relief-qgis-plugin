@@ -6,11 +6,11 @@ import pytest
 # if rasterio isn't installed (rather than skipping cleanly).
 pytest.importorskip("rasterio")
 
-from lidar_relief.export.cog_exporter import validate_cog
-from lidar_relief.export.web_viewer import generate_web_viewer
-import rasterio
-from rasterio.transform import from_origin
-import numpy as np
+from lidar_relief.export.cog_exporter import validate_cog  # noqa: E402
+from lidar_relief.export.web_viewer import generate_web_viewer  # noqa: E402
+import rasterio  # noqa: E402
+from rasterio.transform import from_origin  # noqa: E402
+import numpy as np  # noqa: E402
 
 
 @pytest.fixture

@@ -128,10 +128,10 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
             ext_a.width(), ext_a.height(), ext_b.width(), ext_b.height(), 1.0
         )
         if (
-            abs(ext_a.xMinimum() - ext_b.xMinimum()) > tolerance
-            or abs(ext_a.yMinimum() - ext_b.yMinimum()) > tolerance
-            or abs(ext_a.xMaximum() - ext_b.xMaximum()) > tolerance
-            or abs(ext_a.yMaximum() - ext_b.yMaximum()) > tolerance
+            abs(ext_a.xMinimum() - ext_b.xMinimum()) > tolerance or
+            abs(ext_a.yMinimum() - ext_b.yMinimum()) > tolerance or
+            abs(ext_a.xMaximum() - ext_b.xMaximum()) > tolerance or
+            abs(ext_a.yMaximum() - ext_b.yMaximum()) > tolerance
         ):
             raise QgsProcessingException(
                 f"Input rasters have different extents. Please align them "
