@@ -7,7 +7,7 @@ VERSION=$(grep '^version=' lidar_relief/metadata.txt | cut -d'=' -f2)
 # Sanity check: ensure metadata.txt version matches the top entry of
 # CHANGELOG.md. The two have drifted in the past, causing users to see
 # the wrong changelog when installing a new version.
-CHANGELOG_TOP=$(grep -E '^##\s+\[' CHANGELOG.md | head -1 | sed -E 's/^## \[([0-9.]+)\].*$/\1/')
+CHANGELOG_TOP=$(grep -E '^##\s+\[' CHANGELOG.md | grep -v 'Unreleased' | head -1 | sed -E 's/^## \[([0-9.]+)\].*$/\1/')
 if [ -n "$CHANGELOG_TOP" ] && [ "$CHANGELOG_TOP" != "$VERSION" ]; then
     echo "ERROR: metadata.txt version ($VERSION) does not match top CHANGELOG.md entry ($CHANGELOG_TOP)"
     echo "Please update both files to the same version before packaging."
