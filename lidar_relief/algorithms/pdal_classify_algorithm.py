@@ -20,7 +20,13 @@ from qgis.core import (
     QgsProcessingParameterEnum,
     QgsProcessingParameterNumber,
     QgsProcessingParameterFileDestination,
-    QgsProcessingParameterOutputString,
+    # NOTE: this is an output (algo result), not an input parameter, so the
+    # `Parameter` prefix is wrong. `QgsProcessingOutputString` has shipped
+    # with QGIS Processing since the QGIS 3.0 API rewrite (2018) and works
+    # across 3.x and 4.x.  Using `QgsProcessingParameterOutputString` here
+    # produced an ImportError on QGIS 4.0.3 (and would on any 3.x install)
+    # because that name does not exist in qgis.core.
+    QgsProcessingOutputString,
     QgsProcessingException,
 )
 
@@ -119,7 +125,7 @@ class PdalClassifyAlgorithm(QgsProcessingAlgorithm):
             )
         )
         self.addOutput(
-            QgsProcessingParameterOutputString(self.OUTPUT_STATS, "Processing stats")
+            QgsProcessingOutputString(self.OUTPUT_STATS, "Processing stats")
         )
 
     def processAlgorithm(self, parameters, context, feedback):
@@ -138,7 +144,9 @@ class PdalClassifyAlgorithm(QgsProcessingAlgorithm):
         preset_idx = self.parameterAsEnum(parameters, self.PRESET, context)
         preset = PRESET_NAMES[preset_idx]
         resolution = self.parameterAsDouble(parameters, self.RESOLUTION, context)
-        output_format_idx = self.parameterAsEnum(parameters, self.OUTPUT_FORMAT, context)
+        output_format_idx = self.parameterAsEnum(
+            parameters, self.OUTPUT_FORMAT, context
+        )
         output_format = "gdal" if output_format_idx == 0 else "las"
         output_path = self.parameterAsFileOutput(parameters, self.OUTPUT, context)
 
