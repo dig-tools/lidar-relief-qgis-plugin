@@ -54,6 +54,17 @@ jobs:
             exit 1
           fi
 
+      - name: Verify CHANGELOG.md covers metadata.txt version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "::notice title=Changelog guard::checking CHANGELOG.md has ## [${VERSION}]"
+          # Prevents an accidental release that would publish a zip with no
+          # narrative behind the auto-generated "Full Changelog" shortlog on
+          # the GitHub Release page (see scripts/check_changelog.py for the
+          # rule set and failure-message format).  Hard fail so the publish
+          # step below never runs with a guard-broken changelog.
+          python3 scripts/check_changelog.py --quiet
+
       - name: Install qgis-plugin-ci
         run: pip install qgis-plugin-ci
 

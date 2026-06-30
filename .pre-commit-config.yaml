@@ -1,0 +1,30 @@
+# Pre-commit hooks for LiDAR-Relief-QGIS-Plugin.
+#
+# Install once locally:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Then `git commit` will refuse to accept a change to `metadata.txt` or
+# `CHANGELOG.md` unless CHANGELOG.md has a `## [<metadata version>]` header.
+# The same script is invoked from `.github/workflows/release.yml` so a tag
+# push that slips past the local hook will still be blocked before publish.
+#
+# Why fail the commit?  The QGIS plugin scanner runs on every plugins.qgis.org
+# upload.  When a GitHub tag is pushed without a corresponding CHANGELOG entry,
+# `gh release create --generate-notes` produces a diff-style "Full Changelog"
+# shortlog only — useful for maintainers, but no narrative for end users on
+# the GitHub Release page or the plugins.qgis.org changelog tab.
+
+repos:
+  - repo: local
+    hooks:
+      - id: changelog-up-to-date
+        name: CHANGELOG.md covers metadata.txt version
+        description: >-
+          Fail if CHANGELOG.md has no `## [<version>]` header for the
+          version= line in metadata.txt.
+        entry: python3 scripts/check_changelog.py
+        language: system
+        pass_filenames: false
+        files: '^(lidar_relief/)?metadata\.txt|CHANGELOG\.md|scripts/check_changelog\.py$'
+        # stages: [pre-commit, manual]  # uncomment to also run on `pre-commit run --hook-stage manual`

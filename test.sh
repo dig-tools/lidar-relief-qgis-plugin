@@ -37,4 +37,13 @@ python3 -m flake8 --isolated --max-line-length=200     --extend-select=W504 --ex
 echo "=== Running Unit Tests (pytest) ==="
 python3 -m pytest lidar_relief/tests/ -v --tb=short
 
+echo "=== Verifying CHANGELOG.md covers metadata.txt version ==="
+# Local-dev safety net for the same guard CI runs in release.yml.  When this
+# fails, the offending metadata.txt bump needs a matching `## [<version>]`
+# header in CHANGELOG.md before tagging the release.  Pre-commit hook
+# (.pre-commit-config.yaml) catches this on `git commit` too — this is
+# belt-and-suspenders for devs who run `./test.sh` directly without
+# `pre-commit install`.
+python3 scripts/check_changelog.py
+
 echo "✅ All tests and linting passed successfully!"
