@@ -13,6 +13,16 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          # Force an explicit, full-history checkout of the tag that triggered
+          # this workflow. Without this, on tag pushes actions/checkout leaves
+          # HEAD as a shallow (fetch-depth: 1) commit which can produce stale
+          # archives inside `qgis-plugin-ci release` (it internally does
+          # `git archive HEAD`, which on shallow clones has produced zips with
+          # content from an unrelated commit). Fetching full history makes the
+          # ci pipeline deterministic.
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -29,6 +39,20 @@ jobs:
 
       - name: Run Tests and Linter
         run: ./test.sh
+
+      - name: Verify tree clean before package
+        run: |
+          echo "::notice title=Tree state::ref=${{ github.ref_name }} sha=$(git rev-parse HEAD)"
+          # Track-only check (git diff HEAD), not `git status --porcelain`,
+          # because `./test.sh` may leave untracked artifacts (__pycache__/,
+          # .pytest_cache/, etc.) that `git archive HEAD` does NOT include
+          # in the published zip — only changes to tracked files can pollute
+          # the artifact.
+          if ! git diff --quiet HEAD ; then
+            echo "::error::Tracked working tree has changes vs HEAD after test.sh. Refusing to publish a possibly-stale zip."
+            git diff --stat HEAD
+            exit 1
+          fi
 
       - name: Install qgis-plugin-ci
         run: pip install qgis-plugin-ci

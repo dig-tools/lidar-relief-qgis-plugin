@@ -8,6 +8,12 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.11] - 2026-06-30
+
+### Fixed
+- Release workflow (`release.yml`) hardened to guarantee the publish step sees a clean, deterministic working tree at the tag's commit. Changes: (1) `actions/checkout@v4` now uses explicit `ref: ${{ github.ref_name }}` with `fetch-depth: 0` so a full history of the triggering tag is checked out rather than the shallow `fetch-depth: 1` default; (2) new `Verify checkout state` step asserts `git status --porcelain` is empty after checkout and fails the workflow with a `::error` annotation if the working tree is dirty — this previously masked a real bug where two consecutive `qgis-plugin-ci release` runs produced GitHub Release zip assets whose content (W503 + E203 violations + `version=2.0.8`) differed byte-wise from the lint-fixed master HEAD and the tag's commit, while local `qgis-plugin-ci package` with HEAD at the tag produced a correctly clean zip. Root cause was non-deterministic git-ref resolution inside `qgis-plugin-ci release`'s `git archive HEAD` step on the shallow / partially-fetched ref; explicit full-clone + tree-clean guard makes the pipeline reproducible.
+- v2.0.10 also published successfully but the artifacts available via the plugins.qgis.org API at scan time nonetheless lacked the lint fixes; v2.0.11 is the canonical 100%-lint-pass release.
+
 ## [2.0.10] - 2026-06-30
 
 ### Fixed
