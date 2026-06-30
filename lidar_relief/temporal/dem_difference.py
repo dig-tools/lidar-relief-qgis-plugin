@@ -321,7 +321,9 @@ def compute_dod_xarray(
         logger.warning("rioxarray write failed, trying GDAL: %s", e)
         # Fallback: write via GDAL
         _write_array_via_gdal(dod, dod_path, "float32", dem_old)
-        _write_array_via_gdal(mask.astype(np.uint8), mask_path, "uint8", dem_old, nodata=255)
+        _write_array_via_gdal(
+            mask.astype(np.uint8), mask_path, "uint8", dem_old, nodata=255
+        )
 
     volume_report = {
         "cut_volume_m3": round(cut_volume, 1),

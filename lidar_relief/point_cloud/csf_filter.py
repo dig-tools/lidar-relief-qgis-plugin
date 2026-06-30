@@ -379,7 +379,9 @@ def _crs_to_authid(crs) -> Optional[str]:
             return wkt
     except AttributeError:
         pass
-    except Exception as e:  # pragma: no cover — pyproj can raise pyproj.exceptions.CRSError
+    except (
+        Exception
+    ) as e:  # pragma: no cover — pyproj can raise pyproj.exceptions.CRSError
         logger.debug("Could not convert CRS to WKT: %s", e)
     return None
 

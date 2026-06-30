@@ -5,6 +5,7 @@ rules: Data-only module. No computation. Values from peer-reviewed literature.
   get_preset returns a deep copy so callers can mutate it without
   corrupting the canonical preset.
 """
+
 import copy
 
 

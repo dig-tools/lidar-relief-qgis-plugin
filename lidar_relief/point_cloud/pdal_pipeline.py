@@ -306,5 +306,7 @@ def run_pipeline(pipeline_json: str, feedback=None) -> dict:
         # Return the actual preset name (last reader stage's filename is
         # not a preset; the preset is set by build_pipeline at the call site).
         # We retain backwards compatibility by returning the first stage type.
-        "first_stage_type": pipeline_data.get("pipeline", [{}])[0].get("type", "unknown"),
+        "first_stage_type": pipeline_data.get("pipeline", [{}])[0].get(
+            "type", "unknown"
+        ),
     }

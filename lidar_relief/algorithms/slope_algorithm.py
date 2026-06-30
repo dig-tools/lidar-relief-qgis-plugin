@@ -119,7 +119,9 @@ class SlopeAlgorithm(QgsProcessingAlgorithm):
         str_units = self._UNIT_VALUES[int_unit_index]
         str_method = self._METHOD_VALUES[int_method_index]
 
-        feedback.setProgressText(f"Computing slope ({str_units}, {str_method}) in tiles...")
+        feedback.setProgressText(
+            f"Computing slope ({str_units}, {str_method}) in tiles..."
+        )
 
         process_in_tiles(
             source_path=source.source(),
