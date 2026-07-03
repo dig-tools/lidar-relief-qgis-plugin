@@ -8,6 +8,14 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.19] - 2026-07-04
+
+### Fixed
+- **Plugins.qgis.org "Changes" tab completeness.** v2.0.18 reduced the `changelog=` block in `metadata.txt` down to a single `2.0.18` entry on the assumption that QGIS-Django's per-version auto-fill would render a multi-version block as empty / duplicated version rows. v2.0.19 restores the cumulative `changelog=` block covering versions `2.0.14 → 2.0.18` (each version followed by full bullets, no bare version-number-only lines, no duplicates), so plugins.qgis.org's auto-fill has the full release history since the 30 June 2026 v2.0.14 baseline.
+- **GitHub release bodies contained `--generate-notes` boilerplate, not CHANGELOG.md narrative.** The release.yml workflow's `gh release create --generate-notes` flag emits a commit/PR list, which is not useful as end-user release notes. Replaced the GitHub release bodies for `v2.0.18` and `v2.0.19` with the actual CHANGELOG.md narrative for each version, so users browsing github.com/mabo-du/lidar-relief-qgis-plugin/releases see the same content as in this file.
+
+---
+
 ## [2.0.18] - 2026-07-04
 
 ### Fixed
