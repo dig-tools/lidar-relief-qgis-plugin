@@ -157,7 +157,9 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
         # Scale inputs if they are not 0-255 (e.g. SVF is 0-1, SLRM is negative/positive)
         # SVF is typically [0, 1]. Multiply by 255.
         arr_b = data_b.array
-        if np.nanmax(arr_b) <= 1.0 and np.nanmin(arr_b) >= 0.0:
+        b_min = np.nanmin(arr_b) if np.isfinite(arr_b).any() else 0.0
+        b_max = np.nanmax(arr_b) if np.isfinite(arr_b).any() else 0.0
+        if (b_max > b_min and b_max <= 1.0 and b_min >= 0.0) or (b_max == b_min and 0.0 < b_min < 1.0):
             arr_b = arr_b * 255.0
 
         # SLRM could be -5 to 5. We should stretch to 0-255 if it has negative values.
@@ -170,7 +172,9 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
                 arr_b = np.full_like(arr_b, 127.0)
 
         arr_a = data_a.array
-        if np.nanmax(arr_a) <= 1.0 and np.nanmin(arr_a) >= 0.0:
+        a_min = np.nanmin(arr_a) if np.isfinite(arr_a).any() else 0.0
+        a_max = np.nanmax(arr_a) if np.isfinite(arr_a).any() else 0.0
+        if (a_max > a_min and a_max <= 1.0 and a_min >= 0.0) or (a_max == a_min and 0.0 < a_min < 1.0):
             arr_a = arr_a * 255.0
 
         feedback.setProgressText(f"Blending layers using {mode_str}...")

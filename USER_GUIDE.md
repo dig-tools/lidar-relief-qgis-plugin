@@ -236,6 +236,7 @@ pass. Choose from 4 research-validated terrain presets or use manual settings:
 | AI Detection | `onnxruntime` | `pip install onnxruntime` |
 | GPU Acceleration | `cupy-cuda12x` | `pip install cupy-cuda12x` |
 | LAS/LAZ input | `laspy` or `pdal` | `pip install laspy` |
+| RVT Relief Toolbox | `rvt-py` | `pip install rvt-py` |
 
 All features degrade gracefully with clear error messages if a dependency
 is missing.

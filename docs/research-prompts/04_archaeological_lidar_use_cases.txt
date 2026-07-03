@@ -1,0 +1,12 @@
+Project: LiDAR-Relief-QGIS-Plugin
+Source: open_heritage_software_project_scopes.md — Project 19
+======================================================================
+
+CONTEXT:
+I am building a QGIS plugin for LiDAR-derived archaeological relief visualisations. I need research:
+
+──────────────────────────────────────────────────────────────────────
+
+RESEARCH PROMPT 4:
+
+**Archaeological LiDAR use cases**: What specific archaeological feature types are best detected by which visualisation algorithms? For example: which algorithm best reveals medieval ridge-and-furrow, Roman road agger, prehistoric enclosure ditches, or tropical site vegetation patterns? What colour ramps are recommended for each use case?

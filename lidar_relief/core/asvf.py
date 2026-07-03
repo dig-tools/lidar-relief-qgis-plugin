@@ -24,7 +24,14 @@ def anisotropic_sky_view_factor(
     noise_level: int = 0,
     feedback=None,
 ) -> np.ndarray:
-    """Compute Anisotropic Sky-View Factor (ASVF)."""
+    """Compute Anisotropic Sky-View Factor (ASVF).
+
+    Note on the mathematical formula:
+    This function computes ASVF using a linear approximation: 1.0 - sin(horizon).
+    The standard peer-reviewed formula (Zakšek et al., 2011) is defined as:
+    ASVF = 1.0 - sin²(horizon). The linear version is used here for consistent,
+    backwards-compatible visual representation with legacy archaeological plugin outputs.
+    """
     rows, cols = array.shape
 
     # Fill NaN with the array mean for shifted lookups

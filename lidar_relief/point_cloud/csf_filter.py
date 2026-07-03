@@ -23,7 +23,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 try:
-    from CSF import CSF, VecInt, VecFloat, VecVecFloat
+    from CSF import CSF, VecInt
 
     _CSF_AVAILABLE = True
 except ImportError:
@@ -92,23 +92,8 @@ def check_dependencies() -> None:
         )
 
 
-def _numpy_to_csf_points(xyz: np.ndarray) -> "VecVecFloat":
-    """Convert a NumPy XYZ array to CSF's VecVecFloat format.
-
-    Args:
-        xyz: (N, 3) float32/float64 array of XYZ points.
-
-    Returns:
-        VecVecFloat suitable for CSF.setPointCloud().
-    """
-    pts = VecVecFloat()
-    for row in xyz:
-        pt = VecFloat()
-        pt.push_back(float(row[0]))
-        pt.push_back(float(row[1]))
-        pt.push_back(float(row[2]))
-        pts.push_back(pt)
-    return pts
+# The slow _numpy_to_csf_points function has been removed.
+# Modern CSF bindings accept numpy arrays directly, so filtering passes the numpy array to setPointCloud.
 
 
 def filter_point_cloud(
@@ -146,8 +131,7 @@ def filter_point_cloud(
     if len(xyz) == 0:
         return np.empty((0, 3), dtype=np.float32), np.empty((0, 3), dtype=np.float32)
 
-    # Build CSF point cloud
-    pts = _numpy_to_csf_points(xyz)
+    # Build CSF point cloud - nothing to build since numpy array is passed directly below
 
     # Configure CSF
     csf = CSF()
@@ -166,7 +150,8 @@ def filter_point_cloud(
         csf.params.iterations = int(iterations)
 
     # Run
-    csf.setPointCloud(pts)
+    # Modern CSF bindings accept numpy arrays directly, avoiding the slow O(N) Python loop.
+    csf.setPointCloud(xyz)
     ground_indices = VecInt()
     offground_indices = VecInt()
     csf.do_filtering(ground_indices, offground_indices)

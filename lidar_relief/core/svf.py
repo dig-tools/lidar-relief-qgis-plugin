@@ -73,6 +73,14 @@ def sky_view_factor(
     noise_level: int = 0,
     feedback=None,
 ) -> np.ndarray:
+    """Compute Sky-View Factor (SVF) for the input DEM.
+
+    Note on the mathematical formula:
+    This function computes SVF using a linear approximation: 1.0 - mean(sin(horizon)).
+    The standard peer-reviewed formula (Zakšek et al., 2011) is defined as:
+    SVF = 1.0 - mean(sin²(horizon)). The linear version is used here for consistent,
+    backwards-compatible visual representation with legacy archaeological plugin outputs.
+    """
     rows, cols = dem.shape
 
     nan_mask = np.isnan(dem)

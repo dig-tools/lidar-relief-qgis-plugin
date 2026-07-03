@@ -8,6 +8,31 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.15] - 2026-07-04
+
+### Fixed
+- **RVT Topographic Openness execution failure**: Fixed missing `rvt.vis.openness` API usage in `rvt_vis.py` by calling `rvt.vis.sky_view_factor(compute_opns=True)` to align with the modern `rvt-py` 2.x API.
+- **RVT Multi-directional Hillshade output orientation and padding**: Fixed shape mismatch crashing tile processing by transposing multi-directional hillshade outputs to `(height, width, directions)` and fixing 3D padding logic in `_unwrap_rvt_output`.
+- **MSTP memory spikes and OOM vulnerability**: Replaced $O(N \times M)$ coordinate grids using `np.mgrid` inside `_window_stats` with 1D broadcasted arrays, reducing memory footprints by gigabytes.
+- **Flat terrain standard deviation clamping noise**: Clamped flat-terrain standard deviations to exactly `0.0` in `compute_dev` when standard deviation falls below threshold to avoid micro-noise speckles.
+- **Windows file locks and silent cleanup failure**: Closed all GDAL Band and Dataset handles in `process_in_tiles` before attempting to delete files, and used `gdal.GetDriverByName("GTiff").Delete(path)` on cancel to ensure proper locks release and file removal.
+- **Auto-scaling heuristic for flat/all-zero rasters**: Fixed division-by-zero warnings on flat inputs in `blend_algorithm.py`.
+- **Azimuth cardinal coordinate parsing**: Wrapped azimuth parsing in `hillshade_algorithm.py` inside a try-except block to gracefully handle non-numeric azimuths.
+- **GDAL BuildVRT failure check**: Added return validation in `ml_export_algorithm.py` to prevent `NoneType` object errors when `BuildVRT` fails.
+- **YOLOv5 postprocessing and detection label mapping**: Reordered postprocessing checks in `ml/detector.py` to make the YOLOv5 branch reachable and fixed dictionary parsing to support non-contiguous integer class mappings.
+- **CSF point cloud conversion bottleneck**: Replaced slow single-threaded point conversion loops in `point_cloud/csf_filter.py` with direct SWIG NumPy array transfers.
+- **Multi-temporal change detection transform compatibility**: Checked transform objects dynamically (supporting both `affine.Affine` and standard GDAL 6-tuples) in `temporal/dem_difference.py`.
+- **QField field package compatibility**: Included standard XML headers in exported QField project files.
+- **Report generator percentiles mismatch**: Fixed statistics tables requesting P85 but computing P95 percentiles.
+- **Web viewer CDN security**: Included Subresource Integrity (SRI) hashes on all external CDN assets.
+
+### Changed
+- **Test suite robustness and coverage**: Added deterministic random seeds, flat DEM test cases, and NaN propagation checks to PCA, VAT, Red Relief, and e4MSTP tests.
+- **Unified GDAL exceptions in tests**: Enabled `gdal.UseExceptions()` in test fixtures to suppress future GDAL 4.0 warning logs.
+- **SVF/ASVF linear approximation documentation**: Documented the linear $1 - \sin$ approximation choice in `svf.py` and `asvf.py` compared to the standard peer-reviewed $1 - \sin^2$ formula.
+
+---
+
 ## [2.0.14] - 2026-06-30
 
 ### Fixed

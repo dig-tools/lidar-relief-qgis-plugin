@@ -27,21 +27,21 @@ pytestmark = pytest.mark.skipif(
 class TestRvtMultidirectionalHillshade:
     def test_output_shape_matches_input(self, flat_dem):
         result = rvt_multidirectional_hillshade(flat_dem, cellsize=1.0, nr_directions=8)
-        assert result.shape == flat_dem.shape
+        assert result.shape == flat_dem.shape + (8,)
 
     def test_output_dtype_float32(self, flat_dem):
         result = rvt_multidirectional_hillshade(flat_dem, cellsize=1.0, nr_directions=8)
         assert result.dtype == np.float32
 
     def test_flat_surface_is_bright(self, flat_dem):
-        # A flat surface lit from a 45° altitude should produce a near-uniform,
-        # bright result — well above 128/255 on average.
+        # A flat surface lit from a 35° altitude should produce a near-uniform,
+        # bright result — well above 0.5 on average for [0, 1] cosine hillshade.
         result = rvt_multidirectional_hillshade(
             flat_dem, cellsize=1.0, nr_directions=16
         )
         valid = result[~np.isnan(result)]
         assert valid.size > 0
-        assert np.mean(valid) > 100.0
+        assert np.mean(valid) > 0.5
 
     def test_tilted_surface_has_variation(self, tilted_dem):
         result = rvt_multidirectional_hillshade(
@@ -49,28 +49,26 @@ class TestRvtMultidirectionalHillshade:
         )
         valid = result[~np.isnan(result)]
         assert valid.size > 0
-        # Tilted DEM should not be uniform — at least some std-dev.
-        assert np.std(valid) > 1.0
+        # Tilted DEM should not be uniform — at least some standard deviation.
+        assert np.std(valid) > 0.01
 
-    def test_output_range_zero_to_255(self, tilted_dem):
+    def test_output_range_zero_to_one(self, tilted_dem):
         result = rvt_multidirectional_hillshade(
             tilted_dem, cellsize=1.0, nr_directions=8
         )
         valid = result[~np.isnan(result)]
         assert np.all(valid >= 0.0)
-        assert np.all(valid <= 255.0)
+        assert np.all(valid <= 1.0)
 
     def test_nan_in_is_nan_out(self, dem_with_nodata):
         result = rvt_multidirectional_hillshade(
             dem_with_nodata, cellsize=1.0, nr_directions=8
         )
         input_nan = np.isnan(dem_with_nodata)
-        output_nan = np.isnan(result)
-        # Every input NaN pixel must remain NaN.
-        assert np.all(output_nan[input_nan])
-        # No NaN may appear where the input had data (rvt with -9999 sentinel
-        # would propagate the marker; we strip it out via the input mask).
-        assert not np.any(output_nan[~input_nan])
+        # Every input NaN pixel must remain NaN in all direction bands.
+        assert np.all(np.isnan(result[input_nan]))
+        # No NaN may appear where the input had data
+        assert not np.any(np.isnan(result[~input_nan]))
 
     def test_validates_nr_directions_lower_bound(self, flat_dem):
         with pytest.raises(ValueError):
@@ -89,7 +87,7 @@ class TestRvtMultidirectionalHillshade:
             result = rvt_multidirectional_hillshade(
                 flat_dem, cellsize=1.0, nr_directions=n
             )
-            assert result.shape == flat_dem.shape
+            assert result.shape == flat_dem.shape + (n,)
             assert result.dtype == np.float32
 
 
@@ -106,7 +104,7 @@ class TestRvtSingleHillshade:
         )
         valid = result[~np.isnan(result)]
         assert np.all(valid >= 0.0)
-        assert np.all(valid <= 255.0)
+        assert np.all(valid <= 1.0)
 
     def test_single_nan_propagation(self, dem_with_nodata):
         result = rvt_single_hillshade(
@@ -136,17 +134,15 @@ class TestRvtOpenness:
         result = rvt_openness(flat_dem, cellsize=1.0, search_radius=10)
         assert result.dtype == np.float32
 
-    def test_flat_surface_is_near_zero(self, flat_dem):
-        # A perfectly horizontal surface has zero openness — every angle
-        # to the horizon is the same as the surface tilt (here: 0).
+    def test_flat_surface_is_90_degrees(self, flat_dem):
+        # A perfectly horizontal surface has 90° openness (zenith angle)
+        # to match the Yokoyama topographic openness contract.
         result = rvt_openness(
             flat_dem, cellsize=1.0, search_radius=20, num_directions=16
         )
         valid = result[~np.isnan(result)]
         assert valid.size > 0
-        # Accept a small tolerance — rvt's internal bounding can introduce
-        # sub-degree noise at zero-input.
-        assert np.max(np.abs(valid)) < 5.0
+        np.testing.assert_allclose(valid, 90.0, atol=5.0)
 
     def test_positive_openness_in_zero_to_one_hundred_eighty(self, tilted_dem):
         result = rvt_openness(
@@ -171,8 +167,7 @@ class TestRvtOpenness:
         result = rvt_openness(dem_with_nodata, cellsize=1.0, search_radius=10)
         input_nan = np.isnan(dem_with_nodata)
         assert np.all(np.isnan(result)[input_nan])
-        # No NaN may appear where the input had data — rvt converts -9999
-        # internally; we re-apply the input mask afterward.
+        # No NaN may appear where the input had data
         assert not np.any(np.isnan(result)[~input_nan])
 
     def test_validates_cellsize_positive(self, flat_dem):

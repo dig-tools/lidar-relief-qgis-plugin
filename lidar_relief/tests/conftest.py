@@ -10,6 +10,12 @@ rules:
 import numpy as np
 import pytest
 
+try:
+    from osgeo import gdal
+    gdal.UseExceptions()
+except ImportError:
+    pass
+
 
 @pytest.fixture
 def flat_dem() -> np.ndarray:

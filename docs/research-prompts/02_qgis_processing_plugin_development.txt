@@ -1,0 +1,12 @@
+Project: LiDAR-Relief-QGIS-Plugin
+Source: open_heritage_software_project_scopes.md — Project 19
+======================================================================
+
+CONTEXT:
+I am building a QGIS plugin for LiDAR-derived archaeological relief visualisations. I need research:
+
+──────────────────────────────────────────────────────────────────────
+
+RESEARCH PROMPT 2:
+
+**QGIS Processing plugin development**: How does the QGIS 3.x Processing plugin API work? What are the key classes (QgsProcessingAlgorithm, QgsProcessingProvider, QgsProcessingParameterRasterLayer)? What is the recommended project structure for a QGIS Processing plugin? How is a plugin submitted to the QGIS Plugin Repository?

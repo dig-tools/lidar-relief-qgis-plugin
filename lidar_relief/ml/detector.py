@@ -99,8 +99,21 @@ def load_model(
                 if isinstance(label_data, list):
                     labels = label_data
                 elif isinstance(label_data, dict):
-                    # Support {0: "barrow", 1: "ditch"} format
-                    labels = [label_data[str(i)] for i in range(len(label_data))]
+                    # Support {0: "barrow", 1: "ditch"} format, mapping to correct class ID indices
+                    max_idx = -1
+                    int_keys = {}
+                    for k, v in label_data.items():
+                        try:
+                            ik = int(k)
+                            int_keys[ik] = v
+                            if ik > max_idx:
+                                max_idx = ik
+                        except ValueError:
+                            pass
+                    if int_keys:
+                        labels = [int_keys.get(i, f"class_{i}") for i in range(max_idx + 1)]
+                    else:
+                        labels = []
         except (json.JSONDecodeError, KeyError) as e:
             logger.warning("Failed to load labels: %s", e)
 
@@ -488,7 +501,7 @@ def _postprocess_yolo(
     # Try standard YOLO output format
     try:
         # YOLOv8/v11: single output tensor (1, N, 6) — [x1, y1, x2, y2, conf, class]
-        if len(outputs) == 1 and outputs[0].ndim == 3:
+        if len(outputs) == 1 and outputs[0].ndim == 3 and outputs[0].shape[-1] == 6:
             out = outputs[0][0]  # (N, 6)
             for det in out:
                 x1, y1, x2, y2, conf, cls_id = det
@@ -516,7 +529,7 @@ def _postprocess_yolo(
         # accept any width >= 6 so custom YOLOv5 models with fewer or
         # more classes are supported.
         # exclude the v8/v11 layout (which has exactly 6 cols)
-        elif len(outputs) == 1 and outputs[0].ndim == 3 and outputs[0].shape[-1] >= 6 and outputs[0].shape[-1] != 6:
+        elif len(outputs) == 1 and outputs[0].ndim == 3 and outputs[0].shape[-1] > 6:
             out = outputs[0][0]
             for det in out:
                 scores = det[5:]

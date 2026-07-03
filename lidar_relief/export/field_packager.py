@@ -549,7 +549,7 @@ def _create_qgis_project(
 
     # Prettify XML using safe ElementTree indentation
     ET.indent(doc, space="  ")
-    pretty_xml = ET.tostring(doc, encoding="utf-8", xml_declaration=False)
+    pretty_xml = ET.tostring(doc, encoding="utf-8", xml_declaration=True)
 
     with open(qgs_path, "wb") as f:
         f.write(pretty_xml)

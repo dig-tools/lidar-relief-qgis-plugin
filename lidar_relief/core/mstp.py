@@ -47,10 +47,9 @@ def _window_stats(
     pad_sum = np.pad(i_sum, ((1, 0), (1, 0)), mode="constant", constant_values=0)
     pad_sq = np.pad(i_sq, ((1, 0), (1, 0)), mode="constant", constant_values=0)
 
-    # Coordinate grids for the window boundaries
-    # x2, y2 are bottom-right (inclusive)
-    # x1, y1 are top-left (exclusive, so they point to the row/col just before the window)
-    y, x = np.mgrid[0:rows, 0:cols]
+    # Use 1D arrays and broadcast to avoid creating large 2D grids in memory
+    x = np.arange(cols)
+    y = np.arange(rows)[:, np.newaxis]
 
     x1 = np.maximum(x - radius, 0)
     y1 = np.maximum(y - radius, 0)
@@ -112,9 +111,11 @@ def multi_scale_topographic_position(
 
     def compute_dev(radius: int):
         mean_z, std_z = _window_stats(i_sum, i_sq, radius)
-        # Prevent division by zero in perfectly flat areas
-        std_z = np.maximum(std_z, 0.001)
-        dev = (filled_dem - mean_z) / std_z
+        # If std_z is below 0.001, treat it as flat area (DEV = 0) to avoid micro-noise amplification
+        is_flat = std_z < 0.001
+        std_z_safe = np.where(is_flat, 1.0, std_z)
+        dev = (filled_dem - mean_z) / std_z_safe
+        dev[is_flat] = 0.0
         return dev
 
     if feedback is not None and feedback.isCanceled():

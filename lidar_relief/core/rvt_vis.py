@@ -27,19 +27,33 @@ def _unwrap_rvt_output(result: np.ndarray, reference: np.ndarray) -> np.ndarray:
     the original DEM grid (any cropped edge would otherwise mis-correlate
     tile interiors with the source raster).
     """
-    if result.shape == reference.shape:
-        return result
-    out_rows, out_cols = result.shape
+    if result.ndim == 3:
+        out_ch, out_rows, out_cols = result.shape
+    else:
+        out_rows, out_cols = result.shape
+        out_ch = None
+
     in_rows, in_cols = reference.shape
+    if out_rows == in_rows and out_cols == in_cols:
+        return result
+
     pad_top = (in_rows - out_rows) // 2
     pad_left = (in_cols - out_cols) // 2
     pad_bottom = in_rows - out_rows - pad_top
     pad_right = in_cols - out_cols - pad_left
-    return np.pad(
-        result,
-        ((pad_top, pad_bottom), (pad_left, pad_right)),
-        mode="edge",
-    )
+
+    if out_ch is not None:
+        return np.pad(
+            result,
+            ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right)),
+            mode="edge",
+        )
+    else:
+        return np.pad(
+            result,
+            ((pad_top, pad_bottom), (pad_left, pad_right)),
+            mode="edge",
+        )
 
 
 class RVTNotAvailable(RuntimeError):
@@ -139,13 +153,17 @@ def rvt_multidirectional_hillshade(
     )
 
     result = np.asarray(result_float, dtype=np.float32)
+    padded = _unwrap_rvt_output(result, array)
+
+    # Transpose from (directions, rows, cols) to (rows, cols, directions)
+    padded_transposed = np.transpose(padded, (1, 2, 0))
 
     # Re-apply NaN where the input was nodata. We use the input mask directly
     # because rvt converts -9999 to its own internal nodata at the edges — we
     # want pixel-exact parity with the source DEM.
-    result[nan_mask] = np.nan
+    padded_transposed[nan_mask] = np.nan
 
-    return _unwrap_rvt_output(result, array)
+    return padded_transposed
 
 
 def rvt_openness(
@@ -203,34 +221,36 @@ def rvt_openness(
     if feedback is not None and feedback.isCanceled():
         return np.full_like(array, np.nan)
 
-    method = "neg" if is_negative else "pos"
-    result_obj = _RVT_VIS.openness(
+    # In rvt-py version 2.x, openness is calculated via sky_view_factor.
+    # To compute negative openness, we compute positive openness on the inverted DEM (ve_factor = -ve).
+    ve_factor = -float(ve) if is_negative else float(ve)
+    result_obj = _RVT_VIS.sky_view_factor(
         dem=sanitized,
-        radius=int(search_radius),
-        method=method,
-        ve=float(ve),
-        n_dir=int(num_directions),
+        resolution=float(cellsize),
+        compute_svf=False,
+        compute_opns=True,
+        svf_n_dir=int(num_directions),
+        svf_r_max=int(search_radius),
+        ve_factor=ve_factor,
         no_data=-9999.0,
     )
 
-    # rvt.vis.openness returns a dict with 'pos' and/or 'neg' keys. Fall back
-    # to treating the return value as a raw ndarray in case the upstream
-    # signature ever changes shape.
     if isinstance(result_obj, dict):
-        result_float = result_obj.get(method)
+        result_float = result_obj.get("opns")
         if result_float is None:
             raise RuntimeError(
-                f"rvt.vis.openness did not return a '{method}' array; "
+                f"rvt.vis.sky_view_factor did not return an 'opns' array; "
                 f"got keys={list(result_obj.keys())}"
             )
     else:
         result_float = result_obj
 
-    # rvt returns radians; convert to degrees to match the native
-    # topographic_openness() contract used by the rest of the plugin.
-    result = np.rad2deg(np.asarray(result_float, dtype=np.float32)).astype(np.float32)
-    result[nan_mask] = np.nan
-    return _unwrap_rvt_output(result, array)
+    # In rvt-py version 2.x, sky_view_factor returns openness values in degrees,
+    # in the range [0, 180] (matching the Yokoyama topographic openness contract).
+    result = np.asarray(result_float, dtype=np.float32)
+    padded = _unwrap_rvt_output(result, array)
+    padded[nan_mask] = np.nan
+    return padded
 
 
 def rvt_single_hillshade(
@@ -269,5 +289,6 @@ def rvt_single_hillshade(
     )
 
     result = np.asarray(result_float, dtype=np.float32)
-    result[nan_mask] = np.nan
-    return _unwrap_rvt_output(result, array)
+    padded = _unwrap_rvt_output(result, array)
+    padded[nan_mask] = np.nan
+    return padded

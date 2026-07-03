@@ -85,6 +85,7 @@ def _single_hillshade(
         Result is clipped to [0, 1] — no negative illumination.
     """
     # Convert to radians
+    azimuth_deg = float(azimuth_deg) % 360.0  # wrap to [0, 360)
     azimuth_rad = np.deg2rad(360.0 - azimuth_deg + 90.0)  # geographic → math
     zenith_rad = np.deg2rad(90.0 - altitude_deg)
 
@@ -115,7 +116,7 @@ def multidirectional_hillshade(
         dem: 2D float32 elevation array (nodata as np.nan).
         cellsize: Pixel size in map units.
         azimuths: List of sun azimuth angles in degrees. Defaults to
-                  [315, 45, 135, 225, 270, 360] (6-direction blend).
+                  [315, 45, 135, 225, 270, 0] (6-direction blend).
         altitude: Sun altitude angle in degrees above horizon (0–90).
 
     Returns:
@@ -127,7 +128,7 @@ def multidirectional_hillshade(
         Default 6 azimuths provide good all-direction coverage for archaeology.
     """
     if azimuths is None:
-        azimuths = [315.0, 45.0, 135.0, 225.0, 270.0, 360.0]
+        azimuths = [315.0, 45.0, 135.0, 225.0, 270.0, 0.0]
 
     dz_dx, dz_dy = _horn_gradients(dem, cellsize)
 

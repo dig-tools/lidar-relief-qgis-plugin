@@ -270,7 +270,14 @@ def compute_dod_xarray(
     # Cell area from geotransform
     if hasattr(dod, "rio"):
         transform = dod.rio.transform()
-        cell_area = abs(transform[0] * transform[4])  # pixel_width × pixel_height
+        # Handle both affine.Affine objects and standard GDAL 6-element tuples
+        if hasattr(transform, "a") and hasattr(transform, "e"):
+            cell_area = abs(transform.a * transform.e)
+        elif len(transform) >= 6:
+            # GDAL transform: (origin_x, pixel_width, rotation_x, origin_y, rotation_y, pixel_height)
+            cell_area = abs(transform[1] * transform[5])
+        else:
+            cell_area = abs(transform[0] * transform[4])
     else:
         cell_area = 1.0
 

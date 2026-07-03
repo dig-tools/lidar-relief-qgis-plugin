@@ -80,7 +80,7 @@ def read_dem_to_array(source_path: str, feedback=None) -> DemData:
 
     # Build nodata mask and replace with NaN
     if nodata is not None:
-        nodata_mask = np.isclose(array, nodata, rtol=1e-5) | np.isnan(array)
+        nodata_mask = np.isclose(array, nodata, atol=1e-5, rtol=0.0) | np.isnan(array)
     else:
         nodata_mask = np.isnan(array)
 
@@ -148,6 +148,11 @@ def write_array_to_raster(
         gdal_dtype,
         options=creation_options,
     )
+    if out_dataset is None:
+        raise ValueError(
+            f"Failed to create output raster via GDAL: {output_path}. "
+            "Please check disk space, write permissions, or folder existence."
+        )
 
     out_dataset.SetGeoTransform(geotransform)
     out_dataset.SetProjection(projection)
@@ -292,6 +297,11 @@ def process_in_tiles(
     out_dataset = driver.Create(
         output_path, x_size, y_size, out_bands, gdal_dtype, options=creation_options
     )
+    if out_dataset is None:
+        raise ValueError(
+            f"Failed to create output raster via GDAL process_in_tiles: {output_path}. "
+            "Please check disk space, write permissions, or folder existence."
+        )
     out_dataset.SetGeoTransform(geotransform)
     out_dataset.SetProjection(dataset.GetProjection())
 
@@ -307,15 +317,19 @@ def process_in_tiles(
     for y in range(0, y_size, tile_size):
         for x in range(0, x_size, tile_size):
             if feedback and feedback.isCanceled():
+                band = None
                 out_dataset = None
                 dataset = None
                 import os
 
                 if os.path.exists(output_path):
                     try:
-                        os.remove(output_path)
-                    except OSError:
-                        pass
+                        gdal.GetDriverByName("GTiff").Delete(output_path)
+                    except Exception:
+                        try:
+                            os.remove(output_path)
+                        except OSError:
+                            pass
                 return
 
             # Compute actual tile dimensions (handling edges)
@@ -336,7 +350,7 @@ def process_in_tiles(
             # Handle nodata in input
             block_nodata_mask = np.zeros_like(block, dtype=bool)
             if nodata is not None:
-                block_nodata_mask = np.isclose(block, nodata, rtol=1e-5) | np.isnan(
+                block_nodata_mask = np.isclose(block, nodata, atol=1e-5, rtol=0.0) | np.isnan(
                     block
                 )
             else:

@@ -103,9 +103,16 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
         output_path = self.parameterAsOutputLayer(parameters, self.OUTPUT, context)
 
         # Parse azimuths
-        list_float_azimuths = [
-            float(a.strip()) for a in azimuths_str.split(",") if a.strip()
-        ]
+        try:
+            list_float_azimuths = [
+                float(a.strip()) for a in azimuths_str.split(",") if a.strip()
+            ]
+        except ValueError:
+            from qgis.core import QgsProcessingException
+            raise QgsProcessingException(
+                f"Failed to parse sun azimuth angles string: {azimuths_str!r}. "
+                f"Please provide a comma-separated list of numbers (e.g. '315, 45, 135')."
+            )
 
         feedback.setProgressText("Computing multi-directional hillshade in tiles...")
 

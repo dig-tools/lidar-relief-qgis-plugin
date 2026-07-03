@@ -22,9 +22,6 @@ build/
 *.egg-info/
 *.zip
 
-# Documentation
-docs/
-
 # OS generated files
 .DS_Store
 .DS_Store?

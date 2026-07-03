@@ -32,7 +32,6 @@ from ..core.local_dominance import compute_local_dominance
 from ..core.asvf import anisotropic_sky_view_factor
 from ..core.pca import compute_pca_composite
 from ..core.emstp import compute_e4mstp
-from ..core.mstp import compute_mstp
 
 
 class BatchAlgorithm(QgsProcessingAlgorithm):
@@ -81,6 +80,8 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
     MSTP_LOCAL = "MSTP_LOCAL"
     MSTP_MESO = "MSTP_MESO"
     MSTP_BROAD = "MSTP_BROAD"
+    ASVF_ANISOTROPY_DIR = "ASVF_ANISOTROPY_DIR"
+    ASVF_ANISOTROPY_WEIGHT = "ASVF_ANISOTROPY_WEIGHT"
 
     _PRESET_OPTIONS = [
         "Manual",
@@ -227,6 +228,26 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 "MSTP Broad Radius (px)",
                 type=QgsProcessingParameterNumber.Integer,
                 defaultValue=100,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.ASVF_ANISOTROPY_DIR,
+                "ASVF Anisotropy Direction (degrees)",
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=315.0,
+                minValue=0.0,
+                maxValue=360.0,
+            )
+        )
+        self.addParameter(
+            QgsProcessingParameterNumber(
+                self.ASVF_ANISOTROPY_WEIGHT,
+                "ASVF Anisotropy Weight (0.0 to 1.0)",
+                type=QgsProcessingParameterNumber.Double,
+                defaultValue=0.5,
+                minValue=0.0,
+                maxValue=1.0,
             )
         )
         self.addParameter(
@@ -413,6 +434,12 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             "mstp_local": self.parameterAsInt(parameters, self.MSTP_LOCAL, context),
             "mstp_meso": self.parameterAsInt(parameters, self.MSTP_MESO, context),
             "mstp_broad": self.parameterAsInt(parameters, self.MSTP_BROAD, context),
+            "asvf_dir": self.parameterAsDouble(
+                parameters, self.ASVF_ANISOTROPY_DIR, context
+            ),
+            "asvf_weight": self.parameterAsDouble(
+                parameters, self.ASVF_ANISOTROPY_WEIGHT, context
+            ),
         }
         tile_size = self.parameterAsInt(parameters, self.TILE_SIZE, context)
 
@@ -482,7 +509,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 halo_size=1,
                 tile_size=tile_size,
                 feedback=feedback,
-                azimuths=[315.0, 45.0, 135.0, 225.0, 270.0, 360.0],
+                azimuths=[315.0, 45.0, 135.0, 225.0, 270.0, 0.0],
                 altitude=45.0,
             )
             dict_results[self.HILLSHADE_OUTPUT] = out_path
@@ -670,8 +697,8 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                     cellsize,
                     num_directions=p_cfg["svf_num_directions"],
                     search_radius=radius,
-                    anisotropy_dir=315.0,
-                    anisotropy_weight=0.5,
+                    anisotropy_dir=p_cfg["asvf_dir"],
+                    anisotropy_weight=p_cfg["asvf_weight"],
                     noise_level=p_cfg["svf_noise"],
                     feedback=feedback,
                 )
@@ -725,11 +752,11 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 slope = (compute_slope(block, cellsize, units="degrees") / 90.0).clip(
                     0, 1
                 )
-                mstp = compute_mstp(
+                mstp = multi_scale_topographic_position(
                     block,
-                    local_r=p_cfg["mstp_local"],
-                    meso_r=p_cfg["mstp_meso"],
-                    broad_r=p_cfg["mstp_broad"],
+                    local_radius=p_cfg["mstp_local"],
+                    meso_radius=p_cfg["mstp_meso"],
+                    broad_radius=p_cfg["mstp_broad"],
                     feedback=feedback,
                 )
                 mstp_norm = mstp.astype(np.float32)
@@ -750,7 +777,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
                 source_path=source_path,
                 output_path=out_path,
                 algorithm_func=e4mstp_wrapper,
-                halo_size=min(p_cfg["mstp_broad"], 50),
+                halo_size=p_cfg["mstp_broad"],
                 tile_size=tile_size,
                 feedback=feedback,
             )

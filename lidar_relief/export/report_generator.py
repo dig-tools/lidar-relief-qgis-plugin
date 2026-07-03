@@ -385,7 +385,7 @@ def generate_report(
                 ("P25", fmt("p25")),
                 ("P50 (Median)", fmt("p50")),
                 ("P75", fmt("p75")),
-                ("P85", fmt("p85")),
+                ("P95", fmt("p95")),
                 ("Valid Pixels", str(stats.get("valid_pixels", "—"))),
                 ("Nodata Pixels", str(stats.get("nodata_pixels", "—"))),
             ]
@@ -564,18 +564,17 @@ def _compute_raster_stats(raster_path: str) -> dict:
             return {}
 
         valid_float = valid.astype(np.float64)
-        sorted_vals = np.sort(valid_float)
-
+        # Use np.percentile for correct and robust percentile calculation
         return {
             "min": float(np.min(valid_float)),
             "max": float(np.max(valid_float)),
             "mean": float(np.mean(valid_float)),
             "std": float(np.std(valid_float)),
-            "p5": float(sorted_vals[int(len(sorted_vals) * 0.05)]),
-            "p25": float(sorted_vals[int(len(sorted_vals) * 0.25)]),
-            "p50": float(sorted_vals[int(len(sorted_vals) * 0.50)]),
-            "p75": float(sorted_vals[int(len(sorted_vals) * 0.75)]),
-            "p95": float(sorted_vals[int(len(sorted_vals) * 0.95)]),
+            "p5": float(np.percentile(valid_float, 5)),
+            "p25": float(np.percentile(valid_float, 25)),
+            "p50": float(np.percentile(valid_float, 50)),
+            "p75": float(np.percentile(valid_float, 75)),
+            "p95": float(np.percentile(valid_float, 95)),
             "valid_pixels": int(len(valid_float)),
             "nodata_pixels": int(array.size - len(valid_float)),
         }
