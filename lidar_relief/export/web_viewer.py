@@ -31,9 +31,9 @@ _COG_PROTOCOL_VERSION = "0.0.2"
 # to verify hashes, set these to None and the integrity attribute will
 # be omitted (NOT recommended — leaves the viewer vulnerable to CDN
 # compromise).
-_MAPLIBRE_CSS_SRI = "sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V"
-_MAPLIBRE_JS_SRI = "sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj"
-_COG_PROTOCOL_JS_SRI = "sha384-YXRaHQgtER6QvWv1rEufJdyU042Qs3r1W5WdAI97Y5nIdZ9O8IAJQCPeAtjW9VeV"
+_MAPLIBRE_CSS_SRI = "sha384-MinO0mNliZ3vwppuPOUnGa+iq619pfMhLVUXfC4LHwSCvF9H+6P/KO4Q7qBOYV5V"  # pragma: allowlist secret
+_MAPLIBRE_JS_SRI = "sha384-SYKAG6cglRMN0RVvhNeBY0r3FYKNOJtznwA0v7B5Vp9tr31xAHsZC0DqkQ/pZDmj"  # pragma: allowlist secret
+_COG_PROTOCOL_JS_SRI = "sha384-YXRaHQgtER6QvWv1rEufJdyU042Qs3r1W5WdAI97Y5nIdZ9O8IAJQCPeAtjW9VeV"  # pragma: allowlist secret
 
 
 def generate_web_viewer(

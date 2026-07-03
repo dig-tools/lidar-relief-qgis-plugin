@@ -8,6 +8,13 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.16] - 2026-07-04
+
+### Fixed
+- **QGIS Plugin Manager secrets detection false positives**: Added Yelp's `detect-secrets` inline bypass comments (`# pragma: allowlist secret`) to MapLibre GL JS and custom COG protocol Subresource Integrity (SRI) base64 hashes in `web_viewer.py` to prevent automated submission blocks.
+
+---
+
 ## [2.0.15] - 2026-07-04
 
 ### Fixed
