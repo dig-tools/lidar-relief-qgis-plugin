@@ -8,6 +8,14 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.18] - 2026-07-04
+
+### Fixed
+
+- **Plugins.qgis.org upload HTTP 400 (auto-publish failure).** The `tags=` field in `lidar_relief/metadata.txt` had grown to 43 comma-separated entries over many releases. The QGIS-Django plugin registry caps per-plugin tags well below this; the upload endpoint returned HTTP 400 on every direct `qgis-plugin-ci release` invocation, which forced the v2.0.16 → v2.0.17 uploads to fall back to manual web-form paste. Trimmed `tags=` to the conventional 5 broad terms (`lidar,relief,visualization,dem,archaeology`) so the next release auto-publishes without manual intervention.
+- **Plugins.qgis.org "Changes" page rendered empty/duplicate entries after manual upload.** When the v2.0.17 release was uploaded manually, the QGIS-Django upload form auto-populated the per-version "Changes" field with the entire multi-version `changelog=` block (all 36 historical entries), then tried to re-parse that block as a single version's notes. The result was the perceived "empty entries at the top for versions that are then repeated below". Replaced the 36-entry `changelog=` block with a single-entry block (covering v2.0.18 only) so the upload form auto-fills cleanly. The full history remains reachable from the same plugin page via the existing `changelog_url=` link to GitHub Releases.
+---
+
 ## [2.0.17] - 2026-07-04
 
 ### Fixed
