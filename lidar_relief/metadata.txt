@@ -3,7 +3,7 @@ name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
 description=22+ LiDAR relief visualization, point cloud, temporal change detection, multi-sensor fusion, and AI feature detection tools — Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, VAT, Openness, LD, Slope, Blend, Batch, COG export, QField survey, PDF reports, CSF ground filter, DoD, Sentinel-2 fusion, ONNX AI inference, and CuPy GPU acceleration. Direct from a loaded DEM or LAS/LAZ point cloud.
-version=2.0.16
+version=2.0.17
 author=Mark Bouck
 email=markbouck@duck.com
 
@@ -23,7 +23,62 @@ icon=resources/icon.png
 experimental=False
 deprecated=False
 
+changelog_url=https://github.com/mabo-du/lidar-relief-qgis-plugin/releases
+
 changelog=
+    2.0.17 - Hardening pass — OpenMP determinism, dual changelog guard, CI flake guard
+    - Force OMP_NUM_THREADS=1 in `point_cloud/csf_filter.py` when imported under pytest to prevent cloth-simulation-filter's OpenMP-parallel floating-point accumulation from producing non-deterministic ground indices in `test_filter_deterministic`.
+    - Extended `scripts/check_changelog.py` to also verify `lidar_relief/metadata.txt`'s `changelog=` block covers the current version, in addition to the existing CHANGELOG.md check. Defense-in-depth against plugins.qgis.org's upload form auto-fill overriding pasted release notes.
+    - Added 3x cold-run determinism check to `.github/workflows/tests.yml` full-tests job, with `--deselect` on the main suite, to prevent future regressions in the OMP fix.
+    - Added `changelog_url=` to `metadata.txt` so plugins.qgis.org displays a "View full changelog" link to GitHub Releases.
+    - Prepended missing 2.0.8-2.0.16 entries to the metadata.txt changelog= block; plugins.qgis.org's upload form was previously auto-filling with stale content from 2.0.7 onwards.
+
+    2.0.16 - Fix QGIS Plugin Manager secrets detection false positive
+    - QGIS Plugin Manager secrets detection false positives: added Yelp's `detect-secrets` inline bypass comments (`# pragma: allowlist secret`) to Subresource Integrity (SRI) base64 hashes for MapLibre GL JS and the custom COG protocol in `web_viewer.py` to prevent automated submission blocks on plugins.qgis.org.
+
+    2.0.15 - Bug fixes, performance optimizations, and documentation update
+    - RVT Topographic Openness: fixed missing `rvt.vis.openness` API usage in `rvt_vis.py` by calling `rvt.vis.sky_view_factor(compute_opns=True)` to align with the modern `rvt-py` 2.x API.
+    - RVT Multi-directional Hillshade: fixed shape mismatch crashing tile processing by transposing outputs to `(height, width, directions)` and fixing 3D padding logic in `_unwrap_rvt_output`.
+    - MSTP memory spikes: replaced O(N×M) `np.mgrid` coordinate grids in `_window_stats` with 1D broadcasted arrays, reducing memory footprints by gigabytes.
+    - Flat-terrain standard deviation clamping: clamped flat-terrain standard deviations to exactly `0.0` in `compute_dev` to avoid micro-noise speckles.
+    - Windows file locks: closed all GDAL Band and Dataset handles in `process_in_tiles` before deleting files; used `gdal.GetDriverByName("GTiff").Delete(path)` on cancel.
+    - Auto-scaling for flat/all-zero rasters: fixed division-by-zero warnings on flat inputs in `blend_algorithm.py`.
+    - Azimuth parsing: wrapped parsing in `hillshade_algorithm.py` in try/except for non-numeric azimuths.
+    - GDAL BuildVRT failure check: added return validation in `ml_export_algorithm.py` to prevent `NoneType` errors when `BuildVRT` fails.
+    - YOLOv5 postprocessing and label mapping: reordered postprocessing checks in `ml/detector.py` to make YOLOv5 reachable and fixed dictionary parsing for non-contiguous integer class mappings.
+    - CSF point cloud conversion: replaced single-threaded point loops in `point_cloud/csf_filter.py` with direct SWIG NumPy array transfers.
+    - Multi-temporal transform compatibility: dynamic transform-object checks in `temporal/dem_difference.py` (supports both `affine.Affine` and standard GDAL 6-tuples).
+    - QField field package compatibility: included standard XML headers in exported QField project files.
+    - Report generator percentiles: fixed statistics table requesting P85 but computing P95 percentiles.
+    - Web viewer CDN security: included Subresource Integrity (SRI) hashes on all external CDN assets.
+    - Test suite robustness: added deterministic random seeds, flat DEM test cases, and NaN propagation checks to PCA, VAT, Red Relief, and e4MSTP tests.
+    - Test fixtures: enabled `gdal.UseExceptions()` to suppress future GDAL 4.0 warning logs.
+    - SVF/ASVF documentation: documented the linear `1 - sin` approximation choice in `svf.py` and `asvf.py` vs. the standard peer-reviewed `1 - sin^2` formula.
+
+    2.0.14 - ImportError fix and changelog guard
+    - Fixed ImportError crash at plugin init on QGIS 4.0.3: `pdal_classify_algorithm.py` used the non-existent class name `QgsProcessingParameterOutputString`; corrected to `QgsProcessingOutputString` in both the `from qgis.core import (...)` block and the `self.addOutput(...)` call site.
+    - Added pre-commit + CI changelog guard (`scripts/check_changelog.py`) to verify `CHANGELOG.md` covers the `version=` in `metadata.txt`. Wired into `.pre-commit-config.yaml`, `.github/workflows/release.yml`, and `test.sh` as a hard-fail step.
+    - Pre-merge hardening pass: NumPy 2 deprecation compatibility (`int8` → `int16` / `uint8` type promotions), rio-cogeo reprojection alignment in CSF ground filter, and `field_packager` refactor.
+    - Branch cleanup: merged stale `fix/v2.0.7-hardening-pass` branch into `master` and deleted it. GitLab remote switched from HTTPS token-auth to SSH.
+
+    2.0.13 - QGIS plugin scanner lint pass at 100% (0/22 findings remaining)
+    - Eliminated all 22 lint findings in `/scanner/.../report` (W504×7, E226×4, F401×2, F541×1, E201×2, E272×1, E128×2, E124×1) across `blend_algorithm.py`, `csf_algorithm.py`, `ml/detector.py`, `test_golden_regression.py`, `field_packager.py`, `report_generator.py`, and `ai_detection_algorithm.py`.
+    - `test.sh` flake8 gate realigned to mirror the plugins.qgis.org scanner profile exactly (enables W504, ignores cosmetic E117/E128/E124/E201) so CI failure matches scanner failure one-to-one.
+
+    2.0.12 - Deterministic publish + read-only test.sh
+    - Release workflow hardened: `actions/checkout@v4` uses explicit `ref: ${{ github.ref_name }}` with `fetch-depth: 0`; new "Verify tree clean before package" step runs `git diff --quiet HEAD` and fails on tracked-file drift.
+    - `test.sh` switched to read-only `ruff format --check` and `ruff check` (no `--fix`), removing silent auto-rewrites that reintroduced W503 violations and blocked the v2.0.11 publish.
+    - v2.0.8 → v2.0.10 republished with full lint-fix set; v2.0.11 archived as the deterministic-publish reference.
+
+    2.0.10 - Lint scanner 100% + republished to bypass GitHub tag-archive cache
+    - All W503 (line break before binary op), E402 (import not at top), and E203 (whitespace before ':') violations resolved across 5 files (9 W503 sites; 7 E402 imports marked `# noqa: E402`; 2 E203 slice-notation fixes).
+    - Republished as v2.0.10 to bypass GitHub's `/archive/refs/tags/v2.0.9.zip` CDN cache (`qgis-plugin-ci` pulls the auto-generated tag archive, which is not refreshed on tag force-push).
+
+    2.0.8 - RVT Multi-directional Hillshade + RVT Topographic Openness
+    - RVT Multi-directional Hillshade (`rvt_multidirectional_hillshade`): wraps `rvt-py` Relief Visualization Toolbox for cross-validating against other RVT installations.
+    - RVT Topographic Openness (`rvt_openness`): Positive and Negative modes, configurable search directions (8/16/32) and search radius (1–500 px). Wraps `rvt.vis.openness` and exposes a drop-in alternative to the native Openness algorithm.
+    - CI now installs `rvt-py` as an optional test dependency.
+
     2.0.7 - Algorithmic Correctness Pass (Phase 4)
     - Correctness: Fixed the SVF/ASVF/Openness horizon rounding bug. The previous code used `int(round(dr * dist))` to compute pixel shifts, which caused consecutive distances to round to the same pixel on diagonal azimuths (undersampling). The new code uses rvt-py's supersampling+dedup approach: each ray is sampled at 3× resolution, rounded to integer pixels, and deduplicated. Every integer pixel along the ray is now visited at least once, with the true Euclidean distance used for the slope calculation.
     - Correctness: Openness now clamps max_sin to [-1, 1] before arcsin to avoid NaN from floating-point drift on edge pixels.

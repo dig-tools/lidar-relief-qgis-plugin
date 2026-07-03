@@ -113,9 +113,36 @@ jobs:
             cp -r /tmp/rvt-extracted/rvt "$SITE_PACKAGES"/
           fi
 
+      - name: CSF filter determinism (3x cold runs)
+        # Belt-and-suspenders against the cloth-simulation-filter OpenMP
+        # floating-point non-determinism flake in
+        # tests/test_csf_filter.py::TestCSFFilter::test_filter_deterministic.
+        # csf_filter.py sets OMP_NUM_THREADS=1 when imported under pytest,
+        # restoring bit-stable FP accumulation by forcing libgomp into a
+        # single-threaded schedule. This step re-runs the determinism
+        # test 3 times in fresh Python processes to surface any future
+        # regression in that isolation (e.g. someone lifting the
+        # pytest-only OMP_NUM_THREADS guard into production, swapping the
+        # CSF wheel for one that ignores OMP_NUM_THREADS, or moving CSF
+        # to a thread-pool backend). Each invocation loads a brand-new
+        # Python process so the OpenMP FP accumulator starts cold.
+        run: |
+          for i in 1 2 3; do
+            echo "=== determinism check attempt $i ==="
+            if ! python3 -m pytest lidar_relief/tests/test_csf_filter.py::TestCSFFilter::test_filter_deterministic --tb=short; then
+              echo "::error ::test_filter_deterministic failed on attempt $i (likely OpenMP FP non-determinism regressed in csf_filter.py or a CSF upgrade)."
+              exit 1
+            fi
+          done
+          echo "✓ test_filter_deterministic passed 3/3 cold runs"
+
       - name: Run full test suite
         env:
           PYTHONPATH: /usr/share/qgis/python:.
           LD_LIBRARY_PATH: /usr/lib
         run: |
-          python3 -m pytest lidar_relief/tests/ --tb=short -v
+          # The CSF determinism test is run 3x in the previous step as a
+          # permanent regression guard; --deselect avoids running it a 4th
+          # time here so the only execution path is the dedicated guard.
+          python3 -m pytest lidar_relief/tests/ --tb=short -v \
+            --deselect lidar_relief/tests/test_csf_filter.py::TestCSFFilter::test_filter_deterministic

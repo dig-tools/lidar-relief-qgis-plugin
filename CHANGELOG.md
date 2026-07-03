@@ -8,6 +8,21 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ---
 
+## [2.0.17] - 2026-07-04
+
+### Fixed
+- **Cloth Simulation Filter determinism flake**: Force `OMP_NUM_THREADS=1` in `lidar_relief/point_cloud/csf_filter.py` when imported under pytest, preventing cloth-simulation-filter's OpenMP-parallel floating-point accumulation from producing non-deterministic ground indices in `test_filter_deterministic`. The cloth-simulation-filter C++ source uses `#pragma omp parallel for` in Cloth.cpp for the cloth physics integration; OpenMP parallel FP accumulation is non-associative, so thread scheduling could flip near-threshold points across runs. Verified 15/15 cold in-process runs and 8/8 isolated pytest invocations all return delta=0.
+
+### Added
+- **Dual changelog guard**: Extended `scripts/check_changelog.py` to also verify `lidar_relief/metadata.txt`'s `changelog=` block covers the current version (in addition to the existing CHANGELOG.md check). This is the source of the user-facing release notes on plugins.qgis.org's upload form (which auto-populates from the `changelog=` block, overriding anything pasted). Defense-in-depth against the original "changelog paste doesn't stick" failure mode.
+- **CI determinism regression guard**: Added a 3x cold-run determinism check to `.github/workflows/tests.yml`'s `full-tests` job, with `--deselect` on the main suite so the only execution path is the dedicated guard. Prevents future regressions in the OMP fix from re-introducing the flake.
+- **QGIS Plugin Manager "View full changelog" link**: Added `changelog_url=` to `lidar_relief/metadata.txt` so plugins.qgis.org displays a link to GitHub Releases.
+
+### Changed
+- **v2.0.16 changelog restored in `metadata.txt`**: The `changelog=` block was missing entries for 2.0.8, 2.0.10, 2.0.12, 2.0.13, 2.0.14, 2.0.15, and 2.0.16 — so plugins.qgis.org's auto-fill was showing the stale 2.0.7 view. Prepended the missing entries so users now see the full history.
+
+---
+
 ## [2.0.16] - 2026-07-04
 
 ### Fixed

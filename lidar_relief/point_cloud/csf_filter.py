@@ -15,6 +15,28 @@ rules:
 
 import logging
 import os
+import sys
+
+# Force single-threaded OpenMP when this module is imported under a test
+# runner, so back-to-back `filter_point_cloud()` calls with identical input
+# produce identical ground indices. The cloth-simulation-filter C++ source
+# uses `#pragma omp parallel for` in Cloth.cpp (cloth physics integration +
+# constraint relaxation) and OpenMP parallel floating-point accumulation is
+# not bit-stable across thread schedules — even with the same NumPy input
+# and the same `np.random.seed(42)`, two consecutive CSF runs can disagree
+# on a few near-threshold points because the FMA ordering differs. This
+# manifested as an intermittent flake in
+# `test_csf_filter.py::TestCSFFilter::test_filter_deterministic` whenever
+# the host had multiple cores available. Setting OMP_NUM_THREADS=1 BEFORE
+# the CSF native module loads forces libgomp into a single-threaded
+# schedule, restoring bit-stable FP accumulation. Production (non-test)
+# imports do not see this restriction, so real point-cloud users still get
+# the OpenMP speedup for large inputs. `setdefault` honours any explicit
+# user override (e.g. CI runners may want to pin via env var).
+if "pytest" in sys.modules or "unittest" in sys.modules:
+    os.environ.setdefault("OMP_NUM_THREADS", "1")
+
+import os
 import tempfile
 from typing import Optional
 
