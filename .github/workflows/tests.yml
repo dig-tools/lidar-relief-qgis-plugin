@@ -7,6 +7,31 @@ on:
     branches: [main, master]
 
 jobs:
+  security-and-qgis-compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install security scanner
+        run: pip install bandit
+
+      - name: Scan runtime code
+        run: bandit -r lidar_relief -x lidar_relief/tests
+
+      - name: Reject deprecated unscoped QGIS enums
+        run: |
+          if grep -R -n -E 'QgsRasterBandStats\.All|QgsContrastEnhancement\.StretchToMinimumMaximum|QgsProcessingParameterNumber\.(Double|Integer)|QgsProcessingParameterField\.(Any|Numeric)|QgsProcessing\.TypeRaster' lidar_relief --include='*.py'; then
+            echo "::error::Deprecated unscoped QGIS enums remain in plugin code."
+            exit 1
+          fi
+
+      - name: Ensure tests are excluded from the plugin archive
+        run: |
+          if git archive HEAD lidar_relief | tar -tf - | grep -q '^lidar_relief/tests/'; then
+            echo "::error::Development tests would be included in the QGIS plugin archive."
+            exit 1
+          fi
+
   # Minimal installation check: deliberately runs before installing any of the
   # plugin's optional Python packages. This protects the contract that QGIS can
   # load the complete provider even when specialized tools are unavailable.

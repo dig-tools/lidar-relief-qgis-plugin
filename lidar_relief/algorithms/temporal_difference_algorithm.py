@@ -69,7 +69,7 @@ class TemporalDifferenceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.RMSE_OLD,
                 "Older DEM vertical RMSE (metres)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.15,
                 minValue=0.01,
             )
@@ -78,7 +78,7 @@ class TemporalDifferenceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.RMSE_NEW,
                 "Newer DEM vertical RMSE (metres)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.15,
                 minValue=0.01,
             )
@@ -87,7 +87,7 @@ class TemporalDifferenceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.CONFIDENCE,
                 "Confidence level (1.96=95%, 2.58=99%)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.96,
                 minValue=1.0,
                 maxValue=3.5,

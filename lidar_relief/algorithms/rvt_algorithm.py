@@ -76,7 +76,7 @@ class RvtMultidirectionalHillshadeAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.NR_DIRECTIONS,
                 "Number of azimuth directions",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=16,
                 minValue=4,
                 maxValue=64,

@@ -57,7 +57,7 @@ class MlExportAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterMultipleLayers(
                 self.INPUTS,
                 "Input raster layers",
-                layerType=QgsProcessing.TypeRaster,
+                layerType=QgsProcessing.SourceType.TypeRaster,
             )
         )
         self.addParameter(

@@ -63,7 +63,7 @@ class AsvfAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.DIRECTIONS,
                 "Number of search directions",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=16,
                 minValue=4,
                 maxValue=64,
@@ -73,7 +73,7 @@ class AsvfAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.RADIUS,
                 "Search radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=10,
                 minValue=1,
                 maxValue=100,
@@ -83,7 +83,7 @@ class AsvfAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANISOTROPY_DIR,
                 "Anisotropy Direction (degrees)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=315.0,
                 minValue=0.0,
                 maxValue=360.0,
@@ -93,7 +93,7 @@ class AsvfAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANISOTROPY_WEIGHT,
                 "Anisotropy Weight (0.0 to 1.0)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.5,
                 minValue=0.0,
                 maxValue=1.0,

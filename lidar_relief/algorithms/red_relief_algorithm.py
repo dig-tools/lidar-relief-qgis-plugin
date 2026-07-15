@@ -60,7 +60,7 @@ class RedReliefAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.RADIUS,
                 "SLRM Smoothing radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=20,
                 minValue=2,
                 maxValue=500,

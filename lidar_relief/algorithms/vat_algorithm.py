@@ -61,7 +61,7 @@ class VatAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SVF_RADIUS,
                 "SVF Search Radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=50,
                 minValue=1,
                 maxValue=500,
@@ -71,7 +71,7 @@ class VatAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OPENNESS_RADIUS,
                 "Openness Search Radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=50,
                 minValue=1,
                 maxValue=500,

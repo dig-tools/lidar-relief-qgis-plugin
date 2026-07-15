@@ -82,7 +82,7 @@ class SvfAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SEARCH_RADIUS,
                 "Search radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=10,
                 minValue=1,
                 maxValue=100,

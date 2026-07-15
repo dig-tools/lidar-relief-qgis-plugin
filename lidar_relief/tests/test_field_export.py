@@ -168,3 +168,25 @@ class TestFieldPackager:
         assert "relief_visualization" in content
         assert "anomalies" in content
         assert "fieldStatus" in content or "field_status" in content
+
+    def test_qgs_project_escapes_untrusted_text(self):
+        """User text must remain data and cannot inject XML elements."""
+        from lidar_relief.export.field_packager import _create_qgis_project
+
+        qgs_path = os.path.join(self.tmpdir, "untrusted.qgs")
+        _create_qgis_project(
+            qgs_path=qgs_path,
+            raster_path="relief<&>.tif",
+            gpkg_path="survey<&>.gpkg",
+            project_name='Survey <evil enabled="1"> & notes',
+        )
+
+        with open(qgs_path, encoding="utf-8") as project_file:
+            content = project_file.read()
+
+        assert '<evil enabled="1">' not in content
+        assert "Survey &lt;evil enabled=&quot;1&quot;&gt; &amp; notes" in content
+        assert "relief&lt;&amp;&gt;.tif" in content
+        assert "survey&lt;&amp;&gt;.gpkg" in content
+        assert "<!DOCTYPE" not in content
+        assert "<!ENTITY" not in content

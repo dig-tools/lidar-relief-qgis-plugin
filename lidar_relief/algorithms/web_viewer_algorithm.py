@@ -96,7 +96,7 @@ class WebViewerAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.CENTER_LON,
                 "Center Longitude (Leave blank to auto-detect)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 optional=True,
             )
         )
@@ -104,7 +104,7 @@ class WebViewerAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.CENTER_LAT,
                 "Center Latitude (Leave blank to auto-detect)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 optional=True,
             )
         )
@@ -112,7 +112,7 @@ class WebViewerAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ZOOM,
                 "Initial Zoom Level",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=12.0,
             )
         )
@@ -125,7 +125,7 @@ class WebViewerAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OPACITY,
                 "Layer Opacity (0.0 - 1.0)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.0,
                 minValue=0.0,
                 maxValue=1.0,

@@ -95,7 +95,7 @@ class AiDetectionAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.CONFIDENCE,
                 "Confidence threshold",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.5,
                 minValue=0.01,
                 maxValue=1.0,
@@ -105,7 +105,7 @@ class AiDetectionAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.IOU_THRESHOLD,
                 "IoU threshold (NMS)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.45,
                 minValue=0.05,
                 maxValue=1.0,
@@ -115,7 +115,7 @@ class AiDetectionAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TILE_SIZE,
                 "Tile size (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=640,
                 minValue=128,
                 maxValue=2048,

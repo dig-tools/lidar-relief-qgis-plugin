@@ -67,7 +67,7 @@ class SlrmAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.RADIUS,
                 "Smoothing radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=20,
                 minValue=2,
                 maxValue=500,

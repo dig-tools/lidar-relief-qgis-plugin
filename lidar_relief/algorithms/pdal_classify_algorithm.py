@@ -104,7 +104,7 @@ class PdalClassifyAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.RESOLUTION,
                 "Output DEM cell size (map units, ignored for LAS output)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.0,
                 minValue=0.1,
             )

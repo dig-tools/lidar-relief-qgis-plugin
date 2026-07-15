@@ -6,6 +6,28 @@ All notable changes to LiDAR Relief Visualization are documented here.
 ## [Unreleased]
 
 
+## [2.0.22] - 2026-07-15
+
+**Security**
+
+- **QGIS security-scan compliance.** Documented and explicitly suppressed
+  Bandit B405 at the sole ElementTree import because the field-package exporter
+  only constructs and serializes a new QGIS project; it never parses XML.
+  Added a regression test proving that untrusted project names and paths are
+  escaped as text and cannot inject XML elements, declarations, or entities.
+- **Lean runtime package.** Excluded the development-only pytest suite from the
+  installable QGIS archive. Tests remain fully available in the source
+  repository and CI, but test assertions and optional fixtures are no longer
+  shipped as plugin runtime files.
+
+**Fixed**
+
+- **QGIS 4 / Qt6 enum compatibility.** Replaced all 56 deprecated unscoped QGIS
+  enum aliases with their QGIS 3.34-and-QGIS 4-compatible scoped forms,
+  covering Processing number and field types, raster source types, raster
+  statistics, and contrast-enhancement algorithms.
+
+
 ## [2.0.21] - 2026-07-15
 
 **Added**

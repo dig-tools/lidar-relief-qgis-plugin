@@ -61,7 +61,7 @@ class LocalDominanceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.MIN_RAD,
                 "Minimum search radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=10,
                 minValue=1,
             )
@@ -70,7 +70,7 @@ class LocalDominanceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.MAX_RAD,
                 "Maximum search radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=20,
                 minValue=2,
             )
@@ -79,7 +79,7 @@ class LocalDominanceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ANGLR_RES,
                 "Angular resolution (degrees)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=15.0,
                 minValue=1.0,
                 maxValue=90.0,
@@ -89,7 +89,7 @@ class LocalDominanceAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OBSERVER_H,
                 "Observer height (map units)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.7,
                 minValue=0.0,
             )

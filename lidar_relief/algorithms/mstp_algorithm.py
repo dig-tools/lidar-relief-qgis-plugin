@@ -63,7 +63,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.LOCAL_RADIUS,
                 "Local Scale Radius (pixels) -> Blue",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=5,
             )
         )
@@ -71,7 +71,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.MESO_RADIUS,
                 "Meso Scale Radius (pixels) -> Green",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=50,
             )
         )
@@ -79,7 +79,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.BROAD_RADIUS,
                 "Broad Scale Radius (pixels) -> Red",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=500,
             )
         )
@@ -87,7 +87,7 @@ class MstpAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.LIGHTNESS,
                 "Lightness/Contrast Multiplier",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.0,
             )
         )

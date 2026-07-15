@@ -447,7 +447,10 @@ def _create_qgis_project(
 
     All user-supplied strings are XML-escaped to prevent injection.
     """
-    from xml.etree import ElementTree as ET
+    # ElementTree is used only to construct and serialize a new document.
+    # This function never parses XML, so the untrusted-XML risks covered by
+    # Bandit's B405 warning do not apply here.
+    from xml.etree import ElementTree as ET  # nosec B405
 
     # Determine the canvas extent. Previously hardcoded to (-180,-90,180,90)
     # which caused QField to open zoomed out to the whole world.

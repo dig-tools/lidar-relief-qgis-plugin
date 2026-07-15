@@ -78,7 +78,7 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OPACITY,
                 "Opacity (0.0 to 1.0)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.0,
                 minValue=0.0,
                 maxValue=1.0,

@@ -31,14 +31,14 @@ class ReliefLayerPostProcessor(QgsProcessingLayerPostProcessorInterface):
         # Standard Deviation stretch for single band raster
         if layer.bandCount() == 1:
             provider = layer.dataProvider()
-            stats = provider.bandStatistics(1, QgsRasterBandStats.All)
+            stats = provider.bandStatistics(1, QgsRasterBandStats.Stats.All)
 
             renderer = QgsSingleBandGrayRenderer(provider, 1)
             contrast_enhancement = QgsContrastEnhancement(provider.dataType(1))
 
             if self.stretch_type == "stddev":
                 contrast_enhancement.setContrastEnhancementAlgorithm(
-                    QgsContrastEnhancement.StretchToMinimumMaximum
+                    QgsContrastEnhancement.ContrastEnhancementAlgorithm.StretchToMinimumMaximum
                 )
                 # 2 std dev
                 min_val = max(stats.minimumValue, stats.mean - 2 * stats.stdDev)
@@ -47,7 +47,7 @@ class ReliefLayerPostProcessor(QgsProcessingLayerPostProcessorInterface):
                 contrast_enhancement.setMaximumValue(max_val)
             else:
                 contrast_enhancement.setContrastEnhancementAlgorithm(
-                    QgsContrastEnhancement.StretchToMinimumMaximum
+                    QgsContrastEnhancement.ContrastEnhancementAlgorithm.StretchToMinimumMaximum
                 )
                 contrast_enhancement.setMinimumValue(stats.minimumValue)
                 contrast_enhancement.setMaximumValue(stats.maximumValue)

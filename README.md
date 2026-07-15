@@ -5,7 +5,7 @@
 # LiDAR Relief Visualization Plugin — v2.0
 
 [![QGIS Plugin](https://img.shields.io/badge/QGIS-3%20%7C%204-589632?logo=qgis&logoColor=white)](https://plugins.qgis.org/plugins/lidar_relief/)
-[![Version](https://img.shields.io/badge/release-2.0.21-C28B22)](https://github.com/dig-tools/lidar-relief-qgis-plugin/releases)
+[![Version](https://img.shields.io/badge/release-2.0.22-C28B22)](https://github.com/dig-tools/lidar-relief-qgis-plugin/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Tests](https://github.com/dig-tools/lidar-relief-qgis-plugin/actions/workflows/tests.yml/badge.svg)](https://github.com/dig-tools/lidar-relief-qgis-plugin/actions/workflows/tests.yml)
 

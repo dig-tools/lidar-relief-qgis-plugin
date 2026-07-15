@@ -1,2 +1,7 @@
 # Opt out of AI model training
 * ai-training=false
+
+# Development-only tests are retained in the repository but excluded from the
+# installable QGIS archive. This reduces plugin size and prevents test-only
+# assertions and optional test fixtures from being scanned as runtime code.
+lidar_relief/tests export-ignore

@@ -138,7 +138,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SVF_NUM_DIRECTIONS,
                 "SVF Directions",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=16,
             )
         )
@@ -146,7 +146,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OPENNESS_NUM_DIRECTIONS,
                 "Openness Directions",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=16,
             )
         )
@@ -154,7 +154,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.LD_OBSERVER_HEIGHT,
                 "Local Dominance Observer Height (m)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.7,
             )
         )
@@ -162,7 +162,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SVF_RADIUS,
                 "SVF Search Radius (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=10,
             )
         )
@@ -170,7 +170,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SVF_NOISE,
                 "SVF Noise Level",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=0,
             )
         )
@@ -178,7 +178,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.OPENNESS_RADIUS,
                 "Openness Search Radius (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=15,
             )
         )
@@ -186,7 +186,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SLRM_RADIUS,
                 "SLRM Trend Radius (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=20,
             )
         )
@@ -194,7 +194,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.LD_MIN_RAD,
                 "Local Dominance Min Radius (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=10,
             )
         )
@@ -202,7 +202,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.LD_MAX_RAD,
                 "Local Dominance Max Radius (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=20,
             )
         )
@@ -210,7 +210,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.MSTP_LOCAL,
                 "MSTP Local Radius (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=3,
             )
         )
@@ -218,7 +218,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.MSTP_MESO,
                 "MSTP Meso Radius (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=20,
             )
         )
@@ -226,7 +226,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.MSTP_BROAD,
                 "MSTP Broad Radius (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=100,
             )
         )
@@ -234,7 +234,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ASVF_ANISOTROPY_DIR,
                 "ASVF Anisotropy Direction (degrees)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=315.0,
                 minValue=0.0,
                 maxValue=360.0,
@@ -244,7 +244,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ASVF_ANISOTROPY_WEIGHT,
                 "ASVF Anisotropy Weight (0.0 to 1.0)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=0.5,
                 minValue=0.0,
                 maxValue=1.0,
@@ -254,7 +254,7 @@ class BatchAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.TILE_SIZE,
                 "Tile Size (px)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=1024,
                 minValue=256,
                 maxValue=8192,

@@ -99,7 +99,7 @@ class RvtOpennessAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.SEARCH_RADIUS,
                 "Search Radius (pixels)",
-                type=QgsProcessingParameterNumber.Integer,
+                type=QgsProcessingParameterNumber.Type.Integer,
                 defaultValue=20,
                 minValue=1,
                 maxValue=500,

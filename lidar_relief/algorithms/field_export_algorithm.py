@@ -88,7 +88,7 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
                 "Anomaly ID field",
                 parentLayerParameterName=self.INPUT_ANOMALIES,
                 optional=True,
-                type=QgsProcessingParameterField.Any,
+                type=QgsProcessingParameterField.DataType.Any,
             )
         )
 
@@ -98,7 +98,7 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
                 "Confidence field (optional)",
                 parentLayerParameterName=self.INPUT_ANOMALIES,
                 optional=True,
-                type=QgsProcessingParameterField.Numeric,
+                type=QgsProcessingParameterField.DataType.Numeric,
             )
         )
 
@@ -108,7 +108,7 @@ class FieldExportAlgorithm(QgsProcessingAlgorithm):
                 "Detection method field (optional)",
                 parentLayerParameterName=self.INPUT_ANOMALIES,
                 optional=True,
-                type=QgsProcessingParameterField.Any,
+                type=QgsProcessingParameterField.DataType.Any,
             )
         )
 

@@ -87,7 +87,7 @@ class CsfAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.CELLSIZE,
                 "Output DEM cell size (map units)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=1.0,
                 minValue=0.1,
             )

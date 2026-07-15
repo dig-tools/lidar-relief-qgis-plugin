@@ -75,7 +75,7 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
             QgsProcessingParameterNumber(
                 self.ALTITUDE,
                 "Sun altitude (degrees)",
-                type=QgsProcessingParameterNumber.Double,
+                type=QgsProcessingParameterNumber.Type.Double,
                 defaultValue=45.0,
                 minValue=0.0,
                 maxValue=90.0,
