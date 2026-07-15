@@ -42,15 +42,15 @@ from pathlib import Path
 CHANGELOG_VERSION_HEADER = re.compile(
     # Match `## [VERSION]` (allows `### [...]` if ever needed). Optional
     # ` - YYYY-MM-DD` suffix.
-    r'^#{2,3}\s+\[(?P<version>[0-9]+(?:\.[0-9]+){0,3}'
-    r'[A-Za-z0-9.\-]*)\]'
-    r'(?:\s*-\s*\d{4}-\d{2}-\d{2})?\s*$',
+    r"^#{2,3}\s+\[(?P<version>[0-9]+(?:\.[0-9]+){0,3}"
+    r"[A-Za-z0-9.\-]*)\]"
+    r"(?:\s*-\s*\d{4}-\d{2}-\d{2})?\s*$",
     re.MULTILINE,
 )
 
 VERSION_LINE = re.compile(
     # Match a `version = ...` line in metadata.txt (INI-style key=value).
-    r'^\s*version\s*=\s*(?P<version>[^\s#]+)\s*$',
+    r"^\s*version\s*=\s*(?P<version>[^\s#]+)\s*$",
     re.MULTILINE | re.IGNORECASE,
 )
 
@@ -60,7 +60,7 @@ VERSION_LINE = re.compile(
 # would be parsed as the start of the changelog block and produce false
 # positives.
 METADATA_CHANGELOG_KEY = re.compile(
-    r'^changelog\s*=(?P<head>.*)$',
+    r"^changelog\s*=(?P<head>.*)$",
     re.MULTILINE,
 )
 
@@ -68,11 +68,11 @@ METADATA_CHANGELOG_KEY = re.compile(
 # Leading digits (not `-`) so `- Sub-bullet: ...` lines are not mistaken for
 # version entries. Indent can be spaces or tabs.
 METADATA_CHANGELOG_ENTRY = re.compile(
-    r'^[ \t]+(?P<version>[0-9]+(?:\.[0-9]+){0,3}[A-Za-z0-9.\-]*)\s+-.*$',
+    r"^[ \t]+(?P<version>[0-9]+(?:\.[0-9]+){0,3}[A-Za-z0-9.\-]*)\s+-.*$",
     re.MULTILINE,
 )
 
-PLACEHOLDER_VERSIONS = frozenset({'unreleased', ''})
+PLACEHOLDER_VERSIONS = frozenset({"unreleased", ""})
 
 
 def read_metadata_version(metadata_path: Path) -> str:
@@ -84,7 +84,7 @@ def read_metadata_version(metadata_path: Path) -> str:
         )
         sys.exit(2)
 
-    text = metadata_path.read_text(encoding='utf-8', errors='replace')
+    text = metadata_path.read_text(encoding="utf-8", errors="replace")
     match = VERSION_LINE.search(text)
     if not match:
         print(
@@ -92,7 +92,7 @@ def read_metadata_version(metadata_path: Path) -> str:
             file=sys.stderr,
         )
         sys.exit(2)
-    return match.group('version').strip()
+    return match.group("version").strip()
 
 
 def find_changelog_entry(changelog_path: Path, version: str) -> bool:
@@ -104,10 +104,10 @@ def find_changelog_entry(changelog_path: Path, version: str) -> bool:
         )
         sys.exit(2)
 
-    text = changelog_path.read_text(encoding='utf-8', errors='replace')
+    text = changelog_path.read_text(encoding="utf-8", errors="replace")
     target = version.lower()
     for header in CHANGELOG_VERSION_HEADER.finditer(text):
-        if header.group('version').lower() == target:
+        if header.group("version").lower() == target:
             return True
     return False
 
@@ -123,12 +123,12 @@ def extract_metadata_changelog_block(metadata_text: str) -> str | None:
     """
     lines = metadata_text.splitlines()
     start_index: int | None = None
-    head_value = ''
+    head_value = ""
     for i, line in enumerate(lines):
         m = METADATA_CHANGELOG_KEY.match(line)
         if m:
             start_index = i
-            head_value = m.group('head').strip()
+            head_value = m.group("head").strip()
             break
     if start_index is None:
         return None
@@ -136,7 +136,7 @@ def extract_metadata_changelog_block(metadata_text: str) -> str | None:
     block_lines: list[str] = []
     if head_value:
         block_lines.append(head_value)
-    for cont in lines[start_index + 1:]:
+    for cont in lines[start_index + 1 :]:
         if not cont.strip():
             # Blank-line separators between version entries — tolerated by
             # QGIS' metadata parser, so we preserve them in the block and
@@ -149,7 +149,7 @@ def extract_metadata_changelog_block(metadata_text: str) -> str | None:
             continue
         # First non-indented, non-empty line: end of block.
         break
-    return '\n'.join(block_lines)
+    return "\n".join(block_lines)
 
 
 def find_metadata_changelog_entry(metadata_path: Path, version: str) -> bool:
@@ -162,13 +162,13 @@ def find_metadata_changelog_entry(metadata_path: Path, version: str) -> bool:
     """
     if not metadata_path.exists():
         return False  # missing file is reported by read_metadata_version()
-    text = metadata_path.read_text(encoding='utf-8', errors='replace')
+    text = metadata_path.read_text(encoding="utf-8", errors="replace")
     block = extract_metadata_changelog_block(text)
     if block is None:
         return False
     target = version.lower()
     for header in METADATA_CHANGELOG_ENTRY.finditer(block):
-        if header.group('version').lower() == target:
+        if header.group("version").lower() == target:
             return True
     return False
 
@@ -177,9 +177,9 @@ def collect_changelog_versions(changelog_path: Path) -> list[str]:
     """All version strings declared in [bracketed headers], dedup'd."""
     if not changelog_path.exists():
         return []
-    text = changelog_path.read_text(encoding='utf-8', errors='replace')
+    text = changelog_path.read_text(encoding="utf-8", errors="replace")
     return sorted(
-        {m.group('version').strip() for m in CHANGELOG_VERSION_HEADER.finditer(text)},
+        {m.group("version").strip() for m in CHANGELOG_VERSION_HEADER.finditer(text)},
         reverse=True,
     )
 
@@ -188,12 +188,12 @@ def collect_metadata_changelog_versions(metadata_path: Path) -> list[str]:
     """All version strings declared in metadata.txt's changelog= block."""
     if not metadata_path.exists():
         return []
-    text = metadata_path.read_text(encoding='utf-8', errors='replace')
+    text = metadata_path.read_text(encoding="utf-8", errors="replace")
     block = extract_metadata_changelog_block(text)
     if block is None:
         return []
     return sorted(
-        {m.group('version').strip() for m in METADATA_CHANGELOG_ENTRY.finditer(block)},
+        {m.group("version").strip() for m in METADATA_CHANGELOG_ENTRY.finditer(block)},
         reverse=True,
     )
 
@@ -259,31 +259,31 @@ def _missing_metadata_changelog(
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            'Fail if CHANGELOG.md OR metadata.txt changelog= block is missing '
-            'an entry for the version= declared in metadata.txt.'
+            "Fail if CHANGELOG.md OR metadata.txt changelog= block is missing "
+            "an entry for the version= declared in metadata.txt."
         ),
     )
     parser.add_argument(
-        '--metadata',
+        "--metadata",
         type=Path,
-        default=Path('lidar_relief/metadata.txt'),
+        default=Path("lidar_relief/metadata.txt"),
         help=(
-            'Path to QGIS plugin metadata.txt '
-            '(default: ./lidar_relief/metadata.txt — matches '
+            "Path to QGIS plugin metadata.txt "
+            "(default: ./lidar_relief/metadata.txt — matches "
             '"plugin_path: lidar_relief" in .qgis-plugin-ci).'
         ),
     )
     parser.add_argument(
-        '--changelog',
+        "--changelog",
         type=Path,
-        default=Path('CHANGELOG.md'),
-        help='Path to CHANGELOG.md (default: ./CHANGELOG.md).',
+        default=Path("CHANGELOG.md"),
+        help="Path to CHANGELOG.md (default: ./CHANGELOG.md).",
     )
     parser.add_argument(
-        '--quiet',
-        '-q',
-        action='store_true',
-        help='Suppress the success messages; print only on failure.',
+        "--quiet",
+        "-q",
+        action="store_true",
+        help="Suppress the success messages; print only on failure.",
     )
     return parser
 
@@ -306,7 +306,7 @@ def main(argv: list[str] | None = None) -> int:
     # and is non-empty. One read of metadata.txt is enough to detect both
     # "block missing" and "block present but missing version" — distinguish
     # them so the error helper can print the right fix recipe.
-    metadata_text = args.metadata.read_text(encoding='utf-8', errors='replace')
+    metadata_text = args.metadata.read_text(encoding="utf-8", errors="replace")
     block_exists = METADATA_CHANGELOG_KEY.search(metadata_text) is not None
     failed = False
 
@@ -316,7 +316,7 @@ def main(argv: list[str] | None = None) -> int:
     else:
         failed = True
         print(
-            '::error ::' + _missing_changelog_md(version, md_found),
+            "::error ::" + _missing_changelog_md(version, md_found),
             file=sys.stderr,
         )
 
@@ -326,15 +326,13 @@ def main(argv: list[str] | None = None) -> int:
     else:
         failed = True
         print(
-            '::error ::'
-            + _missing_metadata_changelog(
-                version, md_found, meta_found, block_exists
-            ),
+            "::error ::"
+            + _missing_metadata_changelog(version, md_found, meta_found, block_exists),
             file=sys.stderr,
         )
 
     return 1 if failed else 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

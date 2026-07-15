@@ -109,6 +109,7 @@ class HillshadeAlgorithm(QgsProcessingAlgorithm):
             ]
         except ValueError:
             from qgis.core import QgsProcessingException
+
             raise QgsProcessingException(
                 f"Failed to parse sun azimuth angles string: {azimuths_str!r}. "
                 f"Please provide a comma-separated list of numbers (e.g. '315, 45, 135')."

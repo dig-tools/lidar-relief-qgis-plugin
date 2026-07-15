@@ -111,7 +111,9 @@ def load_model(
                         except ValueError:
                             pass
                     if int_keys:
-                        labels = [int_keys.get(i, f"class_{i}") for i in range(max_idx + 1)]
+                        labels = [
+                            int_keys.get(i, f"class_{i}") for i in range(max_idx + 1)
+                        ]
                     else:
                         labels = []
         except (json.JSONDecodeError, KeyError) as e:

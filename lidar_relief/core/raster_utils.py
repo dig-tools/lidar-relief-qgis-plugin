@@ -350,9 +350,9 @@ def process_in_tiles(
             # Handle nodata in input
             block_nodata_mask = np.zeros_like(block, dtype=bool)
             if nodata is not None:
-                block_nodata_mask = np.isclose(block, nodata, atol=1e-5, rtol=0.0) | np.isnan(
-                    block
-                )
+                block_nodata_mask = np.isclose(
+                    block, nodata, atol=1e-5, rtol=0.0
+                ) | np.isnan(block)
             else:
                 block_nodata_mask = np.isnan(block)
 

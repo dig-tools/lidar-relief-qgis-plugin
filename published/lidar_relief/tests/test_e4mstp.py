@@ -53,7 +53,9 @@ def test_e4mstp_nan_propagation():
     # A NaN in DEM is replaced with neutral 1.0 for SVF calculation, so it doesn't cause black pixels
     dem[5, 5] = np.nan
     open_pos[5, 5] = 0.8  # restore
-    result_dem_nan = compute_e4mstp(open_pos, open_neg, local_dom, slope, mstp, dem, cellsize)
+    result_dem_nan = compute_e4mstp(
+        open_pos, open_neg, local_dom, slope, mstp, dem, cellsize
+    )
     np.testing.assert_array_equal(result_dem_nan[5, 5], [25, 64, 64])
 
 

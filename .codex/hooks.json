@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "\"/home/mark/.config/ironlint/adapters/codex/hook.sh\" pre-tool-use",
+            "statusMessage": "ironlint check",
+            "timeout": 120,
+            "type": "command"
+          }
+        ],
+        "matcher": "apply_patch|Edit|Write|Bash"
+      }
+    ]
+  }
+}

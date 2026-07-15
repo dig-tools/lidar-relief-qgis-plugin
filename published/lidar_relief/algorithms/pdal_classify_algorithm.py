@@ -124,9 +124,7 @@ class PdalClassifyAlgorithm(QgsProcessingAlgorithm):
                 fileFilter="GeoTIFF (*.tif);;LAS (*.las)",
             )
         )
-        self.addOutput(
-            QgsProcessingOutputString(self.OUTPUT_STATS, "Processing stats")
-        )
+        self.addOutput(QgsProcessingOutputString(self.OUTPUT_STATS, "Processing stats"))
 
     def processAlgorithm(self, parameters, context, feedback):
         if not pdal_available():

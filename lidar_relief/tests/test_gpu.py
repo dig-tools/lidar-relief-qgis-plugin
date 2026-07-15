@@ -72,7 +72,9 @@ class TestGPUCompute:
 
         # Should be numerically close
         valid = ~np.isnan(svf_numpy) & ~np.isnan(svf_gpu)
-        assert valid.any(), "No valid (non-NaN) values found for GPU-CPU SVF comparison."
+        assert valid.any(), (
+            "No valid (non-NaN) values found for GPU-CPU SVF comparison."
+        )
         max_diff = np.max(np.abs(svf_numpy[valid] - svf_gpu[valid]))
         assert max_diff < 1e-4, f"Max diff: {max_diff}"
 
@@ -90,6 +92,8 @@ class TestGPUCompute:
         open_gpu = compute_openness_gpu(dem, 1.0, num_directions=8, search_radius=5)
 
         valid = ~np.isnan(open_numpy) & ~np.isnan(open_gpu)
-        assert valid.any(), "No valid (non-NaN) values found for GPU-CPU Openness comparison."
+        assert valid.any(), (
+            "No valid (non-NaN) values found for GPU-CPU Openness comparison."
+        )
         max_diff = np.max(np.abs(open_numpy[valid] - open_gpu[valid]))
         assert max_diff < 1e-4, f"Max diff: {max_diff}"

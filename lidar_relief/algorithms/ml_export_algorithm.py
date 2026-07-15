@@ -104,7 +104,9 @@ class MlExportAlgorithm(QgsProcessingAlgorithm):
             vrt_options = gdal.BuildVRTOptions(separate=separate)
             vrt = gdal.BuildVRT(output_path, layer_paths, options=vrt_options)
             if vrt is None:
-                raise RuntimeError("GDAL BuildVRT returned None. Verify that the output path is writable and input files are valid.")
+                raise RuntimeError(
+                    "GDAL BuildVRT returned None. Verify that the output path is writable and input files are valid."
+                )
             vrt.FlushCache()
             vrt = None
         except Exception as e:

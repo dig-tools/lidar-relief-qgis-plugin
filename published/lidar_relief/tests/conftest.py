@@ -12,6 +12,7 @@ import pytest
 
 try:
     from osgeo import gdal
+
     gdal.UseExceptions()
 except ImportError:
     pass

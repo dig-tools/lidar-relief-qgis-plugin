@@ -127,12 +127,14 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
         tolerance = 1e-6 * max(
             ext_a.width(), ext_a.height(), ext_b.width(), ext_b.height(), 1.0
         )
-        extents_aligned = all((
-            abs(ext_a.xMinimum() - ext_b.xMinimum()) <= tolerance,
-            abs(ext_a.yMinimum() - ext_b.yMinimum()) <= tolerance,
-            abs(ext_a.xMaximum() - ext_b.xMaximum()) <= tolerance,
-            abs(ext_a.yMaximum() - ext_b.yMaximum()) <= tolerance,
-        ))
+        extents_aligned = all(
+            (
+                abs(ext_a.xMinimum() - ext_b.xMinimum()) <= tolerance,
+                abs(ext_a.yMinimum() - ext_b.yMinimum()) <= tolerance,
+                abs(ext_a.xMaximum() - ext_b.xMaximum()) <= tolerance,
+                abs(ext_a.yMaximum() - ext_b.yMaximum()) <= tolerance,
+            )
+        )
         if not extents_aligned:
             raise QgsProcessingException(
                 f"Input rasters have different extents. Please align them "
@@ -159,7 +161,9 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
         arr_b = data_b.array
         b_min = np.nanmin(arr_b) if np.isfinite(arr_b).any() else 0.0
         b_max = np.nanmax(arr_b) if np.isfinite(arr_b).any() else 0.0
-        if (b_max > b_min and b_max <= 1.0 and b_min >= 0.0) or (b_max == b_min and 0.0 < b_min < 1.0):
+        if (b_max > b_min and b_max <= 1.0 and b_min >= 0.0) or (
+            b_max == b_min and 0.0 < b_min < 1.0
+        ):
             arr_b = arr_b * 255.0
 
         # SLRM could be -5 to 5. We should stretch to 0-255 if it has negative values.
@@ -174,7 +178,9 @@ class BlendAlgorithm(QgsProcessingAlgorithm):
         arr_a = data_a.array
         a_min = np.nanmin(arr_a) if np.isfinite(arr_a).any() else 0.0
         a_max = np.nanmax(arr_a) if np.isfinite(arr_a).any() else 0.0
-        if (a_max > a_min and a_max <= 1.0 and a_min >= 0.0) or (a_max == a_min and 0.0 < a_min < 1.0):
+        if (a_max > a_min and a_max <= 1.0 and a_min >= 0.0) or (
+            a_max == a_min and 0.0 < a_min < 1.0
+        ):
             arr_a = arr_a * 255.0
 
         feedback.setProgressText(f"Blending layers using {mode_str}...")
