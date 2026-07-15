@@ -29,9 +29,6 @@ docs/*
 !docs/brand/**
 !docs/images/
 !docs/images/**
-!docs/ROADMAP.md
-!docs/implementation_plan_v2.0.md
-!docs/scope.md
 
 # OS generated files
 .DS_Store
@@ -45,6 +42,11 @@ Thumbs.db
 # AI agent tooling config (local developer tooling, not project files)
 .gitnexus
 .agents/
+.codex/
+.ironlint/
+.ironlint.yml
+.opencode/plugins/
+.pi/
 .aidevops.json
 .beads/
 .claude/
