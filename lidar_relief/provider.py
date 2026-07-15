@@ -14,6 +14,7 @@ from .algorithms.hillshade_algorithm import HillshadeAlgorithm
 from .algorithms.slrm_algorithm import SlrmAlgorithm
 from .algorithms.svf_algorithm import SvfAlgorithm
 from .algorithms.slope_algorithm import SlopeAlgorithm
+from .algorithms.ruggedness_algorithm import RuggednessAlgorithm
 from .algorithms.batch_algorithm import BatchAlgorithm
 from .algorithms.openness_algorithm import OpennessAlgorithm
 from .algorithms.mstp_algorithm import MstpAlgorithm
@@ -69,6 +70,7 @@ class LidarReliefProvider(QgsProcessingProvider):
         self.addAlgorithm(SlrmAlgorithm())
         self.addAlgorithm(SvfAlgorithm())
         self.addAlgorithm(SlopeAlgorithm())
+        self.addAlgorithm(RuggednessAlgorithm())
         self.addAlgorithm(BatchAlgorithm())
         self.addAlgorithm(OpennessAlgorithm())
         self.addAlgorithm(MstpAlgorithm())

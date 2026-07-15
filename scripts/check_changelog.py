@@ -1,28 +1,18 @@
 #!/usr/bin/env python3
-"""Guard: ensure both CHANGELOG.md AND metadata.txt's changelog= block cover
-the version declared in metadata.txt.
+"""Guard: ensure CHANGELOG.md contains parser-safe notes for the plugin version.
 
-Exits 0 if both targets cover the current `version=`; exits 1 if either is
-missing an entry. Exits 2 if metadata.txt itself is missing or has no
-`version=` line.
+Exits 0 when the current version has substantive notes that qgis-plugin-ci can
+parse; exits 1 otherwise. Exits 2 if metadata.txt is missing or malformed.
 
 This script is intentionally dependency-free (standard library only) so it
 runs in any environment that can invoke Python — pre-commit hook, GitHub
 Actions runner, or a manual `python3 scripts/check_changelog.py` invocation.
 
-Two separate checks are enforced:
-
-1. `CHANGELOG.md` has a `## [<version>]` header line (plus ideally bullets
-   under it). This is the long-form narrative used by GitHub Releases.
-2. `lidar_relief/metadata.txt` has a `    <version> - <title>` line inside
-   the multi-line `changelog=` block. QGIS-Django auto-populates the
-   plugins.qgis.org upload form's "Changes" textarea from this block, so
-   if this block is stale the new release-notes are silently overridden on
-   every upload — pasting text into the upload page appears to "not stick".
-
-Without check (2) the plugin could pass the original CHANGELOG.md-only
-guard and still ship without the user-facing release notes that led to the
-upload discrepancy in the first place.
+`qgis-plugin-ci` injects the latest entries from CHANGELOG.md into the packaged
+metadata.txt. The source metadata therefore deliberately keeps `changelog=`
+empty: maintaining both copies caused duplicated and stale release notes.
+Because qgis-plugin-ci stops at any further Markdown `##` heading, version
+bodies must use bold labels such as `**Fixed**`, not `### Fixed`.
 
 Usage:
     python3 scripts/check_changelog.py
@@ -110,6 +100,33 @@ def find_changelog_entry(changelog_path: Path, version: str) -> bool:
         if header.group("version").lower() == target:
             return True
     return False
+
+
+def find_qgis_compatible_release_notes(
+    changelog_path: Path, version: str
+) -> tuple[bool, str]:
+    """Validate that qgis-plugin-ci will extract substantive release notes."""
+    text = changelog_path.read_text(encoding="utf-8", errors="replace")
+    headers = list(CHANGELOG_VERSION_HEADER.finditer(text))
+    target_index = next(
+        (
+            index
+            for index, header in enumerate(headers)
+            if header.group("version").lower() == version.lower()
+        ),
+        None,
+    )
+    if target_index is None:
+        return False, "version header is missing"
+
+    start = headers[target_index].end()
+    end = headers[target_index + 1].start() if target_index + 1 < len(headers) else len(text)
+    body = text[start:end].strip()
+    if len(body) < 40:
+        return False, "release-note body is empty or too short"
+    if re.search(r"^#{2,}\s+", body, re.MULTILINE):
+        return False, "use bold labels instead of ##/### subheadings inside a version"
+    return True, ""
 
 
 def extract_metadata_changelog_block(metadata_text: str) -> str | None:
@@ -204,9 +221,9 @@ def _missing_changelog_md(version: str, found: list[str]) -> str:
         f"  Expected header : `## [{version}]` (optional `- YYYY-MM-DD` suffix)\n"
         f"  Found versions  : {found or '[]'}\n\n"
         f"  To fix, add a section to CHANGELOG.md BEFORE tagging the release,\n"
-        f"  and list at least one bullet under ### Fixed / ### Added / ### Changed:\n\n"
+        f"  and list at least one bullet under **Fixed** / **Added** / **Changed**:\n\n"
         f"## [{version}] - YYYY-MM-DD\n"
-        f"### Fixed\n"
+        f"**Fixed**\n"
         f"- one bullet describing the most important change.\n"
     )
 
@@ -300,14 +317,6 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     md_found = collect_changelog_versions(args.changelog)
-    meta_found = collect_metadata_changelog_versions(args.metadata)
-    # `read_metadata_version()` already exits 2 on a missing or
-    # non-parsable metadata.txt, so by the time we get here the file exists
-    # and is non-empty. One read of metadata.txt is enough to detect both
-    # "block missing" and "block present but missing version" — distinguish
-    # them so the error helper can print the right fix recipe.
-    metadata_text = args.metadata.read_text(encoding="utf-8", errors="replace")
-    block_exists = METADATA_CHANGELOG_KEY.search(metadata_text) is not None
     failed = False
 
     if find_changelog_entry(args.changelog, version):
@@ -320,14 +329,14 @@ def main(argv: list[str] | None = None) -> int:
             file=sys.stderr,
         )
 
-    if find_metadata_changelog_entry(args.metadata, version):
+    compatible, reason = find_qgis_compatible_release_notes(args.changelog, version)
+    if compatible:
         if not args.quiet:
-            print(f"✓ metadata.txt changelog= block has `{version} - ...` line.")
+            print("✓ qgis-plugin-ci can parse substantive release notes.")
     else:
         failed = True
         print(
-            "::error ::"
-            + _missing_metadata_changelog(version, md_found, meta_found, block_exists),
+            f"::error ::CHANGELOG.md is not qgis-plugin-ci compatible: {reason}",
             file=sys.stderr,
         )
 

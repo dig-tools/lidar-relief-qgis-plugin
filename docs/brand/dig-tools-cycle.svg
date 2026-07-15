@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img"
+     aria-label="Dig:Tools, cycling through Aperture, Folio, Codex, Crucible, Horizon, and Stratum">
+  <title>Dig:Tools animated ecosystem wordmark</title>
+  <desc>The Dig prefix remains fixed while suite names fade in turn and a line icon draws beside each name.</desc>
+  <defs>
+    <style>
+      .word { font-family: Inter, "Noto Sans", "Segoe UI", Arial, sans-serif; font-size: 100px; font-weight: 700; letter-spacing: -4px; }
+      .ink { fill: #202124; }
+      .accent { fill: #B97812; }
+      .cycle { opacity: 0; animation: cycle 28s linear infinite; }
+      .item-0 { animation-delay: 0s; }
+      .item-1 { animation-delay: 4s; }
+      .item-2 { animation-delay: 8s; }
+      .item-3 { animation-delay: 12s; }
+      .item-4 { animation-delay: 16s; }
+      .item-5 { animation-delay: 20s; }
+      .item-6 { animation-delay: 24s; }
+      .line-icon { fill: none; stroke: #B97812; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw 4s ease-out infinite; }
+      @keyframes cycle { 0%, 10.5% { opacity: 1; } 14.28%, 100% { opacity: 0; } }
+      @keyframes draw { 0%, 8% { stroke-dashoffset: 1; opacity: 0; } 42%, 88% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+      @media (prefers-color-scheme: dark) { .ink { fill: #F5F2EA; } .accent { fill: #D99A32; } .line-icon { stroke: #D99A32; } }
+      @media (prefers-reduced-motion: reduce) { .cycle { animation: none; opacity: 0; } .item-0 { opacity: 1; } .line-icon { animation: none; stroke-dashoffset: 0; opacity: 1; } }
+    </style>
+  </defs>
+
+  <text class="word ink" x="80" y="184">Dig:</text>
+
+  <g class="cycle item-0">
+    <text class="word accent" x="290" y="184">Tools</text>
+    <g class="line-icon" transform="translate(925 78)">
+      <path pathLength="1" d="M26 104 46 55l16 7-20 49c-4 10-12 14-22 10-7-3-8-9-4-17Z"/>
+      <path pathLength="1" d="m46 55 15-21 20 8-3 25-32-12Z"/>
+      <path pathLength="1" d="m65 36 19-28c5-8 18-3 15 6L82 43 65 36Z"/>
+      <path pathLength="1" d="m26 104 36-19"/>
+    </g>
+  </g>
+
+  <g class="cycle item-1">
+    <text class="word accent" x="290" y="184">Aperture</text>
+    <g class="line-icon" transform="translate(920 80)">
+      <circle pathLength="1" cx="60" cy="60" r="46"/>
+      <circle pathLength="1" cx="60" cy="60" r="16"/>
+      <path pathLength="1" d="M60 14 43 44M100 36 67 46M100 84 77 66M60 106 57 75M20 84 45 65M20 36 45 49"/>
+    </g>
+  </g>
+
+  <g class="cycle item-2">
+    <text class="word accent" x="290" y="184">Folio</text>
+    <g class="line-icon" transform="translate(925 80)">
+      <path pathLength="1" d="M18 20h72c8 0 14 6 14 14v72H32c-8 0-14-6-14-14V20Z"/>
+      <path pathLength="1" d="M32 20v86M45 42h42M45 62h42M45 82h30"/>
+      <path pathLength="1" d="M18 92c0-8 6-14 14-14"/>
+    </g>
+  </g>
+
+  <g class="cycle item-3">
+    <text class="word accent" x="290" y="184">Codex</text>
+    <g class="line-icon" transform="translate(920 80)">
+      <path pathLength="1" d="M12 28c18-8 34-5 48 7v72c-14-12-30-15-48-7V28Z"/>
+      <path pathLength="1" d="M108 28c-18-8-34-5-48 7v72c14-12 30-15 48-7V28Z"/>
+      <path pathLength="1" d="M30 49h18M30 65h18M72 49h18M72 65h18"/>
+    </g>
+  </g>
+
+  <g class="cycle item-4">
+    <text class="word accent" x="290" y="184">Crucible</text>
+    <g class="line-icon" transform="translate(925 78)">
+      <path pathLength="1" d="M43 12h34M50 12v34L22 96c-5 9 2 16 12 16h52c10 0 17-7 12-16L70 46V12"/>
+      <path pathLength="1" d="M34 82h52M43 66c9 7 25-7 34 0"/>
+      <circle pathLength="1" cx="48" cy="94" r="3"/>
+      <circle pathLength="1" cx="70" cy="84" r="3"/>
+    </g>
+  </g>
+
+  <g class="cycle item-5">
+    <text class="word accent" x="290" y="184">Horizon</text>
+    <g class="line-icon" transform="translate(920 80)">
+      <circle pathLength="1" cx="82" cy="36" r="18"/>
+      <path pathLength="1" d="M10 74c18-20 36-20 54 0s36 20 46 0M10 92c20-15 40-15 60 0s32 15 40 2"/>
+      <path pathLength="1" d="M82 8v8M82 56v8M54 36h-8M110 36h-8M62 16l6 6M102 16l-6 6"/>
+    </g>
+  </g>
+
+  <g class="cycle item-6">
+    <text class="word accent" x="290" y="184">Stratum</text>
+    <g class="line-icon" transform="translate(920 80)">
+      <path pathLength="1" d="m60 12 50 24-50 24L10 36 60 12Z"/>
+      <path pathLength="1" d="m18 54-8 4 50 24 50-24-8-4M18 76l-8 4 50 24 50-24-8-4"/>
+      <path pathLength="1" d="M60 60v44"/>
+    </g>
+  </g>
+</svg>

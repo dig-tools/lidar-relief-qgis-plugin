@@ -2,16 +2,22 @@
 name=LiDAR Relief Visualization
 qgisMinimumVersion=3.0
 qgisMaximumVersion=4.99
-description=22+ LiDAR relief visualization, point cloud, temporal change detection, multi-sensor fusion, and AI feature detection tools — Hillshade, SVF, SLRM, MSTP, e4MSTP, PCA, ASVF, VAT, Openness, LD, Slope, Blend, Batch, COG export, QField survey, PDF reports, CSF ground filter, DoD, Sentinel-2 fusion, ONNX AI inference, and CuPy GPU acceleration. Direct from a loaded DEM or LAS/LAZ point cloud.
-version=2.0.19
+description=A free, open-source QGIS toolkit with 29 Processing algorithms for archaeological LiDAR visualization and terrain analysis. Reveal subtle earthworks, prepare point clouds, compare surveys, combine LiDAR with satellite imagery, validate anomalies in the field, and produce reproducible research outputs.
+version=2.0.21
 author=Mark Bouck
 email=markbouck@duck.com
 
-about=A comprehensive archaeological terrain analysis toolkit for QGIS that generates 15 LiDAR-derived relief visualization filters — Multi-directional Hillshade, Simple Local Relief Model (SLRM), Sky-View Factor (SVF), Slope, Topographic Openness, Multi-Scale Topographic Position (MSTP), VAT Composite, Simple Red Relief, Blend, Local Dominance, Anisotropic Sky-View Factor (ASVF), Enhanced 4-Scale Topographic Position (e4MSTP), PCA RGB Composite, and ML-Ready VRT Export — directly from a loaded DEM layer. Batch mode with landscape presets. NEW in v2.0: Export as Cloud-Optimized GeoTIFFs with MapLibre web viewers, package for QField field survey, generate CIfA PDF reports, share JSON Visualization Recipes, process LAS/LAZ point clouds via Cloth Simulation Filter, compute multi-temporal DEMs of Difference, fuse LiDAR with Sentinel-2 bands, run AI feature detection via ONNX models (YOLO, U-Net), and GPU acceleration via CuPy. Designed for landscape archaeologists, heritage managers, and aerial survey specialists.
+about=LiDAR Relief Visualization is a free and open-source archaeological terrain-analysis toolkit for QGIS and part of the Dig:Tools ecosystem.
+    Its 29 Processing algorithms help archaeologists, heritage professionals, and landscape researchers examine digital elevation models and LiDAR point clouds for subtle features such as ditches, banks, mounds, hollow ways, scarps, platforms, quarrying, and disturbed ground.
+    Core tools include multi-directional hillshade, SLRM, Sky-View Factor, anisotropic Sky-View Factor, positive and negative openness, Local Dominance, MSTP, e4MSTP, Terrain Ruggedness Index, slope, VAT, Simple Red Relief, PCA composites, visualization blending, and batch processing with landscape presets.
+    Extended workflows support LAS/LAZ ground filtering, PDAL processing, multi-temporal DEM comparison, LiDAR and Sentinel-2 fusion, Cloud-Optimized GeoTIFF export, interactive web maps, QField survey packages, reproducible visualization recipes, PDF reporting, and optional ONNX-based feature detection.
+    Core terrain tools work with libraries supplied by QGIS. Specialized capabilities use clearly identified optional packages and remain isolated, so missing optional dependencies do not prevent the plugin from loading.
+    The plugin supports QGIS 3 and QGIS 4 and is tested through automated numerical, packaging, clean-runtime, and desktop-loader checks. It supports transparent, reproducible research without subscription fees or proprietary lock-in.
+    Visualizations and automated detections are interpretive aids rather than archaeological classifications. Assess potential features using complementary evidence and, where appropriate, field validation.
 
-tracker=https://github.com/mabo-du/lidar-relief-qgis-plugin/issues
-repository=https://github.com/mabo-du/lidar-relief-qgis-plugin
-homepage=https://github.com/mabo-du/lidar-relief-qgis-plugin
+tracker=https://github.com/dig-tools/lidar-relief-qgis-plugin/issues
+repository=https://github.com/dig-tools/lidar-relief-qgis-plugin
+homepage=https://github.com/dig-tools/lidar-relief-qgis-plugin
 
 hasProcessingProvider=yes
 
@@ -23,44 +29,6 @@ icon=resources/icon.png
 experimental=False
 deprecated=False
 
-changelog_url=https://github.com/mabo-du/lidar-relief-qgis-plugin/releases
+changelog_url=https://github.com/dig-tools/lidar-relief-qgis-plugin/releases
 
 changelog=
-    2.0.19 - Plugin page completeness: full release history since 30 June, plus GH release-notes narrative
-    - Restored a multi-version `changelog=` block in `metadata.txt` covering every release since the 30 June 2026 v2.0.14 baseline. Each version is followed by full bullets; there are no bare version-number-only lines, so plugins.qgis.org's "Changes" tab auto-fills cleanly with the cumulative narrative rather than empty/duplicated version rows.
-    - Replaced the GitHub release bodies for v2.0.18 and v2.0.19 (`gh release edit --notes`) so the github.com release page shows the actual CHANGELOG.md narrative for each version rather than the auto-generated commit/PR boilerplate produced by `gh release create --generate-notes`.
-
-    2.0.18 - Cleanup pass: tag-cap fix and full-block render compatibility
-    - Trimmed `tags=` from 43 entries down to the QGIS-Django per-plugin cap of 5 broad terms (`lidar,relief,visualization,dem,archaeology`) so `qgis-plugin-ci release` no longer trips plugins.qgis.org's HTTP 400 (Bad Request) on the upload endpoint. Confirmed by `--generate-notes` not being a substitute for proper release notes.
-
-    2.0.17 - Hardening pass: OpenMP determinism, dual changelog guard, CI flake guard
-    - Force `OMP_NUM_THREADS=1` in `point_cloud/csf_filter.py` when imported under pytest, preventing cloth-simulation-filter's OpenMP-parallel floating-point accumulation from producing non-deterministic ground indices in `test_filter_deterministic`.
-    - Extended `scripts/check_changelog.py` to also verify `lidar_relief/metadata.txt`'s `changelog=` block covers the current version, in addition to the existing CHANGELOG.md check. Defense-in-depth against plugins.qgis.org's upload form auto-fill overriding pasted release notes.
-    - Added 3x cold-run determinism check to `.github/workflows/tests.yml` full-tests job, with `--deselect` on the main suite so the dedicated CIS guard is the sole owner of that test.
-    - Added `changelog_url=` to `metadata.txt` so plugins.qgis.org displays a "View full changelog" link to GitHub Releases.
-    - Prepended missing 2.0.8-2.0.16 entries to the metadata.txt `changelog=` block, fixing the previous pattern where plugins.qgis.org's auto-fill was showing only the stale v2.0.7 view.
-
-    2.0.16 - Fix QGIS Plugin Manager secrets detection false positive
-    - QGIS Plugin Manager secrets detection false positives: added Yelp's `detect-secrets` inline bypass comments (`# pragma: allowlist secret`) to MapLibre GL JS and the custom COG protocol Subresource Integrity (SRI) base64 hashes in `web_viewer.py` to prevent automated submission blocks on plugins.qgis.org.
-
-    2.0.15 - Bug fixes, performance optimizations, and documentation update
-    - RVT Topographic Openness: fixed missing `rvt.vis.openness` API usage in `rvt_vis.py` by calling `rvt.vis.sky_view_factor(compute_opns=True)` to align with the modern `rvt-py` 2.x API.
-    - RVT Multi-directional Hillshade: fixed shape mismatch crashing tile processing by transposing outputs to `(height, width, directions)` and fixing the 3D padding logic in `_unwrap_rvt_output`.
-    - MSTP memory spikes: replaced O(N×M) `np.mgrid` coordinate grids in `_window_stats` with 1D broadcasted arrays, reducing memory footprints by gigabytes.
-    - Flat-terrain standard deviation clamping: clamped flat-terrain standard deviations to exactly `0.0` in `compute_dev` to avoid micro-noise speckles.
-    - Windows file locks: closed all GDAL Band and Dataset handles in `process_in_tiles` before deleting files; used `gdal.GetDriverByName("GTiff").Delete(path)` on cancel.
-    - Auto-scaling for flat/all-zero rasters: fixed division-by-zero warnings on flat inputs in `blend_algorithm.py`.
-    - Azimuth parsing: wrapped parsing in `hillshade_algorithm.py` in try/except for non-numeric azimuths.
-    - GDAL BuildVRT failure check: added return validation in `ml_export_algorithm.py` to prevent `NoneType` errors when `BuildVRT` fails.
-    - YOLOv5 postprocessing and label mapping: reordered postprocessing checks in `ml/detector.py` to make YOLOv5 reachable and fixed dictionary parsing for non-contiguous integer class mappings.
-    - CSF point cloud conversion: replaced single-threaded point loops in `point_cloud/csf_filter.py` with direct SWIG NumPy array transfers.
-    - Multi-temporal transform compatibility: dynamic transform-object checks in `temporal/dem_difference.py` (supports both `affine.Affine` and standard GDAL 6-tuples).
-    - QField field package compatibility: included standard XML headers in exported QField project files.
-    - Report generator percentiles: fixed statistics table requesting P85 but computing P95 percentiles.
-    - Web viewer CDN security: included Subresource Integrity (SRI) hashes on all external CDN assets.
-
-    2.0.14 - ImportError fix and changelog guard
-    - Fixed ImportError crash at plugin init on QGIS 4.0.3: `pdal_classify_algorithm.py` used the non-existent class name `QgsProcessingParameterOutputString`; corrected to `QgsProcessingOutputString` in both the `from qgis.core import (...)` block and the `self.addOutput(...)` call site.
-    - Added pre-commit + CI changelog guard (`scripts/check_changelog.py`) to verify `CHANGELOG.md` covers the `version=` in `metadata.txt`. Wired into `.pre-commit-config.yaml`, `.github/workflows/release.yml`, and `test.sh` as a hard-fail step.
-    - Pre-merge hardening pass: NumPy 2 deprecation compatibility (`int8` → `int16` / `uint8` type promotions), rio-cogeo reprojection alignment in CSF ground filter, and `field_packager` refactor.
-    - Branch cleanup: merged stale `fix/v2.0.7-hardening-pass` branch into `master` and deleted it. GitLab remote switched from HTTPS token-auth to SSH.

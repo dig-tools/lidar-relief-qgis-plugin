@@ -25,6 +25,13 @@ build/
 # Documentation
 docs/*
 !docs/research-papers/
+!docs/brand/
+!docs/brand/**
+!docs/images/
+!docs/images/**
+!docs/ROADMAP.md
+!docs/implementation_plan_v2.0.md
+!docs/scope.md
 
 # OS generated files
 .DS_Store

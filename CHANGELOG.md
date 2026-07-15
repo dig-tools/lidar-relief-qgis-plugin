@@ -2,53 +2,79 @@
 
 All notable changes to LiDAR Relief Visualization are documented here.
 
----
 
 ## [Unreleased]
 
----
+
+## [2.0.21] - 2026-07-15
+
+**Added**
+
+- **Terrain Ruggedness Index (TRI).** Added a dependency-free Riley 3×3
+  implementation and QGIS Processing wrapper. TRI maps local elevation
+  contrast in the DEM's elevation units and can help identify scarps, banks,
+  rough ground, stone spreads, quarrying, and other microtopographic changes.
+- **Release version guard.** Tag-based publishing now fails before upload when
+  the tag version and `metadata.txt` version differ.
+- **QGIS runtime smoke test.** Added a reusable headless test that loads and
+  unloads the plugin, checks all 29 Processing algorithms, executes TRI on a
+  synthetic projected DEM, and validates the output raster. It now runs in CI
+  inside the official QGIS container.
+
+**Fixed**
+
+- **Persistently failing full-test workflow.** The QGIS container ran the CSF
+  determinism test without installing `cloth-simulation-filter`; pytest skipped
+  the module and the explicit node selection then failed. CI now installs and
+  verifies the package before running the test.
+- **Plugin failed to load without optional ReportLab.** A runtime-evaluated
+  `Drawing` return annotation raised `NameError` whenever ReportLab was absent,
+  preventing every plugin tool from loading. Annotations are now deferred, so
+  only the PDF report tool requires ReportLab as documented.
+- **2.0.20 package metadata drift.** The 2.0.20 tag contained
+  `version=2.0.19`, old `mabo-du` links, and no 2.0.20 changelog entry. All live
+  metadata now identifies version 2.0.21 and the `dig-tools` repository.
+- **Documentation drift.** Corrected feature counts, installation guidance,
+  optional-dependency wording, and release links.
+
 
 ## [2.0.19] - 2026-07-04
 
-### Fixed
+**Fixed**
 - **Plugins.qgis.org "Changes" tab completeness.** v2.0.18 reduced the `changelog=` block in `metadata.txt` down to a single `2.0.18` entry on the assumption that QGIS-Django's per-version auto-fill would render a multi-version block as empty / duplicated version rows. v2.0.19 restores the cumulative `changelog=` block covering versions `2.0.14 → 2.0.18` (each version followed by full bullets, no bare version-number-only lines, no duplicates), so plugins.qgis.org's auto-fill has the full release history since the 30 June 2026 v2.0.14 baseline.
-- **GitHub release bodies contained `--generate-notes` boilerplate, not CHANGELOG.md narrative.** The release.yml workflow's `gh release create --generate-notes` flag emits a commit/PR list, which is not useful as end-user release notes. Replaced the GitHub release bodies for `v2.0.18` and `v2.0.19` with the actual CHANGELOG.md narrative for each version, so users browsing github.com/mabo-du/lidar-relief-qgis-plugin/releases see the same content as in this file.
+- **GitHub release bodies contained `--generate-notes` boilerplate, not CHANGELOG.md narrative.** The release.yml workflow's `gh release create --generate-notes` flag emits a commit/PR list, which is not useful as end-user release notes. Replaced the GitHub release bodies for `v2.0.18` and `v2.0.19` with the actual CHANGELOG.md narrative for each version.
 
----
 
 ## [2.0.18] - 2026-07-04
 
-### Fixed
+**Fixed**
 
 - **Plugins.qgis.org upload HTTP 400 (auto-publish failure).** The `tags=` field in `lidar_relief/metadata.txt` had grown to 43 comma-separated entries over many releases. The QGIS-Django plugin registry caps per-plugin tags well below this; the upload endpoint returned HTTP 400 on every direct `qgis-plugin-ci release` invocation, which forced the v2.0.16 → v2.0.17 uploads to fall back to manual web-form paste. Trimmed `tags=` to the conventional 5 broad terms (`lidar,relief,visualization,dem,archaeology`) so the next release auto-publishes without manual intervention.
 - **Plugins.qgis.org "Changes" page rendered empty/duplicate entries after manual upload.** When the v2.0.17 release was uploaded manually, the QGIS-Django upload form auto-populated the per-version "Changes" field with the entire multi-version `changelog=` block (all 36 historical entries), then tried to re-parse that block as a single version's notes. The result was the perceived "empty entries at the top for versions that are then repeated below". Replaced the 36-entry `changelog=` block with a single-entry block (covering v2.0.18 only) so the upload form auto-fills cleanly. The full history remains reachable from the same plugin page via the existing `changelog_url=` link to GitHub Releases.
----
 
 ## [2.0.17] - 2026-07-04
 
-### Fixed
+**Fixed**
 - **Cloth Simulation Filter determinism flake**: Force `OMP_NUM_THREADS=1` in `lidar_relief/point_cloud/csf_filter.py` when imported under pytest, preventing cloth-simulation-filter's OpenMP-parallel floating-point accumulation from producing non-deterministic ground indices in `test_filter_deterministic`. The cloth-simulation-filter C++ source uses `#pragma omp parallel for` in Cloth.cpp for the cloth physics integration; OpenMP parallel FP accumulation is non-associative, so thread scheduling could flip near-threshold points across runs. Verified 15/15 cold in-process runs and 8/8 isolated pytest invocations all return delta=0.
 
-### Added
+**Added**
 - **Dual changelog guard**: Extended `scripts/check_changelog.py` to also verify `lidar_relief/metadata.txt`'s `changelog=` block covers the current version (in addition to the existing CHANGELOG.md check). This is the source of the user-facing release notes on plugins.qgis.org's upload form (which auto-populates from the `changelog=` block, overriding anything pasted). Defense-in-depth against the original "changelog paste doesn't stick" failure mode.
 - **CI determinism regression guard**: Added a 3x cold-run determinism check to `.github/workflows/tests.yml`'s `full-tests` job, with `--deselect` on the main suite so the only execution path is the dedicated guard. Prevents future regressions in the OMP fix from re-introducing the flake.
 - **QGIS Plugin Manager "View full changelog" link**: Added `changelog_url=` to `lidar_relief/metadata.txt` so plugins.qgis.org displays a link to GitHub Releases.
 
-### Changed
+**Changed**
 - **v2.0.16 changelog restored in `metadata.txt`**: The `changelog=` block was missing entries for 2.0.8, 2.0.10, 2.0.12, 2.0.13, 2.0.14, 2.0.15, and 2.0.16 — so plugins.qgis.org's auto-fill was showing the stale 2.0.7 view. Prepended the missing entries so users now see the full history.
 
----
 
 ## [2.0.16] - 2026-07-04
 
-### Fixed
+**Fixed**
 - **QGIS Plugin Manager secrets detection false positives**: Added Yelp's `detect-secrets` inline bypass comments (`# pragma: allowlist secret`) to MapLibre GL JS and custom COG protocol Subresource Integrity (SRI) base64 hashes in `web_viewer.py` to prevent automated submission blocks.
 
----
 
 ## [2.0.15] - 2026-07-04
 
-### Fixed
+**Fixed**
 - **RVT Topographic Openness execution failure**: Fixed missing `rvt.vis.openness` API usage in `rvt_vis.py` by calling `rvt.vis.sky_view_factor(compute_opns=True)` to align with the modern `rvt-py` 2.x API.
 - **RVT Multi-directional Hillshade output orientation and padding**: Fixed shape mismatch crashing tile processing by transposing multi-directional hillshade outputs to `(height, width, directions)` and fixing 3D padding logic in `_unwrap_rvt_output`.
 - **MSTP memory spikes and OOM vulnerability**: Replaced $O(N \times M)$ coordinate grids using `np.mgrid` inside `_window_stats` with 1D broadcasted arrays, reducing memory footprints by gigabytes.
@@ -64,16 +90,15 @@ All notable changes to LiDAR Relief Visualization are documented here.
 - **Report generator percentiles mismatch**: Fixed statistics tables requesting P85 but computing P95 percentiles.
 - **Web viewer CDN security**: Included Subresource Integrity (SRI) hashes on all external CDN assets.
 
-### Changed
+**Changed**
 - **Test suite robustness and coverage**: Added deterministic random seeds, flat DEM test cases, and NaN propagation checks to PCA, VAT, Red Relief, and e4MSTP tests.
 - **Unified GDAL exceptions in tests**: Enabled `gdal.UseExceptions()` in test fixtures to suppress future GDAL 4.0 warning logs.
 - **SVF/ASVF linear approximation documentation**: Documented the linear $1 - \sin$ approximation choice in `svf.py` and `asvf.py` compared to the standard peer-reviewed $1 - \sin^2$ formula.
 
----
 
 ## [2.0.14] - 2026-06-30
 
-### Fixed
+**Fixed**
 
 - **ImportError crash at plugin init on QGIS 4.0.3.** The `pdal_classify_algorithm.py`
   file used the non-existent class name `QgsProcessingParameterOutputString` (a typo
@@ -82,7 +107,7 @@ All notable changes to LiDAR Relief Visualization are documented here.
   qgis.core import (...)` block and the `self.addOutput(...)` call site. This was the
   only instance of this typo across the entire codebase.
 
-### Added
+**Added**
 
 - **Pre-commit + CI changelog guard.** A new `scripts/check_changelog.py` stdlib-only
   script reads `version=` from `lidar_relief/metadata.txt` and verifies that
@@ -91,7 +116,7 @@ All notable changes to LiDAR Relief Visualization are documented here.
   (before the `qgis-plugin-ci release` publish) and in `test.sh`. This ensures future
   releases cannot ship with an empty GitHub Release body.
 
-### Changed
+**Changed**
 
 - **Pre-merge hardening pass.** Incorporated local working-tree improvements for
   NumPy 2 deprecation compatibility (`int8` → `int16`/`uint8` type promotions),
@@ -101,11 +126,10 @@ All notable changes to LiDAR Relief Visualization are documented here.
   `master` and deleted it from GitHub. The repository now has a single branch:
   `master`. GitLab remote switched from HTTPS token-auth to SSH.
 
----
 
 ## [2.0.13] - 2026-06-30
 
-### Fixed
+**Fixed**
 
 - **QGIS plugin scanner lint pass at 100% (0/22 findings remaining).** The
   v2.0.12 zip produced 22 lint issues (`/scanner/.../report`) all in Code
@@ -138,48 +162,45 @@ All notable changes to LiDAR Relief Visualization are documented here.
 
 ## [2.0.12] - 2026-06-30
 
-### Fixed
+**Fixed**
 - Release workflow (`release.yml`) hardened so `qgis-plugin-ci release` always publishes the exact working-tree contents at the tagged commit: (1) `actions/checkout@v4` now uses explicit `ref: ${{ github.ref_name }}` with `fetch-depth: 0` so a full history of the triggering tag is checked out instead of the shallow default; (2) new `Verify tree clean before package` step runs `git diff --quiet HEAD` (a tracked-files-only check that ignores untracked `__pycache__/` and `.pytest_cache/` produced by `./test.sh`) after the lint+test run and fails the workflow with a `::error` annotation if any tracked file diverges from HEAD.
 - `test.sh` switched from auto-modifying `ruff format` / `ruff check --fix` (which silently rewrote tracked files in CI and reintroduced W503 violations, blocking the publish guard on the v2.0.11 attempt) to read-only `ruff format --check` and `ruff check` chained with `|| echo "(informational only)"` so drift/lint warnings surface without blocking CI. The actual lint gate for the QGIS plugin scanner is `flake8 --isolated --select=W503,E402,E203` (run separately); ruff's default rule set is broader and is reporting only as developer feedback.
 - v2.0.8 → v2.0.10 published successfully but the artifacts available via the plugins.qgis.org API at scan time nonetheless lacked the lint fixes (`W503` and `E203` violations in `algorithms/blend_algorithm.py`, `algorithms/csf_algorithm.py`, `ml/detector.py`, `tests/test_golden_regression.py`); release.yml reproducibility fixes plus test.sh read-only mode make v2.0.12 the canonical 100%-lint-pass release.
 
 ## [2.0.10] - 2026-06-30
 
-### Fixed
+**Fixed**
 - Lint scanner passes 100% with 0 findings across W503 (line break before binary operator), E402 (module-level import not at top of file), and E203 (whitespace before ':') rules. 18 fixes applied across 5 files (algorithms/blend_algorithm.py, algorithms/csf_algorithm.py, ml/detector.py, tests/test_golden_regression.py, tests/test_web_viewer.py): 9 W503 sites have their binary operator moved from line-start to end-of-previous-line; 7 E402 imports after a `pytest.importorskip` syscall are now marked `# noqa: E402`; 2 E203 violations in slice notation removed.
 - Republished as v2.0.10 to bypass GitHub's `/archive/refs/tags/v2.0.9.zip` CDN cache. The v2.0.9 published artifact on plugins.qgis.org was the cached source archive (containing v2.0.8 code with all lint violations), not the lint-fixed commit (`37fda8b`), because `qgis-plugin-ci release` downloads the auto-generated tag archive rather than repackaging from the local checkout, and the auto-generated archive is not refreshed when a tag is force-pushed. A new tag name produces a fresh archive with the corrected code.
 
 ## [2.0.8] - 2026-06-30
 
-### Added
+**Added**
 - RVT Multi-directional Hillshade algorithm (`rvt_multidirectional_hillshade`) that wraps the `rvt-py` (Relief Visualization Toolbox) reference implementation. Useful for cross-validating results against other RVT installations.
 - RVT Topographic Openness algorithm (`rvt_openness`) with Positive and Negative modes, configurable search directions (8/16/32) and search radius (1–500 px). Wraps `rvt.vis.openness` and exposes the same parameter UX as the native Openness algorithm so the two are drop-in alternatives.
 - CI step to install `rvt-py` as an optional test dependency (`pip install rvt-py 2>/dev/null || true`).
 
----
 
 ## [2.0.6] - 2026-06-19
 
-### Fixed
+**Fixed**
 - QGIS Scanner Security False Positives: Removed MapLibre CDN `integrity` hashes to prevent `detect-secrets` from flagging them as High Entropy Strings.
 - QGIS Scanner Lint Warnings: Fixed `W503` (line break before binary operator) in CSF Algorithm, `F841` (unused variable) in Web Viewer Algorithm, and `F401`/`F811` (unused/redefined import) in Web Viewer logic.
 
----
 
 ## [2.0.5] - 2026-06-19
 
-### Fixed
+**Fixed**
 - MapLibre Web Viewer: Fixed COG protocol registration (`maplibregl.addProtocol`) failing to load 3D terrain viewer.
 - MapLibre Web Viewer: Fixed issue where `generate_web_viewer` returned a boolean instead of the required config dictionary, causing test failures and crashes during HTML generation.
 - MapLibre Web Viewer: Resolved double-escaped HTML tags in the description block when empty.
 - Test Suite: Fully updated Pytest coverage for web viewer and web viewer algorithm.
 - Removed multi-gigabyte leftover test directories to recover workspace space.
 
----
 
 ## [2.0.3] - 2026-06-12
 
-### Fixed
+**Fixed**
 - Replaced `np.nan_to_num(0.0)` with `np.nanmean()` in `hillshade.py`, `slope.py`, and `slrm.py` to prevent false cliffs at NoData boundaries.
 - Corrected `np.int8` overflow to `np.int16` in `svf.py` and `asvf.py` preventing integer wrap-around.
 - Added checks for `cellsize <= 0` in `local_dominance.py` to avoid divide-by-zero errors.
@@ -193,19 +214,17 @@ All notable changes to LiDAR Relief Visualization are documented here.
 - Updated field export algorithm to correctly call `geom.centroid().asPoint()`.
 - Aligned trigonometric equations in the GPU openness calculation with the CPU NumPy versions and corrected array conversions in `gpu/compute_backend.py`.
 
----
 
 ## [2.0.2] - 2026-06-04
 
-### Fixed
+**Fixed**
 - Bumped to 2.0.2 as v2.0.1 tag was already claimed by an earlier build before lint fixes landed.
 - All lint fixes (W503, E203, E402) and `setup.cfg` restore are included in this release.
 
----
 
 ## [2.0.1] - 2026-06-04
 
-### Fixed
+**Fixed**
 - Bumped version to align with plugins.qgis.org submission.
 - Fixed flake8 W503, E203, E402 lint warnings in `fusion_algorithm.py`, `compute_backend.py`, and `test_csf_filter.py`.
 - Restored `setup.cfg` with flake8 ignore rules for W503 and E203.
@@ -215,11 +234,10 @@ All notable changes to LiDAR Relief Visualization are documented here.
   changed to a string literal for lazy evaluation so the plugin loads correctly
   regardless of optional dependencies.
 
----
 
 ## [2.0.0] - 2026-06-04
 
-### Added — Export Pipeline (LiDAR Relief — Export group)
+**Added — Export Pipeline (LiDAR Relief — Export group)**
 
 - **Cloud-Optimized GeoTIFF (COG) Export**: Convert any algorithm output to a
   cloud-optimized GeoTIFF with internal tiling, overviews, and DEFLATE/LZW/ZSTD
@@ -246,7 +264,7 @@ All notable changes to LiDAR Relief Visualization are documented here.
   sharing of optimized parameter presets beyond the 4 built-in landscape
   presets. (`recipes/__init__.py`; algorithms: `recipe_export`, `recipe_import`)
 
-### Added — Point Cloud Processing (LiDAR Relief — Point Cloud group)
+**Added — Point Cloud Processing (LiDAR Relief — Point Cloud group)**
 
 - **CSF Ground Filter (LAS/LAZ → DEM)**: Archaeology-tuned ground extraction
   using the Cloth Simulation Filter (CSF) with 4 presets: Archaeology Fine
@@ -260,7 +278,7 @@ All notable changes to LiDAR Relief Visualization are documented here.
   terrain, plus statistical outlier removal.
   (`point_cloud/pdal_pipeline.py`; 4 pipeline presets)
 
-### Added — Multi-temporal Analysis (LiDAR Relief — Temporal group)
+**Added — Multi-temporal Analysis (LiDAR Relief — Temporal group)**
 
 - **Multi-temporal Change Detection**: Compute a probabilistic DEM of
   Difference (DoD) between two temporally separated DEMs with propagated
@@ -268,7 +286,7 @@ All notable changes to LiDAR Relief Visualization are documented here.
   raster, significance mask (erosion/deposition), and cut/fill volume report.
   (`temporal/dem_difference.py`; algorithm: `temporal_difference`)
 
-### Added — Multi-Sensor Fusion (LiDAR Relief — Fusion group)
+**Added — Multi-Sensor Fusion (LiDAR Relief — Fusion group)**
 
 - **Multi-Sensor Fusion**: Co-register Sentinel-2 multispectral bands with
   LiDAR relief and apply blend recipes combining topographic and spectral
@@ -278,7 +296,7 @@ All notable changes to LiDAR Relief Visualization are documented here.
   overlay, multiply, screen.
   (`fusion/sentinel_fusion.py`; algorithm: `multi_sensor_fusion`)
 
-### Added — AI/ML Inference (LiDAR Relief — AI/ML group)
+**Added — AI/ML Inference (LiDAR Relief — AI/ML group)**
 
 - **AI Feature Detection**: Load user-provided ONNX models for object
   detection (YOLO) or semantic segmentation (U-Net) on plugin visualizations.
@@ -287,7 +305,7 @@ All notable changes to LiDAR Relief Visualization are documented here.
   Pure NumPy preprocessing — no OpenCV dependency at inference time.
   (`ml/detector.py`; algorithm: `ai_feature_detection`)
 
-### Added — GPU Acceleration
+**Added — GPU Acceleration**
 
 - **CuPy Compute Backend**: Transparent GPU acceleration for computationally
   intensive horizon-scanning algorithms (SVF, Openness). Automatically detects
@@ -295,49 +313,44 @@ All notable changes to LiDAR Relief Visualization are documented here.
   the trigonometric identity `sin(arctan(dz/d)) = dz / sqrt(dz² + d²)` for GPU-
   optimized horizon scanning. (`gpu/compute_backend.py`)
 
-### Fixed
+**Fixed**
 - Fixed missing `compute_mstp` wrapper function in `core/mstp.py` that caused an
   `ImportError` when running the e4MSTP algorithm via Batch mode.
 
----
 
 ## [1.3.5] - 2026-06-04
 
-### Fixed
+**Fixed**
 - Fixed missing `compute_mstp` wrapper function in `core/mstp.py` that caused an
   `ImportError` when running the e4MSTP algorithm via Batch mode.
 
----
 
 ## [1.3.4] - 2026-05-31
 
-### Changed
+**Changed**
 - Bumped version to clear broken 1.3.3 release tag.
 - Updated changelog to document all algorithms added since initial release.
 - Added `package.sh` helper script for correct local ZIP packaging.
 - Removed leftover development scripts from project root.
 
----
 
 ## [1.3.3] - 2026-05-31
 
-### Fixed
+**Fixed**
 - Corrected plugin ZIP structure: files are now correctly nested under a `lidar_relief/` parent directory as required by the QGIS Plugin Manager. Previous releases had files at the archive root, causing installation to fail.
 
----
 
 ## [1.3.0] - 2026-05-26
 
-### Added
+**Added**
 - Enhanced 4-Scale Topographic Position (e4MSTP) composite visualisation (Kokalj 2025 method).
 - PCA RGB Composite algorithm combining SVF, Openness, Slope, and Local Dominance into a single colour output.
 - ML-Ready Export (VRT Stack) tool for machine learning and multi-band analysis workflows.
 
----
 
 ## [1.2.0] - 2026-05-26
 
-### Added
+**Added**
 - Topographic Openness algorithm (positive and negative modes).
 - Multi-Scale Topographic Position (MSTP) algorithm.
 - VAT Composite algorithm.
@@ -346,118 +359,103 @@ All notable changes to LiDAR Relief Visualization are documented here.
 - Local Dominance algorithm.
 - Landscape Scale Presets for the Batch algorithm: Flat/Agricultural, Forested, Upland/Steep, and Coastal — parameters derived from peer-reviewed LiDAR visualisation literature.
 
----
 
 ## [1.1.0] - 2026-05-26
 
-### Added
+**Added**
 - Tile-based processing engine (`process_in_tiles`) for memory-efficient handling of large DEMs.
 - Automatic layer styling post-processor applied to all algorithm outputs.
 
-### Changed
+**Changed**
 - Refactored all algorithms to share a common raster I/O utility layer.
 
----
 
 ## [1.0.13] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Added `contents: write` permissions to the GitHub Actions release workflow.
 
----
 
 ## [1.0.12] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Added `--release-tag` flag to `qgis-plugin-ci` publish command to fix GitHub Release lookup.
 
----
 
 ## [1.0.11] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Corrected `.qgis-plugin-ci` GitHub repository configuration parameter names.
 
----
 
 ## [1.0.10] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Added GitHub org/repo configuration to `.qgis-plugin-ci`.
 
----
 
 ## [1.0.9] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Corrected `.qgis-plugin-ci` formatting to valid YAML.
 
----
 
 ## [1.0.8] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Fixed `ImportError` catching logic in the `scipy` fallback path.
 
----
 
 ## [1.0.7] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Fixed numpy fallback broadcast shape error in SLRM Gaussian filtering.
 
----
 
 ## [1.0.6] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Fixed GitHub Actions release workflow failing due to missing OSGEO credentials.
 
----
 
 ## [1.0.5] - 2026-05-25
 
-### Changed
+**Changed**
 - Removed unused `docs/` folder from version tracking.
 - Fixed README ZIP installation instructions.
 
----
 
 ## [1.0.4] - 2026-05-25
 
-### Changed
+**Changed**
 - Removed `experimental` flag so the plugin is visible to all users by default in the QGIS Plugin Manager.
 
----
 
 ## [1.0.3] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Bypassed mutually exclusive `W503`/`W504` flake8 lint rules using `any()`.
 
----
 
 ## [1.0.2] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Resolved remaining PEP8 `W503` warnings for the QGIS linter.
 - Standardised file permissions across the package.
 
----
 
 ## [1.0.1] - 2026-05-25
 
-### Fixed
+**Fixed**
 - Fixed PEP8 formatting issues (W291, W293, W503) and removed unused imports (F401).
 - Updated plugin homepage, repository, and tracker metadata links.
 - Included `LICENSE` file in the QGIS package.
 - Updated QGIS compatibility range to 3.0–4.99.
 
----
 
 ## [1.0.0] - 2026-05-25
 
-### Added
+**Added**
 - Initial release.
 - Multi-directional Hillshade algorithm.
 - Simple Local Relief Model (SLRM) algorithm.

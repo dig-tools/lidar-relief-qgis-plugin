@@ -7,6 +7,22 @@ on:
     branches: [main, master]
 
 jobs:
+  # Minimal installation check: deliberately runs before installing any of the
+  # plugin's optional Python packages. This protects the contract that QGIS can
+  # load the complete provider even when specialized tools are unavailable.
+  minimal-runtime-smoke:
+    runs-on: ubuntu-latest
+    container: qgis/qgis:final-3_34_2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load plugin and execute a core algorithm without optional packages
+        env:
+          PYTHONPATH: /usr/share/qgis/python:/usr/share/qgis/python/plugins:.
+          QT_QPA_PLATFORM: offscreen
+          LD_LIBRARY_PATH: /usr/lib
+        run: python3 scripts/qgis_smoke_test.py
+
   # ─────────────────────────────────────────────────────────────────────
   # Core tests — pure NumPy, no GDAL/QGIS required.
   # These run on every push and cover the relief visualisation algorithms
@@ -95,6 +111,7 @@ jobs:
           python3 -m pip install \
             "numpy==1.26.4" \
             scipy pytest \
+            cloth-simulation-filter \
             rasterio rioxarray xarray reportlab laspy \
             rio-cogeo \
             onnxruntime onnx
@@ -102,6 +119,7 @@ jobs:
           # the job early with a clear message rather than failing later
           # with a confusing "numpy.dtype size changed" error.
           python3 -c "import numpy; assert numpy.__version__.startswith('1.'), f'numpy was upgraded to {numpy.__version__} — will break scipy'"
+          python3 -c "import CSF; print('cloth-simulation-filter import OK')"
 
       - name: Install rvt-py (pure-Python module)
         run: |
@@ -146,3 +164,10 @@ jobs:
           # time here so the only execution path is the dedicated guard.
           python3 -m pytest lidar_relief/tests/ --tb=short -v \
             --deselect lidar_relief/tests/test_csf_filter.py::TestCSFFilter::test_filter_deterministic
+
+      - name: QGIS plugin runtime smoke test
+        env:
+          PYTHONPATH: /usr/share/qgis/python:/usr/share/qgis/python/plugins:.
+          QT_QPA_PLATFORM: offscreen
+          LD_LIBRARY_PATH: /usr/lib
+        run: python3 scripts/qgis_smoke_test.py

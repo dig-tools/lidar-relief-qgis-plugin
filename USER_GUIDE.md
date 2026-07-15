@@ -11,11 +11,31 @@ prospection platform**, adding point cloud processing, multi-temporal change
 detection, multi-sensor fusion, AI feature detection, and professional
 export/publishing capabilities.
 
+## Quick start
+
+1. Install the plugin from **Plugins → Manage and Install Plugins…** by
+   searching for **LiDAR Relief Visualization**.
+2. Load a projected DEM. Metric horizontal and vertical units are strongly
+   recommended so radii, slopes, and relief values remain interpretable.
+3. Open **Processing Toolbox → LiDAR Relief**.
+4. For an initial survey, run **Batch Relief Visualisation** with the landscape
+   preset closest to your study area.
+5. Inspect several complementary outputs. No single visualization or automated
+   detection should be treated as an archaeological classification.
+6. Record the input dataset, CRS, resolution, parameters, plugin version, and
+   outputs. Visualization Recipes and PDF reports can assist reproducibility.
+
+![TRI applied to a labelled synthetic archaeological landscape](docs/images/tri-synthetic-example.png)
+
+*The synthetic example demonstrates algorithm response under controlled
+conditions. Real anomalies require contextual interpretation and, where
+appropriate, field validation.*
+
 ---
 
 ## Algorithm Reference
 
-### Relief Visualization (15 algorithms)
+### Terrain Visualization and Analysis
 
 | Algorithm | Description | Best For |
 |-----------|-------------|----------|
@@ -31,13 +51,27 @@ export/publishing capabilities.
 | **Simple Red Relief** | Patent-free RRIM analogue | Tropical/Mesoamerican surveys |
 | **PCA Composite** | PCA of 16+ directional hillshades | Ridge-and-furrow, Roman roads |
 | **Slope** | Degrees and percent | Terrain analysis |
+| **Terrain Ruggedness Index (TRI)** | Riley 3×3 local elevation contrast | Scarps, banks, stone spreads, quarrying, rough ground |
 | **Blend Visualizations** | Multiply, Screen, Overlay modes | Custom composites |
 | **Batch Relief Visualisation** | Multi-algorithm single-pass | Survey workflow efficiency |
 | **ML-Ready VRT Export** | Normalized multi-band composites | CNN/LiDAR training datasets |
 
+#### Terrain Ruggedness Index (TRI)
+
+TRI measures how strongly each DEM cell differs from its eight immediate
+neighbours. Values are expressed in the DEM's elevation units: zero indicates
+locally flat terrain, while larger values indicate stronger local relief.
+
+Use TRI to screen for abrupt microtopographic changes such as banks, scarps,
+stone spreads, quarry edges, erosion, and disturbed ground. Compare results
+only between DEMs with similar resolution and vertical units, because changing
+the cell size changes the neighbourhood represented by the 3×3 window. TRI is
+a prospection aid, not an archaeological classification; verify anomalies
+against other visualizations and field evidence.
+
 ---
 
-### Export & Publishing (NEW)
+### Export and publishing
 
 #### Export to Cloud-Optimized GeoTIFF (COG)
 
@@ -103,7 +137,7 @@ users. Recipes include versioned schema, type validation, and metadata
 
 ---
 
-### Point Cloud Processing (NEW)
+### Point-cloud processing
 
 #### CSF Ground Filter (LAS/LAZ → DEM)
 
@@ -125,7 +159,7 @@ Simulation Filter (CSF), with presets specifically tuned for archaeology.
 
 ---
 
-### Multi-temporal Change Detection (NEW)
+### Multi-temporal change detection
 
 Compute a probabilistic DEM of Difference (DoD) between two temporally
 separated DEMs to detect landscape change.
@@ -148,7 +182,7 @@ separated DEMs to detect landscape change.
 
 ---
 
-### Multi-Sensor Fusion (NEW)
+### Multi-sensor fusion
 
 Co-register Sentinel-2 multispectral bands with LiDAR relief and apply
 blend recipes.
@@ -167,7 +201,7 @@ blend recipes.
 
 ---
 
-### AI Feature Detection (NEW)
+### AI feature detection
 
 Run object detection or semantic segmentation on plugin visualizations
 using your own pre-trained ONNX model.
@@ -237,6 +271,17 @@ pass. Choose from 4 research-validated terrain presets or use manual settings:
 | GPU Acceleration | `cupy-cuda12x` | `pip install cupy-cuda12x` |
 | LAS/LAZ input | `laspy` or `pdal` | `pip install laspy` |
 | RVT Relief Toolbox | `rvt-py` | `pip install rvt-py` |
+
+## Getting help and reporting problems
+
+When reporting an issue, include your operating system, QGIS version, plugin
+version, the full Processing log, input CRS and raster resolution, and the
+smallest dataset or steps that reproduce the problem. Do not attach sensitive
+site coordinates or restricted heritage data to a public issue.
+
+- [Issue tracker](https://github.com/dig-tools/lidar-relief-qgis-plugin/issues)
+- [Source and releases](https://github.com/dig-tools/lidar-relief-qgis-plugin)
+- [Official QGIS listing](https://plugins.qgis.org/plugins/lidar_relief/)
 
 All features degrade gracefully with clear error messages if a dependency
 is missing.

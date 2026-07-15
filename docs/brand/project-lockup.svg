@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="Dig:Tools wordmark"><defs><style>
+.word { font-family: Inter, 'Noto Sans', 'Segoe UI', Arial, sans-serif;
+        font-size: 100px; font-weight: 700; letter-spacing: -4px; }
+.ink { fill: #202124; }
+.accent { fill: #B97812; }
+.line-icon { fill: none; stroke: #B97812; stroke-width: 8;
+             stroke-linecap: round; stroke-linejoin: round;
+             stroke-dasharray: none; stroke-dashoffset: 0; opacity: 1; }
+</style></defs><text class="word ink" x="80" y="184">Dig:</text>
+
+  <text class="word accent" x="290" y="184">Tools</text>
+    <g class="line-icon" transform="translate(925 78)">
+      <path pathLength="1" d="M26 104 46 55l16 7-20 49c-4 10-12 14-22 10-7-3-8-9-4-17Z" />
+      <path pathLength="1" d="m46 55 15-21 20 8-3 25-32-12Z" />
+      <path pathLength="1" d="m65 36 19-28c5-8 18-3 15 6L82 43 65 36Z" />
+      <path pathLength="1" d="m26 104 36-19" />
+    </g>
+  </svg>

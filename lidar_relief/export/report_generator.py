@@ -12,6 +12,8 @@ rules:
   Reports follow CIfA standards for archaeological remote sensing.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 from datetime import datetime

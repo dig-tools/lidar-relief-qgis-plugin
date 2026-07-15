@@ -57,6 +57,11 @@ jobs:
       - name: Verify CHANGELOG.md covers metadata.txt version
         run: |
           VERSION=${GITHUB_REF_NAME#v}
+          METADATA_VERSION=$(sed -n 's/^version=//p' lidar_relief/metadata.txt)
+          if [ "${VERSION}" != "${METADATA_VERSION}" ]; then
+            echo "::error::Tag v${VERSION} does not match metadata version ${METADATA_VERSION}."
+            exit 1
+          fi
           echo "::notice title=Changelog guard::checking CHANGELOG.md has ## [${VERSION}]"
           # Prevents an accidental release that would publish a zip with no
           # narrative behind the auto-generated "Full Changelog" shortlog on
@@ -68,18 +73,33 @@ jobs:
       - name: Install qgis-plugin-ci
         run: pip install qgis-plugin-ci
 
+      - name: Verify qgis-plugin-ci can parse release notes
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          python3 -c "from qgispluginci.changelog import ChangelogParser; text = ChangelogParser().content('${VERSION}'); assert text and len(text.strip()) > 40, 'qgis-plugin-ci parsed empty release notes'"
+
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=${GITHUB_REF_NAME#v}
+          awk -v version="${VERSION}" '
+            $0 ~ "^## \\[" version "\\]" { capture=1; next }
+            capture && /^---$/ { exit }
+            capture { print }
+          ' CHANGELOG.md > /tmp/release-notes.md
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "::error::No release notes found for ${VERSION} in CHANGELOG.md."
+            exit 1
+          fi
           if gh release view "v${VERSION}" >/dev/null 2>&1; then
-            echo "Release v${VERSION} already exists; qgis-plugin-ci will refresh assets in step 7."
+            echo "Updating release v${VERSION} notes from CHANGELOG.md."
+            gh release edit "v${VERSION}" --notes-file /tmp/release-notes.md
           else
             echo "Creating release v${VERSION}."
             gh release create "v${VERSION}" \
               --title "Release v${VERSION}" \
-              --generate-notes
+              --notes-file /tmp/release-notes.md
           fi
 
       - name: Package and Release to GitHub and QGIS
