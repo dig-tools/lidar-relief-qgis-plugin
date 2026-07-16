@@ -64,3 +64,42 @@ cloth_nodes.txt
 # Date-stamped agent backups (accidentally left behind by tooling)
 *.bak
 *.bak-*
+
+# Local AI-agent, research-planning, and orchestration state
+# These may be useful locally but are not public project deliverables.
+**/.agents/
+**/.beads/
+**/.claude/
+**/.codex/
+**/.ctx/
+**/.cursor/
+**/.opencode/
+**/.pi/
+**/.vibecheck/
+**/.windsurf/
+**/.ironlint/
+**/.ironlint.yml
+**/.aidevops.json
+**/.claude-strategies.json
+**/.cursorrules
+**/AGENTS.md
+**/CLAUDE.md
+**/MIGRATION.md
+**/thoughts/
+**/plans/
+**/specs/
+**/progress/
+**/todo/tasks/
+**/ROADMAP.md
+**/roadmap.md
+**/scope.md
+**/implementation_plan*.md
+**/.github/copilot-instructions.md
+**/.gitnexus/
+**/opencode.json
+**/AGENTS.md.*
+**/CLAUDE.md.*
+**/MIGRATION.md.*
+**/.gemini/
+**/GEMINI.md
+**/*coding_agent*.md
